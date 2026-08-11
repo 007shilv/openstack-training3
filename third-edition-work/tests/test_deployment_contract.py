@@ -2870,7 +2870,7 @@ def test_manual_placement_starting_gate_has_complete_future_and_partial_state_bo
         "service project", "global admin role", "EXPECTED_PLACEMENT_RPMS",
         "partial Placement package state", "nova_api", "nova_cell0", "neutron", "cinder",
         "User IN ('nova','neutron','cinder','swift')", "openstack-placement-api",
-        "sport = :8778", "placement-api", "http://controller:8778",
+        "sport = :$port", "placement-api", "http://controller:8778",
     ):
         assert token in controller
     assert "EXPECTED_PLACEMENT_RPMS" in compute and "partial Placement package state" in compute
@@ -2992,3 +2992,136 @@ def test_manual_placement_records_exact_six_nevras_and_history_evidence() -> Non
     assert markdown.count(".oe2403sp2") >= 6
     for marker in ("dnf history info", "RPM_DELTA=6", "REPO_ROWS=6", "zero remove/replace"):
         assert marker in markdown
+
+
+def test_manual_placement_controller_gate_fails_closed_for_every_future_api_listener() -> None:
+    namespace = _placement_python_function_namespace("run_after_both_placement_gates")
+    controller = namespace["CONTROLLER_GATE"]
+    ports = (8778, 8774, 9696, 8776, 8080)
+    assert 'for port in 8778 8774 9696 8776 8080; do assert_listener_absent "$port"; done' in controller
+    definition = shell_function_definition(controller, "assert_listener_absent")
+
+    for port in ports:
+        for mode in ("present", "probe-error"):
+            completed = run_git_bash(
+                f"""
+                set -Eeuo pipefail
+                die(){{ exit 1; }}
+                {definition}
+                MODE={shlex.quote(mode)}
+                ss() {{
+                  if [[ $MODE == probe-error ]]; then return 2; fi
+                  printf '%s\n' 'LISTEN injected'
+                }}
+                assert_listener_absent {port}
+                """
+            )
+            assert completed.returncode != 0, f"port {port} {mode} must fail closed"
+
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        die(){{ exit 1; }}
+        {definition}
+        ss() {{ return 0; }}
+        assert_listener_absent 8778
+        """
+    )
+    assert completed.returncode == 0
+
+
+def test_manual_placement_unique_entry_runs_full_deployment_only_after_both_gates() -> None:
+    entry_namespace = _placement_python_function_namespace("run_guarded_placement_deployment")
+    gate_namespace = _placement_python_function_namespace("run_after_both_placement_gates")
+    entry_namespace["run_after_both_placement_gates"] = gate_namespace["run_after_both_placement_gates"]
+    listener_definition = shell_function_definition(
+        gate_namespace["CONTROLLER_GATE"], "assert_listener_absent"
+    )
+    entry_source = next(
+        block for block in markdown_fenced_blocks("05-placement.md", "python")
+        if "def run_guarded_placement_deployment" in block
+    )
+    assert "run_placement_deployment(runtime)" in entry_source
+    assert "lambda: print(" not in manual_markdown("05-placement.md")
+
+    gate_calls: list[str] = []
+    stage_calls: list[str] = []
+
+    class Client:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def close(self) -> None:
+            gate_calls.append(f"close:{self.name}")
+
+    def connector(name: str, _password: str) -> Client:
+        gate_calls.append(f"connect:{name}")
+        return Client(name)
+
+    def deployment(_runtime: object) -> dict:
+        stage_calls.append("run-placement-deployment")
+        return {"status": "PASS", "providers": 0}
+
+    entry_namespace["run_placement_deployment"] = deployment
+    failures: list[tuple[str, str]] = [
+        (str(port), mode)
+        for port in (8778, 8774, 9696, 8776, 8080)
+        for mode in ("present", "probe-error")
+    ] + [("compute", "runner-error")]
+    for failure, mode in failures:
+        gate_calls.clear()
+        stage_calls.clear()
+
+        def runner(
+            client: Client, _script: str, failure: str = failure, mode: str = mode
+        ) -> None:
+            gate_calls.append(f"run:{client.name}")
+            if client.name == "controller" and failure != "compute":
+                completed = run_git_bash(
+                    f"""
+                    set -Eeuo pipefail
+                    die(){{ exit 1; }}
+                    {listener_definition}
+                    MODE={shlex.quote(mode)}
+                    ss() {{
+                      if [[ $MODE == probe-error ]]; then return 2; fi
+                      printf '%s\n' 'LISTEN injected'
+                    }}
+                    assert_listener_absent {failure}
+                    """
+                )
+                assert completed.returncode != 0
+                raise RuntimeError(f"gate failed: controller:{failure}:{mode}")
+            if client.name == "compute" and failure == "compute":
+                raise RuntimeError("gate failed: compute")
+
+        with pytest.raises(RuntimeError, match="gate failed"):
+            entry_namespace["run_guarded_placement_deployment"](
+                "memory-only", object(), connector=connector, runner=runner
+            )
+        assert stage_calls == []
+
+    gate_calls.clear()
+    stage_calls.clear()
+
+    def passing_runner(client: Client, _script: str) -> None:
+        gate_calls.append(f"run:{client.name}")
+
+    result = entry_namespace["run_guarded_placement_deployment"](
+        "memory-only", object(), connector=connector, runner=passing_runner
+    )
+    assert result == {"status": "PASS", "providers": 0}
+    assert gate_calls == [
+        "connect:controller", "run:controller", "close:controller",
+        "connect:compute", "run:compute", "close:compute",
+    ]
+    assert stage_calls == ["run-placement-deployment"]
+
+
+def test_manual_placement_keeps_one_authoritative_api_validator() -> None:
+    markdown = manual_markdown("05-placement.md")
+    bash = manual_shell_text("05-placement.md")
+    assert markdown.count("def run_placement_api_validation") == 1
+    assert "payload['versions'][0]['id']" not in bash
+    assert "provider_status=$(curl" not in bash
+    assert "run_placement_api_validation(curl_placement_request)" in markdown

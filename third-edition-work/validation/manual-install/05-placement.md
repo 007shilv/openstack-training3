@@ -13,8 +13,6 @@
 ```python
 from __future__ import annotations
 
-import getpass
-import os
 from pathlib import Path
 from typing import Callable
 
@@ -29,6 +27,11 @@ HOSTS = {
 CONTROLLER_GATE = r'''set -Eeuo pipefail
 die(){ printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 absent(){ local p=$1 out rc; if out=$(LC_ALL=C rpm -q "$p" 2>&1); then die "unexpected package: $p"; else rc=$?; [[ $rc -eq 1 && $out == "package $p is not installed" ]] || die "RPM probe failed: $p"; fi; }
+assert_listener_absent(){
+  local port=$1 out
+  if ! out=$(ss -H -lnt "( sport = :$port )" 2>&1); then die "listener probe failed: $port"; fi
+  [[ -z $out ]] || die "unexpected listener: $port"
+}
 EXPECTED_PLACEMENT_RPMS=(openstack-placement-api openstack-placement-common python3-microversion-parse python3-os-resource-classes python3-os-traits python3-placement)
 assert_placement_transaction_absent(){
   local installed=0 p out rc
@@ -56,7 +59,7 @@ for p in openstack-nova-common openstack-nova-api openstack-nova-compute opensta
 [[ -z $(mysql -uroot -NBe "SELECT Host FROM mysql.user WHERE User='placement'") ]] || die "Placement DB users exist"
 for db in nova nova_api nova_cell0 neutron cinder; do [[ $(mysql -uroot -NBe "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || die "later database exists: $db"; done
 [[ $(mysql -uroot -NBe "SELECT COUNT(*) FROM mysql.user WHERE User IN ('nova','neutron','cinder','swift')") == 0 ]] || die "later database user exists"
-[[ -z $(ss -H -lnt '( sport = :8778 )') ]] || die "8778 already listens"
+for port in 8778 8774 9696 8776 8080; do assert_listener_absent "$port"; done
 [[ ! -e /usr/bin/placement-api && ! -L /usr/bin/placement-api ]] || die "placement-api executable already exists"
 secret=/root/.openstack-lab-secrets
 [[ -f $secret && ! -L $secret && $(stat -c '%U:%G %a %h' "$secret") == 'root:root 600 1' ]] || die "secret unsafe"
@@ -153,14 +156,9 @@ def run_after_both_placement_gates(
             client.close()
     mutation()
 
-
-if __name__ == "__main__":
-    ssh_password = getpass.getpass("两节点 root SSH 密码：")
-    run_after_both_placement_gates(ssh_password, lambda: print("BOTH_GATES=PASS"))
-    ssh_password = ""
 ```
 
-实际执行结果：`CONTROLLER_TASK5D_STARTING_GATE=PASS`，随后 `COMPUTE_TASK5D_STARTING_GATE=PASS`。第二个门未通过时不会调用写阶段。
+本块只定义严格连接与只读门，不再提供“打印 PASS”的伪入口。后文唯一入口 `run_guarded_placement_deployment` 把完整 `run_placement_deployment` 作为 mutation callback：controller 与 compute 依次成功并关闭门禁连接以后才开始软件包阶段；任一门失败时部署阶段调用数严格为 0。controller 还会对 8778、8774、9696、8776、8080 逐端口执行失败关闭探针；监听存在或 `ss` 探针异常都会中止。
 
 ## 仅本地源安装软件包
 
@@ -966,48 +964,7 @@ if __name__ == "__main__":
     print(f"PLACEMENT_API_WIRING=PASS PROVIDERS={api_evidence['providers']}")
 ```
 
-常规环境可使用 `openstack resource provider list`。本地教学仓库没有 `python3-osc-placement`，系统也没有相应 CLI entry point，因此该命令返回精确的 `Unknown command ['resource', 'provider', 'list']`。这不是认证、端点或策略故障；在禁止外部源的边界内，使用已经存在的 `curl` 作为精确可用客户端，携带内存中的 Keystone 令牌查询同一 Placement API。不能退化为未认证请求，也不能为了得到非空结果手工创建资源提供者。
-
-```bash
-set -Eeuo pipefail
-tmp=$(mktemp -d /root/.task5d-query.XXXXXX)
-cleanup(){ rm -f -- "$tmp"/*.json "$tmp/client-help"; rmdir -- "$tmp" 2>/dev/null || :; unset OS_PASSWORD placement_token; }
-trap cleanup EXIT
-status=$(curl --noproxy '*' -sS -o "$tmp/version.json" -w '%{http_code}' http://controller:8778/)
-python3 - "$status" "$tmp/version.json" <<'PY'
-import json,sys
-status=int(sys.argv[1]); payload=json.load(open(sys.argv[2]))
-if status!=200 or payload['versions'][0]['id']!='v1.0': raise SystemExit('version discovery mismatch')
-PY
-[[ $(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' http://controller:8778/resource_providers) == 401 ]]
-source /root/admin-openrc
-openstack token issue -f value -c expires >/dev/null
-set +e
-openstack resource provider list --help >"$tmp/client-help" 2>&1; osc_rc=$?
-set -e
-if [[ $osc_rc -eq 0 ]]; then
-  openstack --os-placement-api-version 1.39 resource provider list -f json >"$tmp/providers.json"
-  python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert isinstance(data,list)' "$tmp/providers.json"
-else
-  [[ $osc_rc -eq 1 || $osc_rc -eq 2 ]]
-  grep -Fq "Unknown command ['resource', 'provider', 'list']" "$tmp/client-help"
-  [[ -z $(dnf -q repoquery --disablerepo='*' --enablerepo='openstack-local' --qf '%{name}|%{repoid}' 'python3-osc-placement*') ]]
-  placement_token=$(openstack token issue -f value -c id); [[ -n $placement_token ]]
-  provider_status=$(curl --noproxy '*' -sS -o "$tmp/providers.json" -w '%{http_code}' \
-    -H "X-Auth-Token: $placement_token" -H 'OpenStack-API-Version: placement 1.39' \
-    -H 'Accept: application/json' http://controller:8778/resource_providers)
-  unset placement_token
-  python3 - "$provider_status" "$tmp/providers.json" <<'PY'
-import json,sys
-status=int(sys.argv[1]); payload=json.load(open(sys.argv[2]))
-if status!=200: raise SystemExit('authenticated resource-provider query failed')
-providers=payload.get('resource_providers')
-if not isinstance(providers,list): raise SystemExit('provider result is not a list')
-print(f'PROVIDERS={len(providers)}')
-PY
-fi
-cleanup; trap - EXIT
-```
+常规环境可使用 `openstack resource provider list`。本地教学仓库没有 `python3-osc-placement`，系统也没有相应 CLI entry point，因此该命令返回精确的 `Unknown command ['resource', 'provider', 'list']`。这不是认证、端点或策略故障；在禁止外部源的边界内，本节只保留上面的 `run_placement_api_validation(curl_placement_request)` 作为唯一权威验证入口。它携带仅存在于内存中的 Keystone 令牌，同时严格验证 8778 根版本体、未认证 401、认证 200、JSON 列表和非空成员结构；不再并列保留仅检查 HTTP 200 与首个版本 ID 的弱 Bash 实现。不能退化为未认证请求，也不能为了得到非空结果手工创建资源提供者。
 
 实际结果：根版本发现为 HTTP 200、`v1.0`；未认证资源提供者路径为 401；认证查询为 HTTP 200 且 `resource_providers=[]`。因此结论是“查询成功、当前 0 个资源提供者”，而不是“查询失败”。资源提供者应在下一切片由 Nova compute 自动注册。
 
@@ -1170,7 +1127,7 @@ compute 再次执行起始门中的完整磁盘函数：两块盘都必须是 53
 
 ### 真实依赖接线驱动器
 
-各节代码不是只定义不用的函数。下面的依赖驱动器把软件包证据、授权 collector/validator、subprocess 身份适配器、秘密加载、身份 ensure/validator、原子 Placement 配置写入/复核、模式、升级、Apache、实际 HTTP API validator 和最终双节点审计串成唯一顺序。每个写调用后都紧接只读 gate；任一异常自然短路，后续方法不会执行。
+各节代码不是只定义不用的函数。下面的依赖驱动器把软件包证据、授权 collector/validator、subprocess 身份适配器、秘密加载、身份 ensure/validator、原子 Placement 配置写入/复核、模式、升级、Apache、实际 HTTP API validator 和最终双节点审计串成唯一顺序。每个写调用后都紧接只读 gate；任一异常自然短路，后续方法不会执行。`run_guarded_placement_deployment` 是唯一执行入口：它先实际调用前文严格 Paramiko 双节点门，再把完整 `run_placement_deployment(runtime)` 作为 mutation callback；不能用打印 PASS 的回调代替。`runtime` 是把本节各个已给出的远端阶段封装为同名方法的部署适配器，连接对象不跨门禁阶段复用。
 
 ```python
 def run_placement_deployment(runtime: object) -> dict:
@@ -1206,6 +1163,29 @@ def run_placement_deployment(runtime: object) -> dict:
         return {"status":"PASS","providers":0}
     finally:
         placement_password=""
+
+
+def run_guarded_placement_deployment(
+    password: str,
+    runtime: object,
+    connector=None,
+    runner=None,
+) -> dict:
+    result: dict[str, object]={}
+
+    def mutation() -> None:
+        result["evidence"]=run_placement_deployment(runtime)
+
+    run_after_both_placement_gates(
+        password,
+        mutation,
+        connector=connector or connect_node,
+        runner=runner or run_gate,
+    )
+    evidence=result.get("evidence")
+    if evidence!={"status":"PASS","providers":0}:
+        raise RuntimeError("guarded Placement deployment result mismatch")
+    return evidence
 ```
 
 ## 故障诊断与回滚边界
