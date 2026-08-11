@@ -2166,10 +2166,26 @@ def test_manual_glance_production_dual_gate_blocks_all_mutation_on_either_node_f
 class _FakeGlanceIdentity:
     def __init__(self, scenario: str) -> None:
         self.scenario = scenario
-        self.user = scenario in {"correct", "duplicate"}
-        self.service = scenario in {"correct", "duplicate"}
-        self.assignment = scenario in {"correct", "duplicate"}
-        self.endpoints = scenario in {"correct", "duplicate"}
+        self.user = scenario in {
+            "correct", "duplicate", "disabled_user", "wrong_id_user", "wrong_assignment",
+            "disabled_service", "wrong_id_service", "partial_endpoint", "wrong_endpoint",
+            "created_wrong_endpoint",
+        }
+        self.assignment = scenario in {
+            "correct", "duplicate", "wrong_assignment", "disabled_service", "wrong_id_service",
+            "partial_endpoint", "wrong_endpoint", "created_wrong_endpoint",
+        }
+        self.service = scenario in {
+            "correct", "duplicate", "disabled_service", "wrong_id_service",
+            "partial_endpoint", "wrong_endpoint", "created_wrong_endpoint",
+        }
+        self.endpoints = scenario in {"correct", "duplicate", "partial_endpoint", "wrong_endpoint"}
+        if scenario == "partial_endpoint":
+            self.endpoint_interfaces = ["public"]
+        elif self.endpoints:
+            self.endpoint_interfaces = ["public", "internal", "admin"]
+        else:
+            self.endpoint_interfaces = []
         self.mutations: list[tuple[str, ...]] = []
 
     @staticmethod
@@ -2199,10 +2215,15 @@ class _FakeGlanceIdentity:
             rows = ([{"ID": "glance-user", "Name": "glance"}] if self.user else [])
             return rows + ([{"ID": "duplicate-user", "Name": "glance"}] if self.scenario == "duplicate" else [])
         if key == ("user", "show"):
-            return {"id": "glance-user", "name": "glance", "domain_id": "default", "enabled": True}
+            return {
+                "id": "wrong-user-id" if self.scenario == "wrong_id_user" else "glance-user",
+                "name": "glance", "domain_id": "default",
+                "enabled": self.scenario != "disabled_user",
+            }
         if key == ("role", "assignment"):
             rows = ([{
-                "Role": "admin-role", "User": "glance-user", "Project": "service-project",
+                "Role": "member-role" if self.scenario == "wrong_assignment" else "admin-role",
+                "User": "glance-user", "Project": "service-project",
                 "Group": "", "Domain": "", "System": "", "Inherited": False,
             }] if self.assignment else [])
             return rows + ([dict(rows[0])] if self.scenario == "duplicate" and rows else [])
@@ -2210,16 +2231,27 @@ class _FakeGlanceIdentity:
             rows = ([{"ID": "image-service", "Name": "glance", "Type": "image"}] if self.service else [])
             return rows + ([{"ID": "duplicate-service", "Name": "glance", "Type": "image"}] if self.scenario == "duplicate" else [])
         if key == ("service", "show"):
-            return {"id": "image-service", "name": "glance", "type": "image", "enabled": True}
+            return {
+                "id": "wrong-service-id" if self.scenario == "wrong_id_service" else "image-service",
+                "name": "glance", "type": "image",
+                "enabled": self.scenario != "disabled_service",
+            }
         if key == ("endpoint", "list"):
-            rows = ([self._endpoint(interface) for interface in ("public", "internal", "admin")] if self.endpoints else [])
+            rows = [self._endpoint(interface) for interface in self.endpoint_interfaces]
             return rows + ([self._endpoint("public", "-duplicate")] if self.scenario == "duplicate" else [])
         if key == ("endpoint", "show"):
             endpoint_id = args[2]
             interface = endpoint_id.removeprefix("endpoint-").split("-duplicate", 1)[0]
             return {
                 "id": endpoint_id, "interface": interface, "region": "RegionOne",
-                "service_id": "image-service", "url": "http://controller:9292", "enabled": True,
+                "service_id": "image-service",
+                "url": "http://wrong:9292"
+                if (
+                    self.scenario == "wrong_endpoint" and interface == "public"
+                    or self.scenario == "created_wrong_endpoint" and interface == "internal"
+                )
+                else "http://controller:9292",
+                "enabled": True,
             }
         raise AssertionError(f"unexpected identity query: {args}")
 
@@ -2236,8 +2268,7 @@ class _FakeGlanceIdentity:
             self.service = True
             return {"id": "image-service"}
         if key == ("endpoint", "create"):
-            if args[-2] == "admin":
-                self.endpoints = True
+            self.endpoint_interfaces.append(args[-2])
             return {"id": f"endpoint-{args[-2]}"}
         raise AssertionError(f"unexpected identity mutation: {args}")
 
@@ -2265,6 +2296,35 @@ def test_manual_glance_production_identity_ensure_executes_all_state_branches(
                 "memory-only", query=fake.query, mutate=fake.mutate
             )
         assert fake.mutations == []
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    (
+        "disabled_user", "wrong_id_user", "wrong_assignment", "disabled_service",
+        "wrong_id_service", "partial_endpoint", "wrong_endpoint",
+    ),
+)
+def test_manual_glance_identity_stage_failure_blocks_all_downstream_mutations(scenario: str) -> None:
+    namespace = _glance_python_function_namespace("ensure_glance_identity_objects")
+    fake = _FakeGlanceIdentity(scenario)
+    with pytest.raises((RuntimeError, ValueError)):
+        namespace["ensure_glance_identity_objects"](
+            "memory-only", query=fake.query, mutate=fake.mutate
+        )
+    assert fake.mutations == [], f"{scenario} reached a downstream mutation: {fake.mutations}"
+
+
+def test_manual_glance_endpoint_create_requery_stops_before_later_interfaces() -> None:
+    namespace = _glance_python_function_namespace("ensure_glance_identity_objects")
+    fake = _FakeGlanceIdentity("created_wrong_endpoint")
+    with pytest.raises(ValueError, match="endpoint stage exact-state mismatch"):
+        namespace["ensure_glance_identity_objects"](
+            "memory-only", query=fake.query, mutate=fake.mutate
+        )
+    endpoint_creates = [args for args in fake.mutations if args[:2] == ("endpoint", "create")]
+    assert [args[-2] for args in endpoint_creates] == ["public", "internal"]
+    assert all(args[-2] != "admin" for args in endpoint_creates)
 
 
 def test_manual_glance_production_version_validator_rejects_status_and_body_failures() -> None:

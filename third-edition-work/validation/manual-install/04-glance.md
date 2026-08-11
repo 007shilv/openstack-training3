@@ -374,7 +374,7 @@ PY
 unset OPENSTACK_DEPLOY_PASSWORD MYSQL_SOCKET
 ```
 
-授权创建后立即运行结构化证明。它不读取 `mysql.user.authentication_string`，也不执行会返回口令摘要的 `SHOW GRANTS`；只读取 information_schema 中不含凭据的权限元数据。MariaDB 10.11 实际提供 USER、SCHEMA、TABLE、COLUMN 四个权限视图，本验证器要求探针全部成功、Host 集合精确、全局层只有无权的 `USAGE`、数据库层是当前版本 `ALL PRIVILEGES` 展开的精确集合且全部只属于 `glance`，并且没有额外表级或列级授权。
+授权创建后立即运行结构化证明。它读取 `information_schema.USER_PRIVILEGES`、`SCHEMA_PRIVILEGES`、`TABLE_PRIVILEGES`、`COLUMN_PRIVILEGES`，并读取 `mysql.user` 的 `User/Host`、`mysql.procs_priv`、`mysql.proxies_priv`、`mysql.roles_mapping` 中不含凭据的授权元数据。它明确不读取 `mysql.user.authentication_string` 或任何口令摘要，也不执行可能返回摘要的 `SHOW GRANTS`。验证器要求全部探针成功、Host 集合精确、全局层只有无权的 `USAGE`、数据库层是当前 MariaDB 版本 `ALL PRIVILEGES` 展开的精确集合且全部只属于 `glance`，并且没有额外表级、列级、例程、代理或数据库角色授权。
 
 ```python
 from __future__ import annotations
@@ -498,7 +498,7 @@ if __name__ == "__main__":
 
 ### 创建或验证 Keystone 对象
 
-每个存在性查询都先区分查询成功与失败，再区分 0、1、重复。0 条时创建；1 条时必须逐字段验证并跳过；2 条及以上或查询错误时停止。端点总数还必须恰好为 3，而不只是“三种接口都能查到”。下面的生产分类器用于所有对象。
+每个存在性查询都先区分查询成功与失败，再区分 0、1、重复。0 条时创建并立即重新查询；1 条时逐字段验证并跳过；2 条及以上或查询错误时停止。用户的 list/show ID、Default 域和 enabled 在进入角色授权前验证；角色授权在进入服务创建前验证；服务的 list/show ID、名称、类型和 enabled 在查询端点前验证。已有端点必须一次形成精确三接口集合；从 0 创建时则按 public、internal、admin 逐个执行，每创建一个就重新查询并验证当前接口集合、RegionOne、URL、enabled 和已验证的 service ID，任何 partial/wrong 状态都会在创建后续接口前停止。
 
 ```bash
 source /root/admin-openrc || die "admin-openrc failed closed"
@@ -585,6 +585,103 @@ def validate_glance_identity_evidence(evidence: dict) -> None:
         raise ValueError("Glance endpoint binding mismatch")
 
 
+def validate_glance_user_stage(user_rows: list[dict], user_show: dict) -> dict:
+    if len(user_rows) != 1:
+        raise ValueError("Glance user stage cardinality mismatch")
+    list_id = _value(user_rows[0], "ID", "id")
+    show_id = _value(user_show, "id", "ID")
+    user = {
+        "id": str(show_id or ""), "name": _value(user_show, "name", "Name"),
+        "domain_id": _value(user_show, "domain_id", "Domain"),
+        "enabled": _value(user_show, "enabled", "Enabled"),
+    }
+    if not list_id or str(list_id) != user["id"]:
+        raise ValueError("Glance user list/show ID mismatch")
+    if not (
+        user["name"] == "glance" and user["domain_id"] == "default"
+        and user["enabled"] is True
+    ):
+        raise ValueError("Glance user stage exact-state mismatch")
+    return user
+
+
+def validate_glance_assignment_stage(
+    rows: list[dict], user_id: str, project_id: str, role_id: str
+) -> list[dict]:
+    assignments = [{
+        "role": str(_value(row, "Role", "role") or ""),
+        "user": str(_value(row, "User", "user") or ""),
+        "project": str(_value(row, "Project", "project") or ""),
+        "group": _value(row, "Group", "group"), "domain": _value(row, "Domain", "domain"),
+        "system": _value(row, "System", "system"),
+        "inherited": _value(row, "Inherited", "inherited"),
+    } for row in rows]
+    if len(assignments) != 1:
+        raise ValueError("Glance assignment stage cardinality mismatch")
+    row = assignments[0]
+    if not (
+        row["role"] == role_id and row["user"] == user_id and row["project"] == project_id
+        and row["group"] in (None, "") and row["domain"] in (None, "")
+        and row["system"] in (None, "") and row["inherited"] is False
+    ):
+        raise ValueError("Glance assignment stage binding mismatch")
+    return assignments
+
+
+def validate_glance_service_stage(service_rows: list[dict], service_show: dict) -> dict:
+    if len(service_rows) != 1:
+        raise ValueError("Glance service stage cardinality mismatch")
+    list_id = _value(service_rows[0], "ID", "id")
+    show_id = _value(service_show, "id", "ID")
+    service = {
+        "id": str(show_id or ""), "name": _value(service_show, "name", "Name"),
+        "type": _value(service_show, "type", "Type"),
+        "enabled": _value(service_show, "enabled", "Enabled"),
+    }
+    if not list_id or str(list_id) != service["id"]:
+        raise ValueError("Glance service list/show ID mismatch")
+    if not (
+        service["name"] == "glance" and service["type"] == "image"
+        and service["enabled"] is True
+    ):
+        raise ValueError("Glance service stage exact-state mismatch")
+    return service
+
+
+def validate_glance_endpoint_stage(
+    endpoint_rows: list[dict], service_id: str, expected_interfaces: set[str], query
+) -> list[dict]:
+    if len(endpoint_rows) != len(expected_interfaces):
+        raise ValueError("Glance endpoint stage cardinality mismatch")
+    endpoints = []
+    for row in endpoint_rows:
+        list_id = _value(row, "ID", "id")
+        if not list_id:
+            raise ValueError("Glance endpoint list ID missing")
+        endpoint_show = query(["endpoint", "show", str(list_id)])
+        show_id = _value(endpoint_show, "id", "ID")
+        endpoint = {
+            "id": str(show_id or ""),
+            "interface": _value(endpoint_show, "interface", "Interface"),
+            "region": _value(endpoint_show, "region", "Region"),
+            "service_id": str(_value(endpoint_show, "service_id", "Service ID") or ""),
+            "url": _value(endpoint_show, "url", "URL"),
+            "enabled": _value(endpoint_show, "enabled", "Enabled"),
+        }
+        if str(list_id) != endpoint["id"]:
+            raise ValueError("Glance endpoint list/show ID mismatch")
+        if not (
+            endpoint["interface"] in expected_interfaces and endpoint["region"] == "RegionOne"
+            and endpoint["service_id"] == service_id and endpoint["url"] == "http://controller:9292"
+            and endpoint["enabled"] is True
+        ):
+            raise ValueError("Glance endpoint stage exact-state mismatch")
+        endpoints.append(endpoint)
+    if {endpoint["interface"] for endpoint in endpoints} != expected_interfaces:
+        raise ValueError("Glance endpoint stage interface-set mismatch")
+    return endpoints
+
+
 def ensure_glance_identity_objects(password: str, query=subprocess_query, mutate=subprocess_mutate) -> dict:
     projects = query(["project", "list", "--domain", "default"])
     project_rows = _exact_rows(projects, lambda row: _value(row, "Name", "name") == "service", "service project")
@@ -609,8 +706,14 @@ def ensure_glance_identity_objects(password: str, query=subprocess_query, mutate
         raise RuntimeError("global admin role must exist exactly once")
     admin_role_id = _value(role_rows[0], "ID", "id")
     role_show = query(["role", "show", str(admin_role_id)])
-    if _value(role_show, "name", "Name") != "admin" or _value(role_show, "domain_id", "Domain") not in (None, ""):
+    if not (
+        admin_role_id and str(_value(role_show, "id", "ID") or "") == str(admin_role_id)
+        and _value(role_show, "name", "Name") == "admin"
+        and _value(role_show, "domain_id", "Domain") in (None, "")
+    ):
         raise RuntimeError("admin role is not global")
+    admin_role_id = str(admin_role_id)
+    service_project_id = str(service_project_id)
 
     users = query(["user", "list", "--domain", "default"])
     user_rows = _exact_rows(users, lambda row: _value(row, "Name", "name") == "glance", "Glance user")
@@ -620,24 +723,18 @@ def ensure_glance_identity_objects(password: str, query=subprocess_query, mutate
         user_rows = _exact_rows(users, lambda row: _value(row, "Name", "name") == "glance", "Glance user after create")
     if len(user_rows) != 1:
         raise RuntimeError("Glance user final cardinality mismatch")
-    glance_user_id = _value(user_rows[0], "ID", "id")
-    user_show = query(["user", "show", str(glance_user_id)])
-    user = {
-        "id": _value(user_show, "id", "ID"), "name": _value(user_show, "name", "Name"),
-        "domain_id": _value(user_show, "domain_id", "Domain"),
-        "enabled": _value(user_show, "enabled", "Enabled"),
-    }
+    glance_user_id = str(_value(user_rows[0], "ID", "id") or "")
+    user_show = query(["user", "show", glance_user_id])
+    user = validate_glance_user_stage(user_rows, user_show)
+    glance_user_id = user["id"]
 
-    raw_assignments = query(["role", "assignment", "list", "--user", str(glance_user_id)])
+    raw_assignments = query(["role", "assignment", "list", "--user", glance_user_id])
     if len(raw_assignments) == 0:
-        mutate(["role", "add", "--project", str(service_project_id), "--user", str(glance_user_id), str(admin_role_id)])
-        raw_assignments = query(["role", "assignment", "list", "--user", str(glance_user_id)])
-    assignments = [{
-        "role": _value(row, "Role", "role"), "user": _value(row, "User", "user"),
-        "project": _value(row, "Project", "project"), "group": _value(row, "Group", "group"),
-        "domain": _value(row, "Domain", "domain"), "system": _value(row, "System", "system"),
-        "inherited": _value(row, "Inherited", "inherited"),
-    } for row in raw_assignments]
+        mutate(["role", "add", "--project", service_project_id, "--user", glance_user_id, admin_role_id])
+        raw_assignments = query(["role", "assignment", "list", "--user", glance_user_id])
+    assignments = validate_glance_assignment_stage(
+        raw_assignments, glance_user_id, service_project_id, admin_role_id
+    )
 
     services = query(["service", "list"])
     service_rows = _exact_rows(
@@ -655,36 +752,33 @@ def ensure_glance_identity_objects(password: str, query=subprocess_query, mutate
         )
     if len(service_rows) != 1:
         raise RuntimeError("Glance image service final cardinality mismatch")
-    image_service_id = _value(service_rows[0], "ID", "id")
-    service_show = query(["service", "show", str(image_service_id)])
-    service = {
-        "id": _value(service_show, "id", "ID"), "name": _value(service_show, "name", "Name"),
-        "type": _value(service_show, "type", "Type"), "enabled": _value(service_show, "enabled", "Enabled"),
-    }
+    image_service_id = str(_value(service_rows[0], "ID", "id") or "")
+    service_show = query(["service", "show", image_service_id])
+    service = validate_glance_service_stage(service_rows, service_show)
+    image_service_id = service["id"]
 
-    endpoint_rows = query(["endpoint", "list", "--service", str(image_service_id)])
-    if len(endpoint_rows) == 0:
+    endpoint_rows = query(["endpoint", "list", "--service", image_service_id])
+    if endpoint_rows:
+        endpoints = validate_glance_endpoint_stage(
+            endpoint_rows, image_service_id, {"public", "internal", "admin"}, query
+        )
+    else:
+        endpoints = []
+        created_interfaces: set[str] = set()
         for interface in ("public", "internal", "admin"):
-            mutate(["endpoint", "create", "--region", "RegionOne", "image", interface, "http://controller:9292"])
-        endpoint_rows = query(["endpoint", "list", "--service", str(image_service_id)])
-    if len(endpoint_rows) != 3:
-        raise RuntimeError(f"Glance endpoint cardinality mismatch: {len(endpoint_rows)}")
-    endpoints = []
-    for row in endpoint_rows:
-        endpoint_id = _value(row, "ID", "id")
-        endpoint_show = query(["endpoint", "show", str(endpoint_id)])
-        endpoints.append({
-            "id": _value(endpoint_show, "id", "ID"),
-            "interface": _value(endpoint_show, "interface", "Interface"),
-            "region": _value(endpoint_show, "region", "Region"),
-            "service_id": _value(endpoint_show, "service_id", "Service ID"),
-            "url": _value(endpoint_show, "url", "URL"),
-            "enabled": _value(endpoint_show, "enabled", "Enabled"),
-        })
+            mutate([
+                "endpoint", "create", "--region", "RegionOne", image_service_id,
+                interface, "http://controller:9292",
+            ])
+            created_interfaces.add(interface)
+            endpoint_rows = query(["endpoint", "list", "--service", image_service_id])
+            endpoints = validate_glance_endpoint_stage(
+                endpoint_rows, image_service_id, set(created_interfaces), query
+            )
 
     evidence = {
         "user": user, "service": service, "assignments": assignments, "endpoints": endpoints,
-        "admin_role_id": str(admin_role_id), "service_project_id": str(service_project_id),
+        "admin_role_id": admin_role_id, "service_project_id": service_project_id,
     }
     validate_glance_identity_evidence(evidence)
     return evidence
