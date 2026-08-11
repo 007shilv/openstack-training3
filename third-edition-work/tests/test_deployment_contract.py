@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -59,6 +60,7 @@ DESTRUCTIVE_COMMANDS = {
 DEVICE_LITERAL = re.compile(r"/dev/sd[a-z](?:\d+)?\b")
 VARIABLE_REFERENCE = re.compile(r"^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?$")
 ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*?)\s*$")
+HEREDOC_OPEN = re.compile(r"<<-?\s*(?:(['\"])([A-Za-z_][A-Za-z0-9_]*)\1|([A-Za-z_][A-Za-z0-9_]*))")
 
 
 def strip_shell_comment(line: str) -> str:
@@ -88,8 +90,34 @@ def strip_shell_comment(line: str) -> str:
     return "".join(result).rstrip()
 
 
+def shell_sections(text: str) -> tuple[list[str], list[tuple[str, str, str]]]:
+    """Separate executable shell lines from heredoc bodies without executing either."""
+    executable: list[str] = []
+    heredocs: list[tuple[str, str, str]] = []
+    raw_lines = text.splitlines()
+    index = 0
+    while index < len(raw_lines):
+        raw_line = raw_lines[index]
+        line = strip_shell_comment(raw_line)
+        if line.strip():
+            executable.append(line)
+        opener = HEREDOC_OPEN.search(line)
+        if opener is None:
+            index += 1
+            continue
+        delimiter = opener.group(2) or opener.group(3)
+        body: list[str] = []
+        index += 1
+        while index < len(raw_lines) and raw_lines[index].strip() != delimiter:
+            body.append(raw_lines[index])
+            index += 1
+        heredocs.append((line, delimiter, "\n".join(body)))
+        index += 1  # Skip the terminator when present.
+    return executable, heredocs
+
+
 def active_lines(text: str) -> list[str]:
-    return [line for line in (strip_shell_comment(raw) for raw in text.splitlines()) if line.strip()]
+    return shell_sections(text)[0]
 
 
 def unquote(value: str) -> str:
@@ -168,6 +196,19 @@ def command_tokens(line: str) -> tuple[str, list[str]] | None:
     return None
 
 
+def first_shell_command(line: str) -> tuple[str, list[str]] | None:
+    try:
+        tokens = shlex.split(line, posix=True)
+    except ValueError:
+        return None
+    ignored = {"if", "then", "else", "fi", "do", "done", "!", "{"}
+    for index, token in enumerate(tokens):
+        if token in ignored or ASSIGNMENT.match(token):
+            continue
+        return token.rsplit("/", maxsplit=1)[-1], tokens[index + 1 :]
+    return None
+
+
 def disk_command_targets(text: str) -> tuple[list[str], list[str]]:
     """Return resolved disk targets and fail-closed errors for unsafe unknown targets."""
     constants = shell_constants(text)
@@ -178,23 +219,35 @@ def disk_command_targets(text: str) -> tuple[list[str], list[str]]:
         if parsed is None:
             continue
         command, arguments = parsed
+        positional: list[str] = []
         skip_next = False
         for argument in arguments:
             if skip_next:
                 skip_next = False
+            elif argument in {"-L", "-t", "-T", "-n"}:
+                skip_next = True
+            elif argument.startswith("-"):
                 continue
-            if argument in {"-L", "-t", "-T", "-n", "-y", "-f"}:
-                skip_next = argument in {"-L", "-t", "-T", "-n"}
-                continue
-            value = argument.split("=", maxsplit=1)[-1] if command == "dd" and "=" in argument else argument
+            else:
+                positional.append(argument)
+        if command == "dd":
+            target_values = [argument.split("=", maxsplit=1)[1] for argument in arguments if argument.startswith("of=")]
+        elif command == "vgcreate":
+            target_values = positional[1:]
+        elif command.startswith("mkfs.") or command == "mkfs":
+            target_values = positional[-1:]
+        elif command in {"parted", "fdisk", "sgdisk"}:
+            target_values = positional[:1]
+        else:
+            target_values = positional
+        for value in target_values:
             resolved = resolve_value(value, constants)
-            literal = DEVICE_LITERAL.search(resolved or "")
-            if literal:
-                targets.append(literal.group(0))
-                continue
-            variable = VARIABLE_REFERENCE.match(value)
-            if variable and (command in {"pvcreate", "pvremove", "wipefs", "parted", "fdisk", "sgdisk", "mkswap"} or re.search(r"(?:DEVICE|DISK|TARGET)", variable.group(1))):
+            if resolved is None:
                 errors.append(f"{command} has unresolved disk variable {value!r}: {line.strip()}")
+            elif not DEVICE_LITERAL.fullmatch(resolved):
+                errors.append(f"{command} has non-device target {value!r}: {line.strip()}")
+            else:
+                targets.append(resolved)
     return targets, errors
 
 
@@ -205,19 +258,44 @@ def destructive_disk_violations(text: str) -> list[str]:
 
 def antelope_contract_violations(text: str) -> list[str]:
     lines = active_lines(text)
-    active = "\n".join(lines)
     constants = shell_constants(text)
     violations: list[str] = []
     if resolve_value(constants.get("ANTELOPE_REPO_FILE", ""), constants) != "/etc/yum.repos.d/openstack-antelope.repo":
         violations.append("ANTELOPE_REPO_FILE is not the active openstack-antelope.repo path")
-    if not any(re.search(r"\bdnf\b.*\binstall\s+openstack-release-antelope\b", line) for line in lines):
+    installs_release = False
+    for line in lines:
+        parsed = first_shell_command(line)
+        if parsed is None:
+            continue
+        command, arguments = parsed
+        if command in {"dnf", "dnf_install_prefer_local"} and "openstack-release-antelope" in arguments:
+            installs_release = True
+    if not installs_release:
         violations.append("no active dnf install command for openstack-release-antelope")
-    if not any(
-        "openEuler-24.03-LTS-SP3" in line
+    shell_rewrite = any(
+        (parsed := first_shell_command(line)) is not None
+        and parsed[0] == "sed"
+        and "openEuler-24.03-LTS-SP3" in line
         and "openEuler-24.03-LTS-SP2" in line
         and "ANTELOPE_REPO_FILE" in line
         for line in lines
-    ):
+    )
+    python_rewrite = False
+    for opener, _delimiter, body in shell_sections(text)[1]:
+        parsed = first_shell_command(opener)
+        if parsed is None or parsed[0] != "python3":
+            continue
+        try:
+            tree = ast.parse(body)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "replace":
+                continue
+            if len(node.args) >= 2 and all(isinstance(argument, ast.Constant) and isinstance(argument.value, str) for argument in node.args[:2]):
+                if node.args[0].value == "openEuler-24.03-LTS-SP3" and node.args[1].value == "openEuler-24.03-LTS-SP2":
+                    python_rewrite = True
+    if not shell_rewrite and not python_rewrite:
         violations.append("no active SP3-to-SP2 correction for ANTELOPE_REPO_FILE")
     return violations
 
@@ -352,3 +430,41 @@ def test_unresolved_destructive_disk_variable_is_rejected() -> None:
 
 def test_system_disk_warning_comment_is_not_a_destructive_violation() -> None:
     assert destructive_disk_violations("# Never run pvcreate /dev/sda on the system disk.\n") == []
+
+
+def test_cat_and_echo_heredoc_antelope_forgeries_are_rejected() -> None:
+    cat_forgery = """\
+ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"
+cat <<'PY'
+dnf install openstack-release-antelope
+sed -ri 's#openEuler-24.03-LTS-SP3#openEuler-24.03-LTS-SP2#g' "${ANTELOPE_REPO_FILE}"
+PY
+"""
+    echo_forgery = """\
+ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"
+echo 'dnf install openstack-release-antelope'
+echo 'openEuler-24.03-LTS-SP3 openEuler-24.03-LTS-SP2 ANTELOPE_REPO_FILE'
+"""
+    assert antelope_contract_violations(cat_forgery)
+    assert antelope_contract_violations(echo_forgery)
+
+
+def test_python_heredoc_replace_is_accepted_only_when_its_ast_is_valid() -> None:
+    python_fix = """\
+ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"
+dnf install openstack-release-antelope
+python3 - <<'PY'
+url = "openEuler-24.03-LTS-SP3".replace("openEuler-24.03-LTS-SP3", "openEuler-24.03-LTS-SP2")
+PY
+"""
+    assert antelope_contract_violations(python_fix) == []
+
+
+def test_dd_and_mkfs_unknown_targets_fail_closed() -> None:
+    assert destructive_disk_violations('dd if=/dev/zero of="${FOO}"\n')
+    assert destructive_disk_violations('mkfs.xfs "${FOO}"\n')
+
+
+def test_semantic_disk_targets_accept_safe_variable_and_reject_system_partitions() -> None:
+    assert destructive_disk_violations('SAFE="/dev/sdb"\nmkfs.xfs -L data "${SAFE}"\n') == []
+    assert destructive_disk_violations('TARGET="/dev/sda2"\nparted "${TARGET}" print\n')
