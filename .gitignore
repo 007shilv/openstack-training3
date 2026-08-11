@@ -3,6 +3,11 @@
 worktrees/
 .superpowers/
 
+# Runtime credentials must remain outside version control.
+.env
+.env.*
+!.env.example
+
 # User-provided binary sources and large teaching artifacts
 *.docx
 *.doc
