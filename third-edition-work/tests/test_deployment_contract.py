@@ -1839,37 +1839,22 @@ def test_manual_keystone_admin_openrc_installer_is_exclusive_atomic_and_cleanup_
 
 
 def test_manual_glance_session_preserves_required_order_and_stops_on_failure() -> None:
-    text = manual_shell_text("04-glance.md")
-    stages = (
-        "stage_starting_state",
-        "stage_package_transaction",
-        "stage_database_and_grants",
-        "stage_identity_objects",
-        "stage_configuration",
-        "stage_schema",
-        "stage_api",
-        "stage_image_lifecycle",
-        "stage_cross_slice_audit",
+    markdown = manual_markdown("04-glance.md")
+    markers = (
+        "def run_after_both_gates",
+        "validate_glance_preflight",
+        "CREATE DATABASE IF NOT EXISTS glance",
+        "def ensure_glance_identity_objects",
+        "rpm -V openstack-glance openstack-glance-api",
+        "glance-manage db_sync",
+        "systemctl enable --now openstack-glance-api",
+        "def run_image_lifecycle",
+        "## 依赖顺序驱动器与跨切片收口",
     )
-    runner = shell_function_body(text, "run_glance_sequence")
-    assert runner is not None
-    calls = [line.strip() for line in active_lines(runner) if line.strip() in stages]
-    assert calls == list(stages)
-    failing_stage = "stage_schema"
-    mocks = "\n".join(
-        f"{stage}() {{ printf '%s\\n' {stage}; {'return 23' if stage == failing_stage else 'return 0'}; }}"
-        for stage in stages
-    )
-    completed = run_git_bash(
-        f"""
-        set -Eeuo pipefail
-        {shell_function_definition(text, "run_glance_sequence")}
-        {mocks}
-        run_glance_sequence
-        """
-    )
-    assert completed.returncode != 0
-    assert completed.stdout.splitlines() == list(stages[: stages.index(failing_stage) + 1])
+    positions = [markdown.index(marker) for marker in markers]
+    assert positions == sorted(positions)
+    assert "stage_starting_state()" not in markdown
+    assert "run_glance_sequence" not in markdown
 
 
 def test_manual_glance_dual_node_gate_is_strict_and_short_circuits() -> None:
@@ -1879,17 +1864,7 @@ def test_manual_glance_dual_node_gate_is_strict_and_short_circuits() -> None:
         "known_hosts.compute", "paramiko.RejectPolicy()", "ens34", "openstack-local",
         "/dev/sdb", "/dev/sdc", "lsblk -s -nrpo NAME", "wipefs --no-act", "blkid -p",
     ))
-    source = next(
-        block for block in markdown_fenced_blocks("04-glance.md", "python")
-        if "def run_dual_node_starting_gate" in block
-    )
-    tree = ast.parse(source)
-    selected = [
-        node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "run_dual_node_starting_gate"
-    ]
-    namespace: dict[str, object] = {"connect_strict": lambda *_args: None, "run_checked": lambda *_args: None}
-    exec(compile(ast.Module(body=selected, type_ignores=[]), "glance-dual-node-gate", "exec"), namespace)
+    namespace = _glance_python_function_namespace("run_dual_node_starting_gate")
     calls: list[str] = []
 
     class FakeClient:
@@ -1999,20 +1974,7 @@ def test_manual_glance_runtime_secret_loader_executes_fail_closed_branches(
 
 
 def test_manual_glance_identity_classifier_handles_zero_one_duplicate_error_and_mutations() -> None:
-    source = next(
-        block for block in markdown_fenced_blocks("04-glance.md", "python")
-        if "def decide_exact_state" in block and "def validate_glance_identity" in block
-    )
-    namespace: dict[str, object] = {}
-    exec(compile(source, "glance-identity-classifier", "exec"), namespace)
-    decide = namespace["decide_exact_state"]
-    assert decide(True, [], "user") == "CREATE"
-    assert decide(True, [{"id": "one"}], "user") == "VALIDATE"
-    with pytest.raises(RuntimeError, match="duplicate"):
-        decide(True, [{"id": "one"}, {"id": "two"}], "user")
-    with pytest.raises(RuntimeError, match="probe failed"):
-        decide(False, [], "user")
-
+    namespace = _glance_python_function_namespace("validate_glance_identity_evidence")
     evidence = {
         "user": {"id": "user", "name": "glance", "domain_id": "default", "enabled": True},
         "service": {"id": "service", "name": "glance", "type": "image", "enabled": True},
@@ -2023,11 +1985,14 @@ def test_manual_glance_identity_classifier_handles_zero_one_duplicate_error_and_
             "group": "", "domain": "", "system": "", "inherited": False,
         }],
         "endpoints": [
-            {"interface": interface, "region": "RegionOne", "service_id": "service", "url": "http://controller:9292"}
+            {
+                "interface": interface, "region": "RegionOne", "service_id": "service",
+                "url": "http://controller:9292", "enabled": True,
+            }
             for interface in ("public", "internal", "admin")
         ],
     }
-    namespace["validate_glance_identity"](evidence)
+    namespace["validate_glance_identity_evidence"](evidence)
     for mutation in ("disabled-user", "wrong-role", "duplicate-endpoint", "wrong-url"):
         broken = json.loads(json.dumps(evidence))
         if mutation == "disabled-user":
@@ -2039,7 +2004,7 @@ def test_manual_glance_identity_classifier_handles_zero_one_duplicate_error_and_
         else:
             broken["endpoints"][0]["url"] = "http://wrong:9292"
         with pytest.raises(ValueError):
-            namespace["validate_glance_identity"](broken)
+            namespace["validate_glance_identity_evidence"](broken)
 
 
 def test_manual_glance_atomic_config_and_sanitized_snapshot_are_exact(tmp_path: Path) -> None:
@@ -2099,12 +2064,7 @@ def test_manual_glance_schema_api_and_later_boundaries_are_fail_closed() -> None
 
 
 def test_manual_glance_image_lifecycle_exact_ownership_and_cleanup() -> None:
-    source = next(
-        block for block in markdown_fenced_blocks("04-glance.md", "python")
-        if "def classify_task_image" in block
-    )
-    namespace: dict[str, object] = {}
-    exec(compile(source, "glance-task-image-classifier", "exec"), namespace)
+    namespace = _glance_python_function_namespace("classify_task_image")
     classify = namespace["classify_task_image"]
     assert classify([], "task", "owner", "artifact") == "ABSENT"
     good = {"id": "image-id", "name": "task", "properties": {"task_owner": "owner", "task_artifact": "artifact"}}
@@ -2116,11 +2076,333 @@ def test_manual_glance_image_lifecycle_exact_ownership_and_cleanup() -> None:
     with pytest.raises(RuntimeError, match="not exactly task-owned"):
         classify([wrong], "task", "owner", "artifact")
 
-    active = "\n".join(active_lines(manual_shell_text("04-glance.md")))
-    assert "task5c-synthetic-validation-v1" in active
-    assert "task_owner=\"$task_owner\"" in active and "task_artifact=\"$task_artifact\"" in active
-    assert "--disk-format raw" in active and "--container-format bare" in active and "--private" in active
-    assert "sha256sum" in active and "cmp -s -- \"$payload\" \"$download\"" in active
-    assert "openstack image delete \"$image_id\"" in active
-    assert "rm -f -- \"$payload\" \"$download\"" in active and "rmdir -- \"$workdir\"" in active
-    assert "openstack image delete --" not in active
+    markdown = manual_markdown("04-glance.md")
+    assert "task5c-synthetic-validation-v1" in markdown
+    assert 'f"task_owner={TASK_OWNER}"' in markdown and 'f"task_artifact={TASK_ARTIFACT}"' in markdown
+    assert '"--disk-format", "raw"' in markdown and '"--container-format", "bare"' in markdown
+    assert "hashlib.sha256" in markdown and "downloaded task image digest/size mismatch" in markdown
+    assert "_delete_verified_candidate(executor, candidate_id" in markdown
+    assert "_cleanup_owned_workdir(workdir, identity, (payload, download))" in markdown
+
+
+def _glance_python_function_namespace(required_name: str) -> dict[str, object]:
+    candidates = markdown_fenced_blocks("04-glance.md", "python")
+    candidates.extend(body for _opener, _delimiter, body in shell_sections(manual_shell_text("04-glance.md"))[1])
+    source = next(block for block in candidates if f"def {required_name}" in block)
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.FunctionDef, ast.ClassDef))
+    ]
+    namespace: dict[str, object] = {}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), f"glance-{required_name}", "exec"), namespace)
+    return namespace
+
+
+def test_manual_glance_production_dual_gate_blocks_all_mutation_on_either_node_failure() -> None:
+    namespace = _glance_python_function_namespace("run_after_both_gates")
+    run_guarded = namespace["run_after_both_gates"]
+    for name in ("CONTROLLER_GATE", "COMPUTE_GATE"):
+        with tempfile.NamedTemporaryFile("w", suffix=".sh", encoding="utf-8", newline="\n", delete=False) as stream:
+            stream.write(namespace[name])
+            gate_path = Path(stream.name)
+        try:
+            syntax = subprocess.run([str(GIT_BASH), "-n", str(gate_path)], text=True, capture_output=True, check=False)
+            assert syntax.returncode == 0, syntax.stderr
+        finally:
+            gate_path.unlink(missing_ok=True)
+    calls: list[str] = []
+
+    class FakeClient:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def close(self) -> None:
+            calls.append(f"close:{self.name}")
+
+    def connector(name: str, _password: str) -> FakeClient:
+        calls.append(f"connect:{name}")
+        return FakeClient(name)
+
+    def mutation() -> None:
+        calls.append("MUTATION")
+
+    for failing in ("controller", "compute"):
+        calls.clear()
+
+        def runner(client: FakeClient, _script: str, failing: str = failing) -> None:
+            assert _script == namespace[f"{client.name.upper()}_GATE"]
+            calls.append(f"run:{client.name}")
+            if client.name == failing:
+                raise RuntimeError(f"{failing} failed")
+
+        with pytest.raises(RuntimeError, match=f"{failing} failed"):
+            run_guarded(
+                "memory-only", mutation, connector=connector, runner=runner,
+            )
+        assert "MUTATION" not in calls
+        if failing == "controller":
+            assert calls == ["connect:controller", "run:controller", "close:controller"]
+        else:
+            assert calls == [
+                "connect:controller", "run:controller", "close:controller",
+                "connect:compute", "run:compute", "close:compute",
+            ]
+
+    calls.clear()
+    run_guarded(
+        "memory-only", mutation, connector=connector,
+        runner=lambda client, script: (
+            script == namespace[f"{client.name.upper()}_GATE"]
+            and calls.append(f"run:{client.name}")
+        ),
+    )
+    assert calls == [
+        "connect:controller", "run:controller", "close:controller",
+        "connect:compute", "run:compute", "close:compute", "MUTATION",
+    ]
+
+
+class _FakeGlanceIdentity:
+    def __init__(self, scenario: str) -> None:
+        self.scenario = scenario
+        self.user = scenario in {"correct", "duplicate"}
+        self.service = scenario in {"correct", "duplicate"}
+        self.assignment = scenario in {"correct", "duplicate"}
+        self.endpoints = scenario in {"correct", "duplicate"}
+        self.mutations: list[tuple[str, ...]] = []
+
+    @staticmethod
+    def _endpoint(interface: str, suffix: str = "") -> dict[str, object]:
+        return {
+            "ID": f"endpoint-{interface}{suffix}", "Interface": interface,
+            "Region": "RegionOne", "Service ID": "image-service",
+            "Service Type": "image", "URL": "http://controller:9292",
+        }
+
+    def query(self, args: list[str]) -> object:
+        key = tuple(args[:2])
+        if self.scenario == "query_error" and key == ("user", "list"):
+            raise RuntimeError("query failed")
+        if key == ("project", "list"):
+            return [{"ID": "service-project", "Name": "service"}]
+        if key == ("project", "show"):
+            return {
+                "id": "service-project", "name": "service", "domain_id": "default",
+                "enabled": True, "is_domain": False,
+            }
+        if key == ("role", "list"):
+            return [{"ID": "admin-role", "Name": "admin", "Domain": ""}]
+        if key == ("role", "show"):
+            return {"id": "admin-role", "name": "admin", "domain_id": None}
+        if key == ("user", "list"):
+            rows = ([{"ID": "glance-user", "Name": "glance"}] if self.user else [])
+            return rows + ([{"ID": "duplicate-user", "Name": "glance"}] if self.scenario == "duplicate" else [])
+        if key == ("user", "show"):
+            return {"id": "glance-user", "name": "glance", "domain_id": "default", "enabled": True}
+        if key == ("role", "assignment"):
+            rows = ([{
+                "Role": "admin-role", "User": "glance-user", "Project": "service-project",
+                "Group": "", "Domain": "", "System": "", "Inherited": False,
+            }] if self.assignment else [])
+            return rows + ([dict(rows[0])] if self.scenario == "duplicate" and rows else [])
+        if key == ("service", "list"):
+            rows = ([{"ID": "image-service", "Name": "glance", "Type": "image"}] if self.service else [])
+            return rows + ([{"ID": "duplicate-service", "Name": "glance", "Type": "image"}] if self.scenario == "duplicate" else [])
+        if key == ("service", "show"):
+            return {"id": "image-service", "name": "glance", "type": "image", "enabled": True}
+        if key == ("endpoint", "list"):
+            rows = ([self._endpoint(interface) for interface in ("public", "internal", "admin")] if self.endpoints else [])
+            return rows + ([self._endpoint("public", "-duplicate")] if self.scenario == "duplicate" else [])
+        if key == ("endpoint", "show"):
+            endpoint_id = args[2]
+            interface = endpoint_id.removeprefix("endpoint-").split("-duplicate", 1)[0]
+            return {
+                "id": endpoint_id, "interface": interface, "region": "RegionOne",
+                "service_id": "image-service", "url": "http://controller:9292", "enabled": True,
+            }
+        raise AssertionError(f"unexpected identity query: {args}")
+
+    def mutate(self, args: list[str]) -> object:
+        self.mutations.append(tuple(args))
+        key = tuple(args[:2])
+        if key == ("user", "create"):
+            self.user = True
+            return {"id": "glance-user"}
+        if key == ("role", "add"):
+            self.assignment = True
+            return None
+        if key == ("service", "create"):
+            self.service = True
+            return {"id": "image-service"}
+        if key == ("endpoint", "create"):
+            if args[-2] == "admin":
+                self.endpoints = True
+            return {"id": f"endpoint-{args[-2]}"}
+        raise AssertionError(f"unexpected identity mutation: {args}")
+
+
+@pytest.mark.parametrize(
+    ("scenario", "success", "minimum_mutations"),
+    (("zero", True, 6), ("correct", True, 0), ("duplicate", False, 0), ("query_error", False, 0)),
+)
+def test_manual_glance_production_identity_ensure_executes_all_state_branches(
+    scenario: str, success: bool, minimum_mutations: int
+) -> None:
+    namespace = _glance_python_function_namespace("ensure_glance_identity_objects")
+    fake = _FakeGlanceIdentity(scenario)
+    if success:
+        evidence = namespace["ensure_glance_identity_objects"](
+            "memory-only", query=fake.query, mutate=fake.mutate
+        )
+        namespace["validate_glance_identity_evidence"](evidence)
+        assert len(fake.mutations) >= minimum_mutations
+        if scenario == "correct":
+            assert fake.mutations == []
+    else:
+        with pytest.raises((RuntimeError, ValueError)):
+            namespace["ensure_glance_identity_objects"](
+                "memory-only", query=fake.query, mutate=fake.mutate
+            )
+        assert fake.mutations == []
+
+
+def test_manual_glance_production_version_validator_rejects_status_and_body_failures() -> None:
+    namespace = _glance_python_function_namespace("validate_glance_version_response")
+    validate = namespace["validate_glance_version_response"]
+    good = {"versions": [{"id": "v2.16", "status": "CURRENT"}]}
+    validate(200, good)
+    validate(300, good)
+    for status, payload in ((404, good), (500, good), (300, {"versions": []}), (200, {"versions": [{"id": "v1", "status": "SUPPORTED"}]})):
+        with pytest.raises((RuntimeError, ValueError)):
+            validate(status, payload)
+
+
+def test_manual_glance_production_grant_validator_rejects_probe_host_and_scope_mutations() -> None:
+    namespace = _glance_python_function_namespace("validate_glance_grant_evidence")
+    validate = namespace["validate_glance_grant_evidence"]
+    account = {
+        "global": [{"privilege": "USAGE", "grantable": "NO"}],
+        "schema": [
+            {"schema": "glance", "privilege": privilege, "grantable": "NO"}
+            for privilege in sorted(namespace["EXPECTED_SCHEMA_PRIVILEGES"])
+        ],
+        "table": [], "column": [], "routine": [],
+    }
+    good = {
+        "probe_ok": True,
+        "hosts": ["%", "127.0.0.1", "localhost"],
+        "accounts": {host: json.loads(json.dumps(account)) for host in ("%", "127.0.0.1", "localhost")},
+        "proxy": [], "roles": [],
+    }
+    validate(good)
+    mutations = []
+    extra_host = json.loads(json.dumps(good)); extra_host["hosts"].append("controller"); mutations.append(extra_host)
+    extra_global = json.loads(json.dumps(good)); extra_global["accounts"]["%"]["global"].append({"privilege": "SUPER", "grantable": "NO"}); mutations.append(extra_global)
+    extra_schema = json.loads(json.dumps(good)); extra_schema["accounts"]["localhost"]["schema"].append({"schema": "nova", "privilege": "SELECT", "grantable": "NO"}); mutations.append(extra_schema)
+    extra_table = json.loads(json.dumps(good)); extra_table["accounts"]["127.0.0.1"]["table"].append({"schema": "glance", "table": "images", "privilege": "SELECT"}); mutations.append(extra_table)
+    extra_routine = json.loads(json.dumps(good)); extra_routine["accounts"]["%"]["routine"].append({"schema": "nova", "routine": "unsafe", "privilege": "EXECUTE"}); mutations.append(extra_routine)
+    extra_proxy = json.loads(json.dumps(good)); extra_proxy["proxy"].append(["%", "glance", "%", "root", "YES"]); mutations.append(extra_proxy)
+    failed_probe = json.loads(json.dumps(good)); failed_probe["probe_ok"] = False; mutations.append(failed_probe)
+    for mutation in mutations:
+        with pytest.raises((RuntimeError, ValueError)):
+            validate(mutation)
+
+
+class _FakeImageLifecycle:
+    def __init__(self, scenario: str, backend_root: Path) -> None:
+        self.scenario = scenario
+        self.backend_root = backend_root
+        self.backend_root.mkdir()
+        self.deleted_ids: list[str] = []
+        self.images: dict[str, dict[str, object]] = {
+            "foreign-image": {
+                "id": "foreign-image", "name": "user-image", "status": "active",
+                "visibility": "private", "disk_format": "raw", "container_format": "bare",
+                "size": 4, "properties": {"task_owner": "someone-else"},
+            }
+        }
+        if scenario == "foreign":
+            self.images["foreign-image"]["name"] = "task5c-synthetic-validation-v1"
+        elif scenario == "preexisting_exact":
+            self.images["preexisting-task-image"] = {
+                "id": "preexisting-task-image", "name": "task5c-synthetic-validation-v1",
+                "status": "active", "visibility": "private", "disk_format": "raw",
+                "container_format": "bare", "size": 4,
+                "properties": {
+                    "task_owner": "lab-task-5c", "task_artifact": "synthetic-validation-v1",
+                },
+            }
+        elif scenario == "duplicate":
+            for image_id in ("duplicate-one", "duplicate-two"):
+                self.images[image_id] = {
+                    "id": image_id, "name": "task5c-synthetic-validation-v1",
+                    "properties": {
+                        "task_owner": "lab-task-5c", "task_artifact": "synthetic-validation-v1",
+                    },
+                }
+
+    def __call__(self, args: list[str], expect_json: bool = False) -> object:
+        key = tuple(args[:2])
+        if key == ("image", "list"):
+            return [{"ID": image_id, "Name": row["name"]} for image_id, row in self.images.items()]
+        if key == ("image", "show"):
+            image_id = args[2]
+            if image_id not in self.images:
+                raise RuntimeError("show failed")
+            return dict(self.images[image_id])
+        if key == ("image", "create"):
+            payload = Path(args[args.index("--file") + 1])
+            data = payload.read_bytes()
+            image_id = "created-task-image"
+            self.images[image_id] = {
+                "id": image_id, "name": "task5c-synthetic-validation-v1", "status": "active",
+                "visibility": "private", "disk_format": "raw", "container_format": "bare",
+                "size": len(data), "properties": {
+                    "task_owner": "lab-task-5c", "task_artifact": "synthetic-validation-v1",
+                },
+            }
+            (self.backend_root / image_id).write_bytes(data)
+            return {"id": image_id}
+        if key == ("image", "save"):
+            if self.scenario == "mid_failure":
+                raise RuntimeError("injected download failure")
+            destination = Path(args[args.index("--file") + 1])
+            image_id = args[-1]
+            destination.write_bytes((self.backend_root / image_id).read_bytes())
+            return None
+        if key == ("image", "delete"):
+            image_id = args[2]
+            self.deleted_ids.append(image_id)
+            self.images.pop(image_id)
+            (self.backend_root / image_id).unlink()
+            return None
+        raise AssertionError(f"unexpected image command: {args}, expect_json={expect_json}")
+
+
+@pytest.mark.parametrize(
+    "scenario", ("foreign", "preexisting_exact", "duplicate", "mid_failure", "success")
+)
+def test_manual_glance_production_image_lifecycle_cleanup_is_exact(
+    scenario: str, tmp_path: Path
+) -> None:
+    namespace = _glance_python_function_namespace("run_image_lifecycle")
+    executor = _FakeImageLifecycle(scenario=scenario, backend_root=tmp_path / "backend")
+    if scenario == "success":
+        result = namespace["run_image_lifecycle"](
+            executor=executor, work_root=tmp_path, backend_root=tmp_path / "backend"
+        )
+        assert result["status"] == "PASS"
+    else:
+        with pytest.raises((RuntimeError, ValueError)):
+            namespace["run_image_lifecycle"](
+                executor=executor, work_root=tmp_path, backend_root=tmp_path / "backend"
+            )
+    assert not list(tmp_path.glob(".task5c-image.*"))
+    if scenario in {"foreign", "preexisting_exact", "duplicate"}:
+        assert executor.deleted_ids == []
+    elif scenario == "mid_failure":
+        assert executor.deleted_ids == ["created-task-image"]
+        assert "foreign-image" not in executor.deleted_ids
+    else:
+        assert executor.deleted_ids == ["created-task-image"]

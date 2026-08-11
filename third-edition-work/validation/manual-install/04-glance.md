@@ -22,6 +22,143 @@ HOSTS = {
     "compute": ("192.168.234.150", Path(".superpowers/sdd/known_hosts.compute")),
 }
 
+CONTROLLER_GATE = r'''
+set -Eeuo pipefail
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+assert_absent_package() {
+  local package=$1 output rc
+  if output=$(LC_ALL=C rpm -q "$package" 2>&1); then
+    die "unexpected package installed: $package"
+  else
+    rc=$?
+    [[ $rc -eq 1 && $output == "package $package is not installed" ]] ||
+      die "RPM probe failed: $package"
+  fi
+}
+[[ $(hostnamectl --static) == controller ]] || die "controller hostname drift"
+ip -4 -o addr show dev ens33 | grep -Fq '192.168.234.151/24' || die "controller ens33 drift"
+ens34_output=$(ip -4 -o addr show dev ens34) || die "controller ens34 probe failed"
+[[ -z $ens34_output ]] || die "controller ens34 has IPv4"
+[[ $(timedatectl show -p NTPSynchronized --value) == yes ]] || die "controller clock not synchronized"
+for service in chronyd mariadb rabbitmq-server memcached httpd; do
+  systemctl is-active --quiet "$service" || die "$service inactive"
+  systemctl is-enabled --quiet "$service" || die "$service disabled"
+done
+[[ $(mysql -uroot --batch --skip-column-names -e 'SELECT 1;') == 1 ]] || die "MariaDB access failed"
+repo=$(dnf -q repolist --disablerepo='*' --enablerepo='openstack-local') || die "local repo probe failed"
+grep -Fq openstack-local <<<"$repo" || die "openstack-local missing"
+[[ -f /root/.openstack-lab-secrets && ! -L /root/.openstack-lab-secrets ]] || die "runtime secret unsafe"
+[[ $(stat -c '%U:%G %a %h' /root/.openstack-lab-secrets) == 'root:root 600 1' ]] || die "runtime secret metadata drift"
+[[ $(awk 'END {print NR}' /root/.openstack-lab-secrets) -eq 1 ]] || die "runtime secret line count drift"
+grep -Eq '^OPENSTACK_DEPLOY_PASSWORD=.+$' /root/.openstack-lab-secrets || die "runtime secret shape drift"
+[[ -f /root/admin-openrc && ! -L /root/admin-openrc ]] || die "admin-openrc unsafe"
+[[ $(stat -c '%U:%G %a %h' /root/admin-openrc) == 'root:root 600 1' ]] || die "admin-openrc metadata drift"
+for package in openstack-glance openstack-placement-api openstack-nova-common \
+  openstack-neutron-common openstack-cinder-common openstack-swift-common python3-horizon; do
+  assert_absent_package "$package"
+done
+[[ $(mysql -uroot --batch --skip-column-names -e \
+  "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='glance';") == 0 ]] ||
+  die "Glance database already exists"
+glance_hosts=$(mysql -uroot --batch --skip-column-names -e \
+  "SELECT Host FROM mysql.user WHERE User='glance';") || die "Glance DB-user probe failed"
+[[ -z $glance_hosts ]] || die "Glance DB users already exist"
+for path in /etc/glance/glance-api.conf /var/lib/glance/images /root/.glance-task5c-complete; do
+  [[ ! -e $path && ! -L $path ]] || die "unexpected Glance path: $path"
+done
+listener=$(ss -H -lnt '( sport = :9292 )') || die "9292 probe failed"
+[[ -z $listener ]] || die "9292 already listens"
+source /root/admin-openrc || die "admin-openrc failed closed"
+openstack token issue -f value -c expires >/dev/null || die "protected token issuance failed"
+tmpdir=$(mktemp -d /root/.task5c-start-gate.XXXXXX)
+trap 'rm -f -- "$tmpdir/projects.json" "$tmpdir/users.json" "$tmpdir/services.json" "$tmpdir/endpoints.json"; rmdir -- "$tmpdir" 2>/dev/null || :; unset OS_PASSWORD' EXIT
+openstack project list --domain default -f json >"$tmpdir/projects.json" || die "project probe failed"
+openstack user list --domain default -f json >"$tmpdir/users.json" || die "user probe failed"
+openstack service list -f json >"$tmpdir/services.json" || die "service probe failed"
+openstack endpoint list -f json >"$tmpdir/endpoints.json" || die "endpoint probe failed"
+python3 - "$tmpdir" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+projects = json.loads((root / "projects.json").read_text())
+users = json.loads((root / "users.json").read_text())
+services = json.loads((root / "services.json").read_text())
+endpoints = json.loads((root / "endpoints.json").read_text())
+service_projects = [row for row in projects if row.get("Name") == "service"]
+if len(service_projects) != 1:
+    raise SystemExit("service project cardinality mismatch")
+if [row for row in users if row.get("Name") == "glance"]:
+    raise SystemExit("Glance user already exists")
+identity = [row for row in services if row.get("Type") == "identity"]
+if len(identity) != 1 or identity[0].get("Name") != "keystone":
+    raise SystemExit("identity service mismatch")
+if [row for row in services if row.get("Type") == "image" or row.get("Name") == "glance"]:
+    raise SystemExit("Glance service already exists")
+identity_endpoints = [row for row in endpoints if row.get("Service Type") == "identity"]
+if len(identity_endpoints) != 3 or {row.get("Interface") for row in identity_endpoints} != {"public", "internal", "admin"}:
+    raise SystemExit("identity endpoint cardinality/interface mismatch")
+if any(row.get("Region") != "RegionOne" or row.get("URL") != "http://controller:5000/v3/" for row in identity_endpoints):
+    raise SystemExit("identity endpoint binding mismatch")
+if [row for row in endpoints if row.get("Service Type") == "image" or row.get("URL") == "http://controller:9292"]:
+    raise SystemExit("Glance endpoint already exists")
+PY
+rm -f -- "$tmpdir/projects.json" "$tmpdir/users.json" "$tmpdir/services.json" "$tmpdir/endpoints.json"
+rmdir -- "$tmpdir"
+trap - EXIT
+unset OS_PASSWORD
+printf '%s\n' CONTROLLER_STARTING_GATE=PASS
+'''
+
+COMPUTE_GATE = r'''
+set -Eeuo pipefail
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+assert_absent_package() {
+  local package=$1 output rc
+  if output=$(LC_ALL=C rpm -q "$package" 2>&1); then
+    die "unexpected package installed: $package"
+  else
+    rc=$?
+    [[ $rc -eq 1 && $output == "package $package is not installed" ]] || die "RPM probe failed: $package"
+  fi
+}
+assert_compute_data_disk() {
+  local device=$1 expected_size=$2 root_source root_chain facts signatures rc
+  [[ -b $device ]] || die "$device is not a block device"
+  [[ $(blockdev --getsize64 "$device") == "$expected_size" ]] || die "$device size drift"
+  [[ $(lsblk -dnro TYPE "$device") == disk ]] || die "$device is not a whole disk"
+  root_source=$(findmnt -nro SOURCE /) || die "root source probe failed"
+  root_source=$(readlink -f "$root_source") || die "root source canonicalization failed"
+  root_chain=$(lsblk -s -nrpo NAME "$root_source") || die "root ancestry probe failed"
+  grep -Fxq "$device" <<<"$root_chain" && die "$device is a root ancestor"
+  [[ $(lsblk -nrpo NAME "$device" | sed '/^[[:space:]]*$/d' | wc -l) -eq 1 ]] || die "$device has children"
+  facts=$(lsblk -dnro FSTYPE,MOUNTPOINT "$device") || die "$device fact probe failed"
+  [[ -z ${facts//[[:space:]]/} ]] || die "$device has filesystem or mount"
+  signatures=$(wipefs --no-act --noheadings --output TYPE "$device") || die "$device wipefs probe failed"
+  [[ -z ${signatures//[[:space:]]/} ]] || die "$device has a wipefs signature"
+  if blkid -p "$device" >/dev/null 2>&1; then
+    die "$device has a signature"
+  else
+    rc=$?
+    [[ $rc -eq 2 ]] || die "$device blkid probe failed"
+  fi
+}
+[[ $(hostnamectl --static) == compute ]] || die "compute hostname drift"
+ip -4 -o addr show dev ens33 | grep -Fq '192.168.234.150/24' || die "compute ens33 drift"
+ens34_output=$(ip -4 -o addr show dev ens34) || die "compute ens34 probe failed"
+[[ -z $ens34_output ]] || die "compute ens34 has IPv4"
+[[ $(timedatectl show -p NTPSynchronized --value) == yes ]] || die "compute clock not synchronized"
+systemctl is-active --quiet chronyd || die "chronyd inactive"
+systemctl is-enabled --quiet chronyd || die "chronyd disabled"
+repo=$(dnf -q repolist --disablerepo='*' --enablerepo='openstack-local') || die "local repo probe failed"
+grep -Fq openstack-local <<<"$repo" || die "openstack-local missing"
+for package in openstack-glance openstack-placement-api openstack-nova-common \
+  openstack-neutron-common openstack-cinder-common openstack-swift-common python3-horizon; do
+  assert_absent_package "$package"
+done
+assert_compute_data_disk /dev/sdb 53687091200
+assert_compute_data_disk /dev/sdc 53687091200
+printf '%s\n' COMPUTE_STARTING_GATE=PASS
+'''
+
 
 def connect_strict(node: str, password: str) -> paramiko.SSHClient:
     host, known_hosts = HOSTS[node]
@@ -57,8 +194,8 @@ def run_dual_node_starting_gate(
     password: str,
     connector=connect_strict,
     runner=run_checked,
-    controller_gate: str = "",
-    compute_gate: str = "",
+    controller_gate: str = CONTROLLER_GATE,
+    compute_gate: str = COMPUTE_GATE,
 ) -> None:
     controller = connector("controller", password)
     try:
@@ -72,11 +209,13 @@ def run_dual_node_starting_gate(
         compute.close()
 
 
-run_dual_node_starting_gate(
-    getpass.getpass("SSH password: "),
-    controller_gate=CONTROLLER_GATE,
-    compute_gate=COMPUTE_GATE,
-)
+def run_after_both_gates(password: str, mutation, **gate_options) -> None:
+    run_dual_node_starting_gate(password, **gate_options)
+    mutation()
+
+
+if __name__ == "__main__":
+    run_dual_node_starting_gate(getpass.getpass("SSH password: "))
 ```
 
 controller 门禁检查固定地址、ens34 无 IPv4、时间同步、MariaDB/RabbitMQ/Memcached/HTTPD/Keystone、受保护 token、唯一 identity 服务及三个端点、唯一 `service` 项目；同时证明 Glance 数据库、用户、服务、端点、9292 监听、配置路径、Glance 及后续软件包均不存在。compute 门禁检查固定地址、时间、本地源、后续软件包，以及两块数据盘的只读状态。
@@ -235,41 +374,199 @@ PY
 unset OPENSTACK_DEPLOY_PASSWORD MYSQL_SOCKET
 ```
 
-实际结果：数据库 `glance` 唯一，账号主机集合精确为 `%,127.0.0.1,localhost`，受保护的 TCP 登录通过。
+授权创建后立即运行结构化证明。它不读取 `mysql.user.authentication_string`，也不执行会返回口令摘要的 `SHOW GRANTS`；只读取 information_schema 中不含凭据的权限元数据。MariaDB 10.11 实际提供 USER、SCHEMA、TABLE、COLUMN 四个权限视图，本验证器要求探针全部成功、Host 集合精确、全局层只有无权的 `USAGE`、数据库层是当前版本 `ALL PRIVILEGES` 展开的精确集合且全部只属于 `glance`，并且没有额外表级或列级授权。
+
+```python
+from __future__ import annotations
+
+import pymysql
+
+
+EXPECTED_GRANT_HOSTS = {"%", "127.0.0.1", "localhost"}
+EXPECTED_SCHEMA_PRIVILEGES = {
+    "ALTER", "ALTER ROUTINE", "CREATE", "CREATE ROUTINE", "CREATE TEMPORARY TABLES",
+    "CREATE VIEW", "DELETE", "DELETE HISTORY", "DROP", "EVENT", "EXECUTE", "INDEX",
+    "INSERT", "LOCK TABLES", "REFERENCES", "SELECT", "SHOW VIEW", "TRIGGER", "UPDATE",
+}
+
+
+def validate_glance_grant_evidence(evidence: dict) -> None:
+    if evidence.get("probe_ok") is not True:
+        raise RuntimeError("Glance grant evidence probe failed")
+    hosts = evidence.get("hosts")
+    accounts = evidence.get("accounts")
+    if not isinstance(hosts, list) or set(hosts) != EXPECTED_GRANT_HOSTS or len(hosts) != 3:
+        raise ValueError("Glance database Host set mismatch")
+    if not isinstance(accounts, dict) or set(accounts) != EXPECTED_GRANT_HOSTS:
+        raise ValueError("Glance grant-account evidence mismatch")
+    if evidence.get("proxy") != [] or evidence.get("roles") != []:
+        raise ValueError("unexpected proxy or database-role grant for Glance")
+    for host in EXPECTED_GRANT_HOSTS:
+        account = accounts[host]
+        global_rows = account.get("global")
+        schema_rows = account.get("schema")
+        if global_rows != [{"privilege": "USAGE", "grantable": "NO"}]:
+            raise ValueError(f"unexpected global privilege for glance@{host}")
+        if not isinstance(schema_rows, list) or not schema_rows:
+            raise ValueError(f"Glance schema privileges missing for {host}")
+        if any(row.get("schema") != "glance" or row.get("grantable") != "NO" for row in schema_rows):
+            raise ValueError(f"unexpected schema scope/grant option for glance@{host}")
+        privileges = {row.get("privilege") for row in schema_rows}
+        if privileges != EXPECTED_SCHEMA_PRIVILEGES or len(schema_rows) != len(EXPECTED_SCHEMA_PRIVILEGES):
+            raise ValueError(f"Glance schema privilege set mismatch for {host}")
+        if account.get("table") != [] or account.get("column") != [] or account.get("routine") != []:
+            raise ValueError(f"unexpected table/column/routine grant for glance@{host}")
+
+
+def collect_glance_grant_evidence(connection) -> dict:
+    evidence = {"probe_ok": False, "hosts": [], "accounts": {}, "proxy": [], "roles": []}
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT Host FROM mysql.user WHERE User=%s ORDER BY Host", ("glance",))
+        evidence["hosts"] = [row[0] for row in cursor.fetchall()]
+        for host in evidence["hosts"]:
+            grantee = f"'glance'@'{host}'"
+            cursor.execute(
+                "SELECT PRIVILEGE_TYPE,IS_GRANTABLE FROM information_schema.USER_PRIVILEGES "
+                "WHERE GRANTEE=%s ORDER BY PRIVILEGE_TYPE", (grantee,),
+            )
+            global_rows = [
+                {"privilege": privilege, "grantable": grantable}
+                for privilege, grantable in cursor.fetchall()
+            ]
+            cursor.execute(
+                "SELECT TABLE_SCHEMA,PRIVILEGE_TYPE,IS_GRANTABLE FROM information_schema.SCHEMA_PRIVILEGES "
+                "WHERE GRANTEE=%s ORDER BY TABLE_SCHEMA,PRIVILEGE_TYPE", (grantee,),
+            )
+            schema_rows = [
+                {"schema": schema, "privilege": privilege, "grantable": grantable}
+                for schema, privilege, grantable in cursor.fetchall()
+            ]
+            cursor.execute(
+                "SELECT TABLE_SCHEMA,TABLE_NAME,PRIVILEGE_TYPE,IS_GRANTABLE "
+                "FROM information_schema.TABLE_PRIVILEGES WHERE GRANTEE=%s", (grantee,),
+            )
+            table_rows = [
+                {"schema": schema, "table": table, "privilege": privilege, "grantable": grantable}
+                for schema, table, privilege, grantable in cursor.fetchall()
+            ]
+            cursor.execute(
+                "SELECT TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,PRIVILEGE_TYPE,IS_GRANTABLE "
+                "FROM information_schema.COLUMN_PRIVILEGES WHERE GRANTEE=%s", (grantee,),
+            )
+            column_rows = [
+                {
+                    "schema": schema, "table": table, "column": column,
+                    "privilege": privilege, "grantable": grantable,
+                }
+                for schema, table, column, privilege, grantable in cursor.fetchall()
+            ]
+            cursor.execute(
+                "SELECT Db,Routine_name,Routine_type,Proc_priv FROM mysql.procs_priv "
+                "WHERE User=%s AND Host=%s", ("glance", host),
+            )
+            routine_rows = [
+                {"schema": schema, "routine": routine, "type": routine_type, "privilege": privilege}
+                for schema, routine, routine_type, privilege in cursor.fetchall()
+            ]
+            evidence["accounts"][host] = {
+                "global": global_rows, "schema": schema_rows,
+                "table": table_rows, "column": column_rows, "routine": routine_rows,
+            }
+        cursor.execute(
+            "SELECT Host,User,Proxied_host,Proxied_user,With_grant FROM mysql.proxies_priv "
+            "WHERE User=%s OR Proxied_user=%s", ("glance", "glance"),
+        )
+        evidence["proxy"] = list(cursor.fetchall())
+        cursor.execute(
+            "SELECT Host,User,Role,Admin_option FROM mysql.roles_mapping WHERE User=%s", ("glance",),
+        )
+        evidence["roles"] = list(cursor.fetchall())
+    evidence["probe_ok"] = True
+    return evidence
+
+
+if __name__ == "__main__":
+    connection = pymysql.connect(unix_socket="/var/lib/mysql/mysql.sock", user="root")
+    try:
+        validate_glance_grant_evidence(collect_glance_grant_evidence(connection))
+    finally:
+        connection.close()
+    print("GRANT_EVIDENCE=PASS HOSTS=%,127.0.0.1,localhost GLOBAL=USAGE SCHEMA=glance TABLE=0 COLUMN=0 ROUTINE=0 PROXY=0 DBROLE=0")
+```
+
+实际结果：数据库 `glance` 唯一，账号主机集合精确为 `%,127.0.0.1,localhost`；三个账号的全局权限都只有 `USAGE`，schema 权限都只属于 `glance`，表级/列级授权均为 0；受保护的 TCP 登录通过。
 
 ### 创建或验证 Keystone 对象
 
 每个存在性查询都先区分查询成功与失败，再区分 0、1、重复。0 条时创建；1 条时必须逐字段验证并跳过；2 条及以上或查询错误时停止。端点总数还必须恰好为 3，而不只是“三种接口都能查到”。下面的生产分类器用于所有对象。
 
-```python
-def decide_exact_state(probe_ok: bool, rows: list[dict], label: str) -> str:
-    if not probe_ok:
-        raise RuntimeError(f"{label} probe failed")
-    if len(rows) == 0:
-        return "CREATE"
-    if len(rows) == 1:
-        return "VALIDATE"
-    raise RuntimeError(f"{label} duplicate objects: {len(rows)}")
+```bash
+source /root/admin-openrc || die "admin-openrc failed closed"
+openstack token issue -f value -c expires >/dev/null || die "protected token issuance failed"
+python3 - <<'PY'
+from __future__ import annotations
+
+import json
+import os
+import subprocess
 
 
-def validate_glance_identity(evidence: dict) -> None:
+def _value(row: dict, *keys: str):
+    for key in keys:
+        if key in row:
+            return row[key]
+    return None
+
+
+def _exact_rows(rows: list[dict], predicate, label: str) -> list[dict]:
+    matches = [row for row in rows if predicate(row)]
+    if len(matches) > 1:
+        raise RuntimeError(f"{label} duplicate objects: {len(matches)}")
+    return matches
+
+
+def subprocess_query(args: list[str]) -> object:
+    completed = subprocess.run(
+        ["openstack", *args, "-f", "json"], text=True, capture_output=True, check=False
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"OpenStack query failed: {' '.join(args)}")
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"OpenStack query returned invalid JSON: {' '.join(args)}") from error
+
+
+def subprocess_mutate(args: list[str]) -> None:
+    completed = subprocess.run(
+        ["openstack", *args], text=True, stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE, check=False,
+    )
+    if completed.returncode != 0:
+        redacted = list(args)
+        if "--password" in redacted:
+            redacted[redacted.index("--password") + 1] = "<REDACTED>"
+        raise RuntimeError(f"OpenStack mutation failed: {' '.join(redacted)}")
+
+
+def validate_glance_identity_evidence(evidence: dict) -> None:
     user = evidence["user"]
     service = evidence["service"]
-    assignment = evidence["assignments"]
+    assignments = evidence["assignments"]
     endpoints = evidence["endpoints"]
     if not (
-        user.get("name") == "glance" and user.get("domain_id") == "default"
-        and user.get("enabled") is True
+        user.get("id") and user.get("name") == "glance"
+        and user.get("domain_id") == "default" and user.get("enabled") is True
     ):
         raise ValueError("Glance user mismatch")
     if not (
-        service.get("name") == "glance" and service.get("type") == "image"
-        and service.get("enabled") is True
+        service.get("id") and service.get("name") == "glance"
+        and service.get("type") == "image" and service.get("enabled") is True
     ):
         raise ValueError("Glance service mismatch")
-    if len(assignment) != 1:
+    if len(assignments) != 1:
         raise ValueError("Glance assignment cardinality mismatch")
-    row = assignment[0]
+    row = assignments[0]
     if not (
         row.get("role") == evidence["admin_role_id"]
         and row.get("user") == user.get("id")
@@ -282,23 +579,121 @@ def validate_glance_identity(evidence: dict) -> None:
         raise ValueError("Glance endpoint cardinality/interface mismatch")
     if any(
         row.get("region") != "RegionOne" or row.get("service_id") != service.get("id")
-        or row.get("url") != "http://controller:9292"
+        or row.get("url") != "http://controller:9292" or row.get("enabled") is not True
         for row in endpoints
     ):
         raise ValueError("Glance endpoint binding mismatch")
-```
 
-实际执行的创建命令如下；`OS_PASSWORD` 来自受保护的 `admin-openrc`，没有显示在终端记录中。
 
-```bash
-source /root/admin-openrc || die "admin-openrc failed closed"
-openstack token issue -f value -c expires >/dev/null
-openstack user create --domain default --password "$OS_PASSWORD" glance >/dev/null
-openstack role add --project service --user glance admin
-openstack service create --name glance --description 'OpenStack Image' image >/dev/null
-for interface in public internal admin; do
-  openstack endpoint create --region RegionOne image "$interface" http://controller:9292 >/dev/null
-done
+def ensure_glance_identity_objects(password: str, query=subprocess_query, mutate=subprocess_mutate) -> dict:
+    projects = query(["project", "list", "--domain", "default"])
+    project_rows = _exact_rows(projects, lambda row: _value(row, "Name", "name") == "service", "service project")
+    if len(project_rows) != 1:
+        raise RuntimeError("service project must already exist exactly once")
+    service_project_id = _value(project_rows[0], "ID", "id")
+    if not service_project_id:
+        raise RuntimeError("service project ID missing")
+    project_show = query(["project", "show", str(service_project_id)])
+    if not (
+        _value(project_show, "id", "ID") == service_project_id
+        and _value(project_show, "name", "Name") == "service"
+        and _value(project_show, "domain_id", "Domain") == "default"
+        and _value(project_show, "enabled", "Enabled") is True
+        and _value(project_show, "is_domain", "Is Domain") is False
+    ):
+        raise RuntimeError("service project exact-state mismatch")
+
+    roles = query(["role", "list"])
+    role_rows = _exact_rows(roles, lambda row: _value(row, "Name", "name") == "admin", "global admin role")
+    if len(role_rows) != 1:
+        raise RuntimeError("global admin role must exist exactly once")
+    admin_role_id = _value(role_rows[0], "ID", "id")
+    role_show = query(["role", "show", str(admin_role_id)])
+    if _value(role_show, "name", "Name") != "admin" or _value(role_show, "domain_id", "Domain") not in (None, ""):
+        raise RuntimeError("admin role is not global")
+
+    users = query(["user", "list", "--domain", "default"])
+    user_rows = _exact_rows(users, lambda row: _value(row, "Name", "name") == "glance", "Glance user")
+    if not user_rows:
+        mutate(["user", "create", "--domain", "default", "--password", password, "glance"])
+        users = query(["user", "list", "--domain", "default"])
+        user_rows = _exact_rows(users, lambda row: _value(row, "Name", "name") == "glance", "Glance user after create")
+    if len(user_rows) != 1:
+        raise RuntimeError("Glance user final cardinality mismatch")
+    glance_user_id = _value(user_rows[0], "ID", "id")
+    user_show = query(["user", "show", str(glance_user_id)])
+    user = {
+        "id": _value(user_show, "id", "ID"), "name": _value(user_show, "name", "Name"),
+        "domain_id": _value(user_show, "domain_id", "Domain"),
+        "enabled": _value(user_show, "enabled", "Enabled"),
+    }
+
+    raw_assignments = query(["role", "assignment", "list", "--user", str(glance_user_id)])
+    if len(raw_assignments) == 0:
+        mutate(["role", "add", "--project", str(service_project_id), "--user", str(glance_user_id), str(admin_role_id)])
+        raw_assignments = query(["role", "assignment", "list", "--user", str(glance_user_id)])
+    assignments = [{
+        "role": _value(row, "Role", "role"), "user": _value(row, "User", "user"),
+        "project": _value(row, "Project", "project"), "group": _value(row, "Group", "group"),
+        "domain": _value(row, "Domain", "domain"), "system": _value(row, "System", "system"),
+        "inherited": _value(row, "Inherited", "inherited"),
+    } for row in raw_assignments]
+
+    services = query(["service", "list"])
+    service_rows = _exact_rows(
+        services,
+        lambda row: _value(row, "Name", "name") == "glance" or _value(row, "Type", "type") == "image",
+        "Glance image service",
+    )
+    if not service_rows:
+        mutate(["service", "create", "--name", "glance", "--description", "OpenStack Image", "image"])
+        services = query(["service", "list"])
+        service_rows = _exact_rows(
+            services,
+            lambda row: _value(row, "Name", "name") == "glance" or _value(row, "Type", "type") == "image",
+            "Glance image service after create",
+        )
+    if len(service_rows) != 1:
+        raise RuntimeError("Glance image service final cardinality mismatch")
+    image_service_id = _value(service_rows[0], "ID", "id")
+    service_show = query(["service", "show", str(image_service_id)])
+    service = {
+        "id": _value(service_show, "id", "ID"), "name": _value(service_show, "name", "Name"),
+        "type": _value(service_show, "type", "Type"), "enabled": _value(service_show, "enabled", "Enabled"),
+    }
+
+    endpoint_rows = query(["endpoint", "list", "--service", str(image_service_id)])
+    if len(endpoint_rows) == 0:
+        for interface in ("public", "internal", "admin"):
+            mutate(["endpoint", "create", "--region", "RegionOne", "image", interface, "http://controller:9292"])
+        endpoint_rows = query(["endpoint", "list", "--service", str(image_service_id)])
+    if len(endpoint_rows) != 3:
+        raise RuntimeError(f"Glance endpoint cardinality mismatch: {len(endpoint_rows)}")
+    endpoints = []
+    for row in endpoint_rows:
+        endpoint_id = _value(row, "ID", "id")
+        endpoint_show = query(["endpoint", "show", str(endpoint_id)])
+        endpoints.append({
+            "id": _value(endpoint_show, "id", "ID"),
+            "interface": _value(endpoint_show, "interface", "Interface"),
+            "region": _value(endpoint_show, "region", "Region"),
+            "service_id": _value(endpoint_show, "service_id", "Service ID"),
+            "url": _value(endpoint_show, "url", "URL"),
+            "enabled": _value(endpoint_show, "enabled", "Enabled"),
+        })
+
+    evidence = {
+        "user": user, "service": service, "assignments": assignments, "endpoints": endpoints,
+        "admin_role_id": str(admin_role_id), "service_project_id": str(service_project_id),
+    }
+    validate_glance_identity_evidence(evidence)
+    return evidence
+
+
+if __name__ == "__main__":
+    ensure_glance_identity_objects(os.environ["OS_PASSWORD"])
+    print("IDENTITY_OBJECTS=PASS USER=glance ROLE=admin PROJECT=service SERVICE=glance:image ENDPOINTS=3")
+PY
 unset OS_PASSWORD
 ```
 
@@ -446,113 +841,242 @@ done
 systemctl is-enabled --quiet openstack-glance-api
 listener=$(ss -H -lnt '( sport = :9292 )')
 [[ $(sed '/^[[:space:]]*$/d' <<<"$listener" | wc -l) -eq 1 ]] || die "9292 listener mismatch"
+version_file=$(mktemp /root/.task5c-version.XXXXXX)
+trap 'rm -f -- "$version_file"; unset OS_PASSWORD' EXIT
+http_code=$(curl --noproxy '*' -sS -o "$version_file" -w '%{http_code}' http://controller:9292/) ||
+  die "Glance version request failed"
+python3 - "$http_code" "$version_file" <<'PY'
+import json
+import sys
+
+
+def validate_glance_version_response(http_code: int, payload: dict) -> None:
+    if http_code not in (200, 300):
+        raise RuntimeError(f"Glance version endpoint returned HTTP {http_code}")
+    versions = payload.get("versions")
+    if not isinstance(versions, list):
+        raise ValueError("Glance version response has no versions list")
+    if not any(
+        str(row.get("id", "")).lower().startswith("v2")
+        and str(row.get("status", "")).upper() in {"CURRENT", "SUPPORTED"}
+        for row in versions if isinstance(row, dict)
+    ):
+        raise ValueError("Glance v2 discovery missing")
+
+
+if __name__ == "__main__":
+    with open(sys.argv[2], encoding="utf-8") as stream:
+        validate_glance_version_response(int(sys.argv[1]), json.load(stream))
+PY
 source /root/admin-openrc
 openstack token issue -f value -c expires >/dev/null
 openstack image list -f json | python3 -c 'import json,sys; assert json.load(sys.stdin) == []'
 unset OS_PASSWORD
+rm -f -- "$version_file"
+trap - EXIT
 ```
 
 实际结果：`openstack-glance-api` active/enabled，9292 监听 1 个，版本入口 HTTP 300，v2 发现通过，认证镜像列表为空。
 
 ## 合成镜像数据路径闭环
 
-测试不依赖互联网镜像。任务在 `/root/.task5c-image.XXXXXX` 创建 0700 临时目录，用固定的非秘密字节生成 4224 字节 raw 文件。对象名固定为 `task5c-synthetic-validation-v1`，并同时写入 `task_owner=lab-task-5c`、`task_artifact=synthetic-validation-v1`。重跑时，0 条表示可创建；1 条必须验证名称、ID 和两个属性后才允许清理；重复或属性不符立即停止，绝不按模糊名称删除。
+测试不依赖互联网镜像。任务在 `/root/.task5c-image.XXXXXX` 创建 0700 临时目录，用固定的非秘密字节生成 4224 字节 raw 文件。对象名固定为 `task5c-synthetic-validation-v1`，并同时写入 `task_owner=lab-task-5c`、`task_artifact=synthetic-validation-v1`。重跑时，0 条表示可创建；已有 1 条且两个属性正确时也停止并要求人工审计，本次运行不删除它；同名外来对象、属性不符或重复对象同样立即停止。只有本次 create 返回并登记的精确 ID，且删除前再次通过名称、ID 和两个属性核验，才可能由 `finally` 或成功路径删除，绝不按模糊名称清理。
 
-```python
+```bash
+source /root/admin-openrc || die "admin-openrc failed closed before image lifecycle"
+openstack token issue -f value -c expires >/dev/null || die "protected token issuance failed"
+trap 'unset OS_PASSWORD' EXIT ERR
+python3 - <<'PY'
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+import tempfile
+
+
+IMAGE_NAME = "task5c-synthetic-validation-v1"
+TASK_OWNER = "lab-task-5c"
+TASK_ARTIFACT = "synthetic-validation-v1"
+
+
+def _field(row: dict, *keys: str):
+    for key in keys:
+        if key in row:
+            return row[key]
+    return None
+
+
+def subprocess_executor(args: list[str], expect_json: bool = False):
+    command = ["openstack", *args]
+    if expect_json:
+        command.extend(["-f", "json"])
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    if completed.returncode != 0:
+        raise RuntimeError(f"OpenStack command failed: {' '.join(args)}")
+    if not expect_json:
+        return None
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"OpenStack command returned invalid JSON: {' '.join(args)}") from error
+
+
 def classify_task_image(rows: list[dict], name: str, owner: str, artifact: str) -> str:
-    matches = [row for row in rows if row.get("name") == name]
+    matches = [row for row in rows if _field(row, "name", "Name") == name]
     if len(matches) == 0:
         return "ABSENT"
     if len(matches) > 1:
         raise RuntimeError("ambiguous duplicate task images")
     row = matches[0]
-    properties = row.get("properties")
+    properties = _field(row, "properties", "Properties")
     if not isinstance(properties, dict):
         raise RuntimeError("image properties are not structured")
     if properties.get("task_owner") != owner or properties.get("task_artifact") != artifact:
         raise RuntimeError("image is not exactly task-owned")
-    if not row.get("id"):
+    image_id = _field(row, "id", "ID")
+    if not image_id:
         raise RuntimeError("task image ID missing")
-    return row["id"]
-```
+    return str(image_id)
 
-```bash
-image_name=task5c-synthetic-validation-v1
-task_owner=lab-task-5c
-task_artifact=synthetic-validation-v1
-workdir=$(mktemp -d /root/.task5c-image.XXXXXX)
-chmod 700 "$workdir"
-payload="$workdir/payload.raw"
-download="$workdir/download.raw"
-python3 - "$payload" <<'PY'
-from pathlib import Path
-import sys
-Path(sys.argv[1]).write_bytes((b"OPENSTACK_TASK5C_SYNTHETIC_RAW\n" * 128) + bytes(range(256)))
+
+def _show_and_verify_owned(executor, image_id: str) -> dict:
+    row = executor(["image", "show", image_id], True)
+    verified_id = classify_task_image([row], IMAGE_NAME, TASK_OWNER, TASK_ARTIFACT)
+    if verified_id != image_id:
+        raise RuntimeError("task image ID changed")
+    return row
+
+
+def _delete_verified_candidate(executor, image_id: str, backend_root: Path) -> None:
+    _show_and_verify_owned(executor, image_id)
+    executor(["image", "delete", image_id], False)
+    rows = executor(["image", "list"], True)
+    if any(
+        _field(row, "ID", "id") == image_id
+        or _field(row, "Name", "name") == IMAGE_NAME
+        for row in rows
+    ):
+        raise RuntimeError("task image remains after exact delete")
+    if (backend_root / image_id).exists():
+        raise RuntimeError("task image backend file remains after delete")
+
+
+def _cleanup_owned_workdir(workdir: Path, identity: tuple[int, int], known_paths: tuple[Path, ...]) -> None:
+    current = os.lstat(workdir)
+    if not stat.S_ISDIR(current.st_mode) or (current.st_dev, current.st_ino) != identity:
+        raise RuntimeError("task workdir identity changed")
+    for path in known_paths:
+        try:
+            metadata = os.lstat(path)
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise RuntimeError(f"unsafe task temporary: {path.name}")
+        os.unlink(path)
+    if list(workdir.iterdir()):
+        raise RuntimeError("unknown file remains in task workdir")
+    os.rmdir(workdir)
+
+
+def run_image_lifecycle(
+    executor=subprocess_executor,
+    work_root: Path = Path("/root"),
+    backend_root: Path = Path("/var/lib/glance/images"),
+) -> dict:
+    work_root = Path(work_root).resolve(strict=True)
+    backend_root = Path(backend_root)
+    workdir = Path(tempfile.mkdtemp(prefix=".task5c-image.", dir=work_root))
+    os.chmod(workdir, 0o700)
+    work_metadata = os.lstat(workdir)
+    if not stat.S_ISDIR(work_metadata.st_mode) or workdir.parent.resolve() != work_root:
+        raise RuntimeError("exclusive task workdir is unsafe")
+    identity = (work_metadata.st_dev, work_metadata.st_ino)
+    payload = workdir / "payload.raw"
+    download = workdir / "download.raw"
+    candidate_id: str | None = None
+    deleted = False
+    primary_error: BaseException | None = None
+    try:
+        rows = executor(["image", "list"], True)
+        matching = [row for row in rows if _field(row, "Name", "name") == IMAGE_NAME]
+        if len(matching) > 1:
+            raise RuntimeError("ambiguous duplicate task image names")
+        if len(matching) == 1:
+            existing_id = _field(matching[0], "ID", "id")
+            if not existing_id:
+                raise RuntimeError("same-name image ID missing")
+            existing = executor(["image", "show", str(existing_id)], True)
+            classify_task_image([existing], IMAGE_NAME, TASK_OWNER, TASK_ARTIFACT)
+            raise RuntimeError("pre-existing task-owned image requires manual audit; it was not deleted")
+
+        payload.write_bytes((b"OPENSTACK_TASK5C_SYNTHETIC_RAW\n" * 128) + bytes(range(256)))
+        os.chmod(payload, 0o600)
+        expected_size = payload.stat().st_size
+        expected_digest = hashlib.sha256(payload.read_bytes()).digest()
+        created = executor([
+            "image", "create", IMAGE_NAME, "--private", "--disk-format", "raw",
+            "--container-format", "bare", "--property", f"task_owner={TASK_OWNER}",
+            "--property", f"task_artifact={TASK_ARTIFACT}", "--file", str(payload),
+        ], True)
+        candidate_id = str(_field(created, "id", "ID") or "")
+        if not candidate_id:
+            raise RuntimeError("created image ID missing; no deletion is safe")
+        row = _show_and_verify_owned(executor, candidate_id)
+        if not (
+            _field(row, "status", "Status") == "active"
+            and _field(row, "visibility", "Visibility") == "private"
+            and _field(row, "disk_format", "Disk Format") == "raw"
+            and _field(row, "container_format", "Container Format") == "bare"
+            and int(_field(row, "size", "Size")) == expected_size
+        ):
+            raise RuntimeError("created task image state mismatch")
+        executor(["image", "save", "--file", str(download), candidate_id], False)
+        downloaded = download.read_bytes()
+        if len(downloaded) != expected_size or hashlib.sha256(downloaded).digest() != expected_digest:
+            raise RuntimeError("downloaded task image digest/size mismatch")
+        _delete_verified_candidate(executor, candidate_id, backend_root)
+        deleted = True
+        candidate_id = None
+        return {"status": "PASS", "size": expected_size, "digest_match": True}
+    except BaseException as error:
+        primary_error = error
+        raise
+    finally:
+        cleanup_errors: list[BaseException] = []
+        if candidate_id is not None and not deleted:
+            try:
+                _delete_verified_candidate(executor, candidate_id, backend_root)
+            except BaseException as error:
+                cleanup_errors.append(error)
+        try:
+            _cleanup_owned_workdir(workdir, identity, (payload, download))
+        except BaseException as error:
+            cleanup_errors.append(error)
+        if cleanup_errors:
+            if primary_error is not None:
+                for cleanup_error in cleanup_errors:
+                    primary_error.add_note(f"cleanup failure: {cleanup_error}")
+            else:
+                raise RuntimeError("Task 5C lifecycle cleanup failed") from cleanup_errors[0]
+
+
+if __name__ == "__main__":
+    result = run_image_lifecycle()
+    print(f"IMAGE_LIFECYCLE={result['status']} SIZE={result['size']} DIGEST_MATCH=PASS DELETE=PASS TEMP=0")
 PY
-chmod 600 "$payload"
-expected_size=$(stat -c '%s' "$payload")
-expected_sha=$(sha256sum "$payload" | awk '{print $1}')
-openstack image create "$image_name" --private --disk-format raw --container-format bare \
-  --property task_owner="$task_owner" --property task_artifact="$task_artifact" \
-  --file "$payload" -f json >"$workdir/create.json"
-image_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$workdir/create.json")
-openstack image show "$image_id" -f json >"$workdir/show.json"
-python3 - "$workdir/show.json" "$expected_size" <<'PY'
-import json, sys
-row = json.load(open(sys.argv[1]))
-assert row["status"] == "active"
-assert row["visibility"] == "private"
-assert row["disk_format"] == "raw" and row["container_format"] == "bare"
-assert row["size"] == int(sys.argv[2])
-assert row["properties"]["task_owner"] == "lab-task-5c"
-assert row["properties"]["task_artifact"] == "synthetic-validation-v1"
-PY
-openstack image save --file "$download" "$image_id"
-download_sha=$(sha256sum "$download" | awk '{print $1}')
-[[ $(stat -c '%s' "$download") == "$expected_size" && $download_sha == "$expected_sha" ]]
-cmp -s -- "$payload" "$download"
-openstack image delete "$image_id"
-openstack image list --private -f json | python3 -c \
-  'import json,sys; assert all(r.get("Name") != "task5c-synthetic-validation-v1" for r in json.load(sys.stdin))'
-rm -f -- "$payload" "$download" "$workdir/create.json" "$workdir/show.json"
-rmdir -- "$workdir"
 unset OS_PASSWORD
+trap - EXIT ERR
 ```
 
-实际结果：镜像状态 active，格式 raw/bare、可见性 private、大小 4224 字节；上传源与下载文件的非秘密 SHA-256 和大小一致，`cmp` 通过。随后按精确 ID 删除，镜像列表、临时文件和 Glance 后端测试文件均为 0。
+实际结果：镜像状态 active，格式 raw/bare、可见性 private、大小 4224 字节；上传源与下载文件的非秘密 SHA-256 和大小一致。随后按精确 ID 删除，镜像列表、临时文件和 Glance 后端测试文件均为 0。行为测试还向下载步骤注入失败，证明 `finally` 只删除本次登记且重新验证过的 ID，既不删除同名外来对象，也不删除无关镜像；临时目录只有 inode 与创建时一致、内部只有两个已知普通文件时才清理。
 
 ## 依赖顺序驱动器与跨切片收口
 
-教材中的最终驱动器只表达已经逐步验证的顺序；它不替代每一步内部的失败关闭门禁。
-
-```bash
-stage_starting_state() { controller_and_compute_starting_gate; }
-stage_package_transaction() { glance_repo_only_preflight_and_install; }
-stage_database_and_grants() { create_and_validate_glance_database; }
-stage_identity_objects() { create_and_validate_glance_identity; }
-stage_configuration() { backup_and_configure_glance; }
-stage_schema() { sync_and_validate_glance_schema; }
-stage_api() { start_and_validate_glance_api; }
-stage_image_lifecycle() { validate_synthetic_image_lifecycle; }
-stage_cross_slice_audit() { validate_controller_then_compute; }
-
-assert_packages_absent openstack-placement-api openstack-nova-common \
-  openstack-neutron-common openstack-cinder-common openstack-swift-common python3-horizon
-
-run_glance_sequence() {
-  stage_starting_state
-  stage_package_transaction
-  stage_database_and_grants
-  stage_identity_objects
-  stage_configuration
-  stage_schema
-  stage_api
-  stage_image_lifecycle
-  stage_cross_slice_audit
-}
-
-run_glance_sequence
-```
+本章不提供引用未定义函数的“伪一键驱动器”。实际执行入口就是前文完整的 `run_after_both_gates`：controller 与 compute 两个只读门禁全部成功以后，它才调用一个明确的下一阶段函数；测试向两个节点分别注入失败并证明 mutation 回调一次也不会触发。之后每次只执行紧邻的一个完整代码块，并在看到该阶段 PASS 证据后继续。各阶段在本文件中的位置就是唯一顺序：本地源事务、数据库与授权、Keystone 对象、配置、schema、API、合成镜像、最终双节点审计。后续根包 `openstack-placement-api`、`openstack-nova-common`、`openstack-neutron-common`、`openstack-cinder-common`、`openstack-swift-common`、`python3-horizon` 在收口时仍逐项用失败关闭的 RPM 探针证明缺失。
 
 最终 controller 审计结果为 PASS：chronyd、MariaDB、RabbitMQ、Memcached、HTTPD、Glance API 均 active/enabled；Keystone token 正常；identity 与 image 服务各唯一且端点各 3 个；`service` 项目、`glance` 用户及其唯一角色绑定精确；Glance 数据库、配置、schema、9292、认证 CLI 正常；镜像和任务临时文件为 0；Placement 及后续软件包仍缺失。
 
