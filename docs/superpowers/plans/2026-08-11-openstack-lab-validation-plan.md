@@ -33,7 +33,7 @@
 - [ ] Create the directories with `New-Item -ItemType Directory -Force`.
 - [ ] Copy `openstack-ts/` recursively to `third-edition-work/deployment/openstack-ts/` with `Copy-Item`; do not move or delete the original.
 - [ ] Hash the original DOCX, `openstack_repo.zip`, and every original script using `Get-FileHash -Algorithm SHA256`; save sorted output in `third-edition-work/checkpoints/original-inputs.sha256`.
-- [ ] Ask the user to create VMware snapshots named `controller-sp3-clean` and `compute-sp3-clean`; record confirmation in both baseline files.
+- [ ] Record that VMware snapshots named `controller-sp3-clean` and `compute-sp3-clean` have been requested. Snapshot confirmation is not required for this read-only baseline task, but it is a hard gate before Task 5 performs any remote mutation.
 - [ ] Run read-only commands on both VMs: `cat /etc/os-release`, `uname -r`, `ip -br addr`, `lsblk -o NAME,PATH,SIZE,TYPE,FSTYPE,MOUNTPOINTS`, and `rpm -qa | sort`.
 - [ ] Verify expected facts: both hosts are SP3; controller has `192.168.234.151/24`; compute has `192.168.234.150/24`; compute root is `/dev/sda2`; `/dev/sdb` and `/dev/sdc` are blank 50 GB disks.
 
@@ -124,4 +124,3 @@
 - [ ] Create and attach a Cinder volume; verify inside the instance or via OpenStack attachment state.
 - [ ] Create a Swift container, upload an object, download it, and compare SHA-256 hashes.
 - [ ] Record PASS/FAIL and timestamps in `end-to-end.md`; all required checks must be PASS before this stream completes.
-
