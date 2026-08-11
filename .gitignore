@@ -1,6 +1,7 @@
 # Isolated worktrees
 .worktrees/
 worktrees/
+.superpowers/
 
 # User-provided binary sources and large teaching artifacts
 *.docx
