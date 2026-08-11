@@ -23,7 +23,13 @@ Post-staging complete-tree verification (read-only):
 Original staging evidence limitation and future procedure:
 - The original staging name used only the ZIP SHA256. Calling that path task-unique was inaccurate: a hash-only name can collide across retries or concurrent runs.
 - The original run checked that its paths did not exist, but no durable lstat/pre-create evidence was saved in the validation artifacts.
-- Future runs must use /opt/.openstack_repo.<zip-sha256>.<random-UUID-or-task-nonce>, record lstat and test ! -e before creation, and create the staging directory with exclusive mkdir. They must validate the complete normalized entry set and sizes before atomic promotion.
+- Future runs must first lstat and canonicalize the exact parent /opt, rejecting a symlink, wrong owner, or any other resolved parent.
+- Generate a cryptographically random UUID/task nonce and use an exclusive mkdir (mode 0700) to create /opt/.openstack_repo.task-<uuid>; EEXIST is a hard stop. Immediately lstat the new directory and require a root-owned, non-symlink directory with mode 0700 and the expected initial link count.
+- Exclusively create a root-only ownership marker inside that directory containing the UUID/task nonce and ZIP SHA256. The marker is the cleanup authorization token.
+- Exclusively create the ZIP inside that directory with mode 0600, using SFTP 'x' only when the implementation also guarantees no-follow semantics; otherwise use a server-side O_CREAT|O_EXCL|O_NOFOLLOW open. Before writing, lstat the new inode and require a regular, non-symlink, root-owned file with nlink=1 and mode 0600; any mismatch or exclusive-create failure is a hard stop. A prior lstat/test ! -e is informational, is not the security boundary, and is not a substitute for exclusive creation.
+- Write, close, lstat again, and verify the exact ZIP size and SHA256. Create the extraction child directory with exclusive mkdir, then lstat and validate it before extraction.
+- Validate the complete normalized entry set, types, sizes, repomd SHA256, and core RPM hashes before atomic promotion.
+- Cleanup is permitted only after revalidating the exact task-directory parent, root ownership/mode, non-symlink state, and ownership-marker UUID/SHA256. Remove only exact children of that verified nonce-bearing directory and remove the directory only when empty.
 
 Controller local DNF source:
 [openstack-local]
@@ -42,10 +48,11 @@ Controller FTP service and exposure:
 - SELinux: Enforcing. No policy or label change was needed.
 - Controller FTP request: ftp://192.168.234.151/openstack_repo/repodata/repomd.xml -> Content-Length: 1569, PASS.
 
-Task-owned backup cleanup:
+Exact backup cleanup evidence:
 - Parsed exact path: /root/openstack-repo-backups/vsftpd.conf.pre-openstack-repo-ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978.
 - Before deletion it was a regular file, size 5039 bytes, SHA256 fa52b7c07f7499930bbd5fdd890b3828d55250bfa39361837944f6236408e0f6.
-- Its SHA256 exactly matched etc/vsftpd/vsftpd.conf streamed from the verified offline vsftpd RPM, proving it was the package default saved immediately before this task's replacement.
+- Its size and SHA256 show only that its content was identical to etc/vsftpd/vsftpd.conf streamed from the verified offline vsftpd RPM; they do not independently prove creation time or ownership.
+- The first execution report contemporaneously recorded creating this exact path immediately before replacing the package configuration. Taken together, that record and the content match are consistent with this being the backup created by this task and supported exact-file cleanup.
 - Deleted only that exact file; exact post-delete absence check: PASS. It is recoverable by reinstalling or extracting the same vsftpd RPM.
 - /root/openstack-repo-backups is empty but was retained because the original run did not preserve proof that the directory itself was created by this task.
 
