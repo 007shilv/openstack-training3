@@ -181,6 +181,41 @@ def role_identity_violations(script_name: str, text: str) -> list[str]:
         if "ens33" in line and (match := re.search(r"192\.168\.234\.\d+/24", line)):
             if match.group(0).removesuffix("/24") != expected:
                 violations.append(f"ens33 identity is {match.group(0)}, expected {expected}/24")
+    identity_keys = {"my_ip", "local_ip", "target_ip_address", "bind_ip", "address"}
+
+    def check_identity(key: str, value: str | None) -> None:
+        if value is None:
+            violations.append(f"{key} identity value is not a parseable literal")
+        elif key == "bind_ip" and value == "0.0.0.0":
+            return
+        elif value != expected:
+            violations.append(f"{key} identity is {value!r}, expected {expected}")
+
+    for opener, _delimiter, body in shell_sections(text)[1]:
+        parsed = first_shell_command(opener)
+        if parsed is None:
+            continue
+        command, _arguments = parsed
+        if command == "python3":
+            try:
+                tree = ast.parse(body)
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "set":
+                    continue
+                if len(node.args) < 3 or not isinstance(node.args[1], ast.Constant) or node.args[1].value not in identity_keys:
+                    continue
+                value = node.args[2].value if isinstance(node.args[2], ast.Constant) and isinstance(node.args[2].value, str) else None
+                check_identity(node.args[1].value, value)
+        elif command == "cat":
+            for raw in body.splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = (part.strip() for part in line.split("=", maxsplit=1))
+                if key in identity_keys:
+                    check_identity(key, value if "$" not in value else None)
     return violations
 
 
@@ -215,16 +250,18 @@ def disk_command_targets(text: str) -> tuple[list[str], list[str]]:
     targets: list[str] = []
     errors: list[str] = []
     for line in active_lines(text):
-        parsed = command_tokens(line)
+        parsed = first_shell_command(line)
         if parsed is None:
             continue
         command, arguments = parsed
+        if command not in DESTRUCTIVE_COMMANDS and not command.startswith("mkfs."):
+            continue
         positional: list[str] = []
         skip_next = False
         for argument in arguments:
             if skip_next:
                 skip_next = False
-            elif argument in {"-L", "-t", "-T", "-n"}:
+            elif argument in {"-L", "-t", "-T", "-n", "--physicalextentsize", "--align"}:
                 skip_next = True
             elif argument.startswith("-"):
                 continue
@@ -277,25 +314,10 @@ def antelope_contract_violations(text: str) -> list[str]:
         and parsed[0] == "sed"
         and "openEuler-24.03-LTS-SP3" in line
         and "openEuler-24.03-LTS-SP2" in line
-        and "ANTELOPE_REPO_FILE" in line
+        and resolve_value(parsed[1][-1], constants) == "/etc/yum.repos.d/openstack-antelope.repo"
         for line in lines
     )
-    python_rewrite = False
-    for opener, _delimiter, body in shell_sections(text)[1]:
-        parsed = first_shell_command(opener)
-        if parsed is None or parsed[0] != "python3":
-            continue
-        try:
-            tree = ast.parse(body)
-        except SyntaxError:
-            continue
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "replace":
-                continue
-            if len(node.args) >= 2 and all(isinstance(argument, ast.Constant) and isinstance(argument.value, str) for argument in node.args[:2]):
-                if node.args[0].value == "openEuler-24.03-LTS-SP3" and node.args[1].value == "openEuler-24.03-LTS-SP2":
-                    python_rewrite = True
-    if not shell_rewrite and not python_rewrite:
+    if not shell_rewrite:
         violations.append("no active SP3-to-SP2 correction for ANTELOPE_REPO_FILE")
     return violations
 
@@ -449,7 +471,7 @@ echo 'openEuler-24.03-LTS-SP3 openEuler-24.03-LTS-SP2 ANTELOPE_REPO_FILE'
     assert antelope_contract_violations(echo_forgery)
 
 
-def test_python_heredoc_replace_is_accepted_only_when_its_ast_is_valid() -> None:
+def test_python_heredoc_replace_without_a_write_is_rejected() -> None:
     python_fix = """\
 ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"
 dnf install openstack-release-antelope
@@ -457,7 +479,7 @@ python3 - <<'PY'
 url = "openEuler-24.03-LTS-SP3".replace("openEuler-24.03-LTS-SP3", "openEuler-24.03-LTS-SP2")
 PY
 """
-    assert antelope_contract_violations(python_fix) == []
+    assert antelope_contract_violations(python_fix)
 
 
 def test_dd_and_mkfs_unknown_targets_fail_closed() -> None:
@@ -468,3 +490,28 @@ def test_dd_and_mkfs_unknown_targets_fail_closed() -> None:
 def test_semantic_disk_targets_accept_safe_variable_and_reject_system_partitions() -> None:
     assert destructive_disk_violations('SAFE="/dev/sdb"\nmkfs.xfs -L data "${SAFE}"\n') == []
     assert destructive_disk_violations('TARGET="/dev/sda2"\nparted "${TARGET}" print\n')
+
+
+def test_python_cfg_heredoc_role_identity_is_checked() -> None:
+    bad = """\
+python3 - <<'PY'
+cfg.set('DEFAULT', 'my_ip', '192.168.234.151')
+PY
+"""
+    good = bad.replace(".151", ".150")
+    assert role_identity_violations("10-compute-nova.sh", bad)
+    assert role_identity_violations("10-compute-nova.sh", good) == []
+
+
+def test_antelope_requires_real_sed_targeting_the_antelope_repo() -> None:
+    base = 'ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"\ndnf install openstack-release-antelope\n'
+    valid = base + "sed -ri 's#openEuler-24.03-LTS-SP3#openEuler-24.03-LTS-SP2#g' \"${ANTELOPE_REPO_FILE}\"\n"
+    assert antelope_contract_violations(valid) == []
+    assert antelope_contract_violations(base + 'python3 -c "x.replace(\'openEuler-24.03-LTS-SP3\', \'openEuler-24.03-LTS-SP2\')"\n')
+    assert antelope_contract_violations(base + "sed -ri 's#openEuler-24.03-LTS-SP3#openEuler-24.03-LTS-SP2#g' /tmp/other.repo\n")
+
+
+def test_nonexecuting_disk_text_and_option_positions_are_handled() -> None:
+    assert destructive_disk_violations("echo pvcreate /dev/sda\nprintf 'mkfs.xfs /dev/sda'\n") == []
+    assert destructive_disk_violations("vgcreate --physicalextentsize 4M cinder-volumes /dev/sdb\n") == []
+    assert destructive_disk_violations("parted --align optimal /dev/sdb print\n") == []
