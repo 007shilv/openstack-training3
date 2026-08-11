@@ -1,0 +1,38 @@
+# Isolated worktrees
+.worktrees/
+worktrees/
+
+# User-provided binary sources and large teaching artifacts
+*.docx
+*.doc
+*.zip
+*.iso
+*.qcow2
+*.raw
+*.img
+*.vmdk
+*.ova
+*.ovf
+
+# Original deployment inputs contain lab credentials; keep them local-only
+/openstack-ts/
+
+# Generated binary deliverables
+/第三版教材图片/
+/第三版教材配套环境/
+/third-edition-work/render/
+/third-edition-work/validation/
+/third-edition-work/checkpoints/
+
+# Python and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Office and Windows temporary files
+~$*
+Thumbs.db
+desktop.ini
+
