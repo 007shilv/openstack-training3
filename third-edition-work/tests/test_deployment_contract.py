@@ -1822,7 +1822,7 @@ def test_manual_keystone_admin_openrc_installer_is_exclusive_atomic_and_cleanup_
             self.fail_replace = fail_replace
 
         def __getattr__(self, name: str) -> object:
-            if name in {"fchown", "chown"}:
+            if name in {"fchown", "fchmod", "chown"}:
                 return lambda *_args: None
             if name == "replace" and self.fail_replace:
                 return lambda *_args: (_ for _ in ()).throw(OSError("replace failure"))
@@ -2021,7 +2021,7 @@ def test_manual_glance_atomic_config_and_sanitized_snapshot_are_exact(tmp_path: 
 
     class OpsProxy:
         def __getattr__(self, name: str) -> object:
-            if name == "fchown":
+            if name in {"fchown", "fchmod"}:
                 return lambda *_args: None
             if name == "replace":
                 return lambda *_args: (_ for _ in ()).throw(OSError("replace failure"))
@@ -2090,12 +2090,17 @@ def _glance_python_function_namespace(required_name: str) -> dict[str, object]:
     candidates.extend(body for _opener, _delimiter, body in shell_sections(manual_shell_text("04-glance.md"))[1])
     source = next(block for block in candidates if f"def {required_name}" in block)
     tree = ast.parse(source)
-    selected = [
-        node for node in tree.body
-        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.FunctionDef, ast.ClassDef))
-    ]
+    selected = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            aliases = [alias for alias in node.names if alias.name != "pymysql"]
+            if aliases:
+                selected.append(ast.copy_location(ast.Import(names=aliases), node))
+        elif isinstance(node, (ast.ImportFrom, ast.Assign, ast.FunctionDef, ast.ClassDef)):
+            selected.append(node)
     namespace: dict[str, object] = {}
-    exec(compile(ast.Module(body=selected, type_ignores=[]), f"glance-{required_name}", "exec"), namespace)
+    module = ast.fix_missing_locations(ast.Module(body=selected, type_ignores=[]))
+    exec(compile(module, f"glance-{required_name}", "exec"), namespace)
     return namespace
 
 
@@ -2327,6 +2332,24 @@ def test_manual_glance_endpoint_create_requery_stops_before_later_interfaces() -
     assert all(args[-2] != "admin" for args in endpoint_creates)
 
 
+def test_manual_placement_session_preserves_required_order() -> None:
+    markdown = manual_markdown("05-placement.md")
+    markers = (
+        "def run_after_both_placement_gates",
+        "validate_placement_preflight",
+        "CREATE DATABASE IF NOT EXISTS placement",
+        "def ensure_placement_identity_objects",
+        "rpm -V openstack-placement-api",
+        "placement-manage db sync",
+        "upgrade=$(placement-status upgrade check)",
+        "systemctl restart httpd",
+        "openstack resource provider list",
+        "## 跨切片收口审计",
+    )
+    positions = [markdown.index(marker) for marker in markers]
+    assert positions == sorted(positions)
+
+
 def test_manual_glance_production_version_validator_rejects_status_and_body_failures() -> None:
     namespace = _glance_python_function_namespace("validate_glance_version_response")
     validate = namespace["validate_glance_version_response"]
@@ -2466,3 +2489,284 @@ def test_manual_glance_production_image_lifecycle_cleanup_is_exact(
         assert "foreign-image" not in executor.deleted_ids
     else:
         assert executor.deleted_ids == ["created-task-image"]
+
+
+def _placement_python_function_namespace(required_name: str) -> dict[str, object]:
+    candidates = markdown_fenced_blocks("05-placement.md", "python")
+    candidates.extend(body for _opener, _delimiter, body in shell_sections(manual_shell_text("05-placement.md"))[1])
+    source = next(block for block in candidates if f"def {required_name}" in block)
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.AnnAssign, ast.FunctionDef, ast.ClassDef))
+    ]
+    namespace: dict[str, object] = {}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), f"placement-{required_name}", "exec"), namespace)
+    return namespace
+
+
+def test_manual_placement_dual_gate_blocks_mutation_until_both_nodes_pass() -> None:
+    namespace = _placement_python_function_namespace("run_after_both_placement_gates")
+    for name in ("CONTROLLER_GATE", "COMPUTE_GATE"):
+        script = namespace[name]
+        with tempfile.NamedTemporaryFile("w", suffix=".sh", encoding="utf-8", newline="\n", delete=False) as stream:
+            stream.write(script); gate_path = Path(stream.name)
+        try:
+            completed = subprocess.run([str(GIT_BASH), "-n", str(gate_path)], text=True, capture_output=True, check=False)
+            assert completed.returncode == 0, completed.stderr
+        finally:
+            gate_path.unlink(missing_ok=True)
+    calls: list[str] = []
+
+    class Client:
+        def __init__(self, name: str) -> None: self.name = name
+        def close(self) -> None: calls.append(f"close:{self.name}")
+
+    def connector(name: str, _password: str) -> Client:
+        calls.append(f"connect:{name}"); return Client(name)
+
+    for failing in ("controller", "compute"):
+        calls.clear()
+        def runner(client: Client, script: str, failing: str = failing) -> None:
+            assert script == namespace[f"{client.name.upper()}_GATE"]
+            calls.append(f"run:{client.name}")
+            if client.name == failing: raise RuntimeError(f"{failing} failed")
+        with pytest.raises(RuntimeError, match=f"{failing} failed"):
+            namespace["run_after_both_placement_gates"](
+                "memory-only", lambda: calls.append("MUTATION"), connector=connector, runner=runner
+            )
+        assert "MUTATION" not in calls
+
+    markdown = manual_markdown("05-placement.md")
+    assert all(token in markdown for token in (
+        "paramiko.RejectPolicy()", "known_hosts.controller", "known_hosts.compute",
+        "ens34", "/dev/sdb", "/dev/sdc", "wipefs --no-act", "blkid -p",
+    ))
+
+
+def test_manual_placement_package_preflight_is_local_only_and_fail_closed(tmp_path: Path) -> None:
+    text = manual_shell_text("05-placement.md")
+    active = "\n".join(active_lines(text))
+    assert "--disablerepo='*'" in active and "--enablerepo='openstack-local'" in active
+    assert "--setopt=install_weak_deps=False" in active
+    assert not any(flag in active for flag in ("--allowerasing", "--nodeps", "--skip-broken"))
+    definition = shell_function_definition(text, "validate_placement_preflight")
+
+    def run(candidates: str, transaction: str) -> int:
+        candidate_path = tmp_path / "candidates"; transaction_path = tmp_path / "transaction"
+        candidate_path.write_text(candidates, encoding="utf-8")
+        transaction_path.write_text(transaction, encoding="utf-8")
+        result = run_git_bash(
+            f"set -Eeuo pipefail\n{definition}\nvalidate_placement_preflight "
+            f"{shlex.quote(str(candidate_path))} {shlex.quote(str(transaction_path))}\n"
+        )
+        return result.returncode
+
+    good_candidates = "openstack-placement-api|openstack-local\npython3-placement|openstack-local\n"
+    good_transaction = "openstack-placement-api noarch 9 local openstack-local 1 M\nInstall 1 Package\nOperation aborted.\n"
+    assert run(good_candidates, good_transaction) == 0
+    assert run(good_candidates.replace("python3-placement|openstack-local", "python3-placement|external"), good_transaction) != 0
+    assert run(good_candidates, good_transaction.replace("Install 1 Package", "Install 2 Packages")) != 0
+    assert run(good_candidates, good_transaction + "Removing: unsafe\n") != 0
+
+
+@pytest.mark.parametrize(
+    ("record", "metadata", "expected"),
+    (
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 600 1", True),
+        ("OPENSTACK_DEPLOY_PASSWORD=\n", "root:root 600 1", False),
+        ("OTHER=memory-only\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=one\nEXTRA=two\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 644 1", False),
+    ),
+)
+def test_manual_placement_secret_loader_executes_failure_branches(
+    tmp_path: Path, record: str, metadata: str, expected: bool
+) -> None:
+    definition = shell_function_definition(manual_shell_text("05-placement.md"), "load_runtime_secret")
+    secret = tmp_path / "secret"; secret.write_text(record, encoding="utf-8", newline="\n")
+    completed = run_git_bash(
+        f"set -Eeuo pipefail\n{definition}\nstat(){{ printf '%s\\n' {shlex.quote(metadata)}; }}\n"
+        f"set +e; load_runtime_secret loaded {shlex.quote(str(secret))}; rc=$?; set -e\n"
+        "[[ $rc -eq 0 && $loaded == memory-only ]]\n"
+    )
+    assert (completed.returncode == 0) is expected
+
+
+def test_manual_placement_database_uses_parameters_and_exact_scope_validator() -> None:
+    text = manual_shell_text("05-placement.md")
+    python_body = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "CREATE DATABASE IF NOT EXISTS placement" in body)
+    tree = ast.parse(python_body)
+    constants = {node.value for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert "CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s" in constants
+    assert "ALTER USER %s@%s IDENTIFIED BY %s" in constants
+    assert "GRANT ALL PRIVILEGES ON placement.* TO %s@%s" in constants
+    assert "authentication_string" not in text
+
+    namespace = _placement_python_function_namespace("validate_placement_grant_evidence")
+    privileges = namespace["EXPECTED_SCHEMA_PRIVILEGES"]
+    account = {
+        "global": [["USAGE", "NO"]],
+        "schema": [["placement", privilege, "NO"] for privilege in privileges],
+        "table": [], "column": [], "routine": [],
+    }
+    good = {
+        "hosts": ["%", "127.0.0.1", "localhost"],
+        "accounts": {host: json.loads(json.dumps(account)) for host in ("%", "127.0.0.1", "localhost")},
+        "proxy": [], "roles": [],
+    }
+    namespace["validate_placement_grant_evidence"](good)
+    for change in ("extra-host", "global", "schema", "table", "proxy"):
+        bad = json.loads(json.dumps(good))
+        if change == "extra-host": bad["hosts"].append("controller")
+        elif change == "global": bad["accounts"]["%"]["global"].append(["SUPER", "NO"])
+        elif change == "schema": bad["accounts"]["localhost"]["schema"].append(["nova", "SELECT", "NO"])
+        elif change == "table": bad["accounts"]["127.0.0.1"]["table"].append(["placement", "allocations", "SELECT"])
+        else: bad["proxy"].append(["placement", "root"])
+        with pytest.raises(ValueError): namespace["validate_placement_grant_evidence"](bad)
+
+
+class _FakePlacementIdentity:
+    def __init__(self, scenario: str) -> None:
+        self.scenario = scenario
+        self.user = scenario not in {"zero", "query-error"}
+        self.assignment = scenario not in {"zero", "query-error", "disabled-user"}
+        self.service = scenario not in {"zero", "query-error", "disabled-user", "wrong-assignment"}
+        self.interfaces = [] if scenario == "zero" else ["public", "internal", "admin"]
+        self.mutations: list[tuple[str, ...]] = []
+
+    @staticmethod
+    def endpoint(interface: str) -> dict[str, object]:
+        return {"ID": f"endpoint-{interface}", "Interface": interface}
+
+    def query(self, args: list[str]) -> object:
+        key = tuple(args[:2])
+        if self.scenario == "query-error" and key == ("user", "list"): raise RuntimeError("query failed")
+        if key == ("project", "list"): return [{"ID": "project", "Name": "service"}]
+        if key == ("project", "show"): return {"id": "project", "name": "service", "domain_id": "default", "enabled": True, "is_domain": False}
+        if key == ("role", "list"): return [{"ID": "role", "Name": "admin"}]
+        if key == ("role", "show"): return {"id": "role", "name": "admin", "domain_id": None}
+        if key == ("user", "list"):
+            rows = [{"ID": "user", "Name": "placement"}] if self.user else []
+            return rows + ([{"ID": "duplicate", "Name": "placement"}] if self.scenario == "duplicate" else [])
+        if key == ("user", "show"): return {"id": "user", "name": "placement", "domain_id": "default", "enabled": self.scenario != "disabled-user"}
+        if key == ("role", "assignment"):
+            if not self.assignment: return []
+            return [{"Role": "other" if self.scenario == "wrong-assignment" else "role", "User": "user", "Project": "project", "Group": "", "Domain": "", "System": "", "Inherited": False}]
+        if key == ("service", "list"): return [{"ID": "service", "Name": "placement", "Type": "placement"}] if self.service else []
+        if key == ("service", "show"): return {"id": "service", "name": "placement", "type": "placement", "enabled": True}
+        if key == ("endpoint", "list"): return [self.endpoint(i) for i in self.interfaces]
+        if key == ("endpoint", "show"):
+            interface = args[2].removeprefix("endpoint-")
+            url = "http://wrong:8778" if self.scenario == "bad-created-endpoint" and interface == "internal" else "http://controller:8778"
+            return {"id": args[2], "interface": interface, "region": "RegionOne", "service_id": "service", "url": url, "enabled": True}
+        raise AssertionError(args)
+
+    def mutate(self, args: list[str]) -> object:
+        self.mutations.append(tuple(args)); key = tuple(args[:2])
+        if key == ("user", "create"): self.user = True
+        elif key == ("role", "add"): self.assignment = True
+        elif key == ("service", "create"): self.service = True
+        elif key == ("endpoint", "create"): self.interfaces.append(args[-2])
+        else: raise AssertionError(args)
+        return None
+
+
+@pytest.mark.parametrize("scenario", ("zero", "correct"))
+def test_manual_placement_identity_zero_and_exact_states_succeed(scenario: str) -> None:
+    namespace = _placement_python_function_namespace("ensure_placement_identity_objects")
+    fake = _FakePlacementIdentity(scenario)
+    evidence = namespace["ensure_placement_identity_objects"]("memory-only", fake.query, fake.mutate)
+    namespace["validate_placement_identity_evidence"](evidence)
+    if scenario == "correct": assert fake.mutations == []
+    else: assert len(fake.mutations) == 6
+
+
+@pytest.mark.parametrize("scenario", ("duplicate", "query-error", "disabled-user", "wrong-assignment"))
+def test_manual_placement_identity_failure_blocks_downstream_mutations(scenario: str) -> None:
+    namespace = _placement_python_function_namespace("ensure_placement_identity_objects")
+    fake = _FakePlacementIdentity(scenario)
+    with pytest.raises((RuntimeError, ValueError)):
+        namespace["ensure_placement_identity_objects"]("memory-only", fake.query, fake.mutate)
+    assert fake.mutations == []
+
+
+def test_manual_placement_endpoint_create_requery_stops_before_admin() -> None:
+    namespace = _placement_python_function_namespace("ensure_placement_identity_objects")
+    fake = _FakePlacementIdentity("zero")
+    fake.scenario = "bad-created-endpoint"
+    with pytest.raises(ValueError, match="endpoint binding mismatch"):
+        namespace["ensure_placement_identity_objects"]("memory-only", fake.query, fake.mutate)
+    endpoint_mutations = [args for args in fake.mutations if args[:2] == ("endpoint", "create")]
+    assert [args[-2] for args in endpoint_mutations] == ["public", "internal"]
+
+
+def test_manual_placement_atomic_config_failure_preserves_target_and_snapshots(tmp_path: Path) -> None:
+    source = next(block for block in markdown_fenced_blocks("05-placement.md", "python") if "def write_placement_config" in block)
+    namespace: dict[str, object] = {}
+    exec(compile(source, "placement-config", "exec"), namespace)
+
+    class Ops:
+        def __getattr__(self, name: str) -> object:
+            if name in {"fchown", "fchmod"}: return lambda *_args: None
+            if name == "replace": return lambda *_args: (_ for _ in ()).throw(OSError("replace failed"))
+            return getattr(os, name)
+
+    target = tmp_path / "placement.conf"; target.write_text("package-default\n", encoding="utf-8")
+    with pytest.raises(OSError, match="replace failed"):
+        namespace["write_placement_config"](target, "p@ss:/word", 0, 0, ops=Ops(), nonce="failure")
+    assert target.read_text(encoding="utf-8") == "package-default\n"
+    assert not list(tmp_path.glob(".placement.conf.task5d.*"))
+
+    snapshot = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-placement.conf").read_text(encoding="utf-8")
+    assert "<URL_ENCODED_DB_PASSWORD>" in snapshot and "<SERVICE_PASSWORD>" in snapshot
+    assert "policy_file = policy.yaml" in snapshot
+    wsgi = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-apache-placement.conf").read_text(encoding="utf-8")
+    assert "Listen 8778" in wsgi and "WSGIPassAuthorization On" in wsgi
+    policy = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-placement-policy.yaml").read_text(encoding="utf-8")
+    assert "没有自定义策略覆盖" in policy
+
+
+def test_manual_placement_schema_upgrade_and_api_order_are_fail_closed() -> None:
+    markdown = manual_markdown("05-placement.md")
+    active = "\n".join(active_lines(manual_shell_text("05-placement.md")))
+    assert "su -s /bin/sh -c 'placement-manage db sync' placement" in active
+    assert "placement-manage db version" in active and "422ece571366" in markdown
+    for table in ("alembic_version", "allocations", "consumer_types", "resource_providers", "users"):
+        assert table in markdown
+    for check in ("Missing Root Provider IDs", "Incomplete Consumers", "Policy File JSON to YAML Migration"):
+        assert check in markdown
+    assert "oslopolicy-convert-json-to-yaml --namespace placement" in active
+    assert markdown.index("placement-manage db sync") < markdown.index("systemctl restart httpd")
+    assert "apachectl configtest" in active and "sport = :8778" in active
+
+
+def test_manual_placement_version_and_provider_classifiers_distinguish_empty_from_error() -> None:
+    version_ns = _placement_python_function_namespace("validate_placement_version_response")
+    good_version = {"versions": [{"id": "v1.0", "status": "CURRENT", "max_version": "1.39"}]}
+    version_ns["validate_placement_version_response"](200, good_version)
+    for status, payload in ((401, good_version), (500, good_version), (200, {"versions": []}), (200, {"versions": [{"id": "v2", "status": "CURRENT", "max_version": "1.39"}]})):
+        with pytest.raises((RuntimeError, ValueError)):
+            version_ns["validate_placement_version_response"](status, payload)
+
+    provider_ns = _placement_python_function_namespace("classify_resource_provider_response")
+    assert provider_ns["classify_resource_provider_response"](200, {"resource_providers": []}) == []
+    with pytest.raises(RuntimeError): provider_ns["classify_resource_provider_response"](401, {"resource_providers": []})
+    with pytest.raises(ValueError): provider_ns["classify_resource_provider_response"](200, {})
+    with pytest.raises(ValueError): provider_ns["classify_resource_provider_response"](200, {"resource_providers": [{}]})
+    markdown = manual_markdown("05-placement.md")
+    assert "Unknown command ['resource', 'provider', 'list']" in markdown
+    assert "OpenStack-API-Version: placement 1.39" in markdown
+    assert "不能为了得到非空结果手工创建资源提供者" in markdown
+
+
+def test_manual_placement_later_package_and_compute_disk_boundaries_are_explicit() -> None:
+    markdown = manual_markdown("05-placement.md")
+    for package in (
+        "openstack-nova-common", "openstack-nova-api", "openstack-nova-compute",
+        "openstack-neutron-common", "openstack-cinder-common", "openstack-swift-common", "python3-horizon",
+    ):
+        assert package in markdown
+    for marker in ("53687091200", "lsblk -s -nrpo NAME", "wipefs --no-act", "blkid -p", "resource_providers=[]"):
+        assert marker in markdown
+    assert "没有创建资源提供者" in markdown
