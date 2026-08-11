@@ -376,6 +376,75 @@ def load_version_matrix() -> dict[str, object]:
     return json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
 
 
+def shell_function_body(text: str, name: str) -> str | None:
+    """Return executable lines in a simple Bash function, excluding comments/heredocs."""
+    active = "\n".join(active_lines(text))
+    match = re.search(
+        rf"(?m)^{re.escape(name)}\(\)\s*\{{\n(?P<body>.*?)(?=^\}}\s*$)",
+        active,
+        flags=re.DOTALL,
+    )
+    return None if match is None else match.group("body")
+
+
+def blank_disk_guard_violations(text: str) -> list[str]:
+    """Check executable blank-disk guard paths, including the orphan-PV case."""
+    root_guard = shell_function_body(text, "assert_not_root_ancestor")
+    blank_guard = shell_function_body(text, "assert_blank_data_disk")
+    if root_guard is None or blank_guard is None:
+        return ["required disk guard function is missing"]
+    violations: list[str] = []
+    root_lines = "\n".join(active_lines(root_guard))
+    blank_lines = "\n".join(active_lines(blank_guard))
+    if "findmnt -nro SOURCE /" not in root_lines or "lsblk -s -nrpo NAME" not in root_lines:
+        violations.append("root-ancestor guard does not resolve the full root ancestry")
+    if not re.search(r"readlink\s+-f\s+.*root_source", root_lines) or not re.search(r"readlink\s+-f\s+.*device", root_lines):
+        violations.append("root-ancestor guard does not canonicalize source and target")
+    if not re.search(r"^\s*assert_not_root_ancestor\s+['\"]?\$\{device\}['\"]?", blank_lines, flags=re.MULTILINE):
+        violations.append("blank-disk guard does not invoke the root-ancestor guard")
+    classifier_names = ("require_safe_cinder_disk", "require_safe_swift_disk")
+    classifier = next((shell_function_body(text, name) for name in classifier_names if shell_function_body(text, name) is not None), None)
+    if classifier is None or "assert_not_root_ancestor" not in "\n".join(active_lines(classifier)):
+        violations.append("state classifier does not invoke the root-ancestor guard")
+    if not re.search(r"^\s*command\s+-v\s+pvs\s+>/dev/null\s+2>&1\s+\|\|\s+die", blank_lines, flags=re.MULTILINE):
+        violations.append("blank-disk guard does not fail closed when pvs is unavailable")
+    if not re.search(r"pvs\s+--noheadings\s+--readonly\s+-o\s+pv_uuid,pv_name", blank_lines):
+        violations.append("blank-disk guard does not inspect pv_uuid and pv_name")
+    if "vg_name" in blank_lines:
+        violations.append("blank-disk guard relies on vg_name and misses orphan PVs")
+    if re.search(r"pvs[^\n]*\|\|\s*true", blank_lines):
+        violations.append("blank-disk guard masks pvs errors")
+    return violations
+
+
+def replace_blank_guard_line(text: str, old: str, new: str) -> str:
+    body = shell_function_body(text, "assert_blank_data_disk")
+    assert body is not None
+    return text.replace(body, body.replace(old, new, 1), 1)
+
+
+def test_blank_disk_guards_fail_closed_for_root_and_orphan_pv_states() -> None:
+    for script_name in ("14-compute-cinder.sh", "16-compute-swift.sh"):
+        text = script_text(script_name)
+        assert blank_disk_guard_violations(text) == [], script_name
+        assert "root-ancestor" in blank_disk_guard_violations(
+            replace_blank_guard_line(text, 'assert_not_root_ancestor "${device}"\n', "")
+        )[0]
+        classifier_name = "require_safe_cinder_disk" if "cinder" in script_name else "require_safe_swift_disk"
+        device_name = "CINDER_DEVICE" if "cinder" in script_name else "SWIFT_DEVICE"
+        classifier = shell_function_body(text, classifier_name)
+        assert classifier is not None
+        assert "state classifier" in blank_disk_guard_violations(
+            text.replace(classifier, classifier.replace(f'assert_not_root_ancestor "${{{device_name}}}"\n', "", 1), 1)
+        )[-1]
+        assert "pvs is unavailable" in blank_disk_guard_violations(
+            replace_blank_guard_line(text, "command -v pvs >/dev/null 2>&1 || die", "command -v true >/dev/null 2>&1 || die")
+        )[0]
+        assert "pv_uuid and pv_name" in blank_disk_guard_violations(
+            replace_blank_guard_line(text, "pv_uuid,pv_name", "vg_name")
+        )[0]
+
+
 def test_final_script_inventory_is_complete() -> None:
     actual = {path.name for path in all_script_paths()}
     assert actual == EXPECTED_SCRIPTS, (

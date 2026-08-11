@@ -90,18 +90,29 @@ require_compute_host() {
     die 'Refusing Swift disk work: ens33 is not 192.168.234.150/24.'
 }
 
+assert_not_root_ancestor() {
+  local device="$1" root_source canonical_target root_chain node canonical_node
+  root_source="$(findmnt -nro SOURCE /)" || die 'Cannot determine the root filesystem source.'
+  [[ -n "${root_source}" ]] || die 'Root filesystem source is empty.'
+  root_source="$(readlink -f "${root_source}")" || die 'Cannot canonicalize the root filesystem source.'
+  canonical_target="$(readlink -f "${device}")" || die "Cannot canonicalize disk target: ${device}"
+  root_chain="$(lsblk -s -nrpo NAME "${root_source}" 2>/dev/null)" || \
+    die "Cannot resolve the root-device ancestry for ${root_source}."
+  [[ -n "${root_chain}" ]] || die "Cannot resolve the root-device ancestry for ${root_source}."
+  while IFS= read -r node; do
+    canonical_node="$(readlink -f "${node}")" || die "Cannot canonicalize root ancestor: ${node}"
+    [[ "${canonical_node}" != "${canonical_target}" ]] || \
+      die "Refusing root device or an ancestor of root: ${device}"
+  done <<< "${root_chain}"
+}
+
 require_safe_swift_disk() {
-  local root_source type mounted partitions fstype label canonical_target root_chain
+  local type mounted partitions fstype label
   [[ "${SWIFT_DEVICE}" == '/dev/sdc' ]] || die 'Swift device must be exactly /dev/sdc.'
   [[ -b "${SWIFT_DEVICE}" ]] || die "Missing block device: ${SWIFT_DEVICE}"
   type="$(lsblk -dn -o TYPE "${SWIFT_DEVICE}")"
   [[ "${type}" == 'disk' ]] || die "${SWIFT_DEVICE} is not a whole disk."
-  root_source="$(readlink -f "$(findmnt -nro SOURCE /)")"
-  canonical_target="$(readlink -f "${SWIFT_DEVICE}")"
-  root_chain="$(lsblk -s -nrpo NAME "${root_source}" 2>/dev/null | while read -r node; do readlink -f "${node}"; done)"
-  [[ -n "${root_chain}" ]] || die "Cannot resolve the root-device ancestry for ${root_source}."
-  grep -Fxq "${canonical_target}" <<<"${root_chain}" && \
-    die "Refusing root device or an ancestor of root: ${SWIFT_DEVICE}"
+  assert_not_root_ancestor "${SWIFT_DEVICE}"
   partitions="$(lsblk -nrpo TYPE "${SWIFT_DEVICE}" | awk '$1 == "part" {print}')"
   [[ -z "${partitions}" ]] || die "Partitioned target is not allowed: ${SWIFT_DEVICE}"
   mounted="$(lsblk -nrpo NAME,MOUNTPOINT "${SWIFT_DEVICE}" | awk 'NF > 1 && $2 != "" {print $1 " " $2}')"
@@ -120,10 +131,12 @@ require_safe_swift_disk() {
 }
 
 assert_blank_data_disk() {
-  local device="$1" expected_size_gib="$2" size_bytes expected_size_bytes mounted partitions fstype label vg
+  local device="$1" expected_size_gib="$2" size_bytes expected_size_bytes mounted partitions fstype label pv_rows pv_uuid pv_name canonical_target canonical_pv
   [[ "${device}" != '/dev/sda' ]] || die 'Refusing to initialize the system disk /dev/sda.'
   [[ -b "${device}" ]] || die "Missing block device: ${device}"
   [[ "$(lsblk -dn -o TYPE "${device}")" == 'disk' ]] || die "${device} is not a whole disk."
+  assert_not_root_ancestor "${device}"
+  canonical_target="$(readlink -f "${device}")" || die "Cannot canonicalize disk target: ${device}"
   size_bytes="$(lsblk -bdn -o SIZE "${device}")"
   expected_size_bytes=$((expected_size_gib * 1024 * 1024 * 1024))
   [[ "${size_bytes}" == "${expected_size_bytes}" ]] || \
@@ -135,8 +148,15 @@ assert_blank_data_disk() {
   fstype="$(blkid -o value -s TYPE "${device}" 2>/dev/null || true)"
   label="$(blkid -o value -s LABEL "${device}" 2>/dev/null || true)"
   [[ -z "${fstype}" && -z "${label}" ]] || die "Existing filesystem signature on ${device}."
-  vg="$(pvs --noheadings -o vg_name "${device}" 2>/dev/null | xargs || true)"
-  [[ -z "${vg}" ]] || die "Existing LVM physical volume on ${device}: ${vg}"
+  command -v pvs >/dev/null 2>&1 || die 'pvs is required to inspect the Swift data disk.'
+  if ! pv_rows="$(pvs --noheadings --readonly -o pv_uuid,pv_name 2>/dev/null)"; then
+    die "Unable to inspect LVM physical volumes for ${device}."
+  fi
+  while read -r pv_uuid pv_name; do
+    [[ -n "${pv_uuid:-}" && -n "${pv_name:-}" ]] || continue
+    canonical_pv="$(readlink -f "${pv_name}")" || die "Cannot canonicalize LVM PV: ${pv_name}"
+    [[ "${canonical_pv}" != "${canonical_target}" ]] || die "Existing LVM physical volume on ${device}: ${pv_uuid}"
+  done <<< "${pv_rows}"
 }
 
 require_initialization_confirmation() {
