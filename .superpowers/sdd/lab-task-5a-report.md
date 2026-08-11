@@ -33,7 +33,14 @@ The independent first-round review reported no Critical finding. Every Important
 2. The compute disk guard accepts only `blkid -p` RC=2 as blank and rejects RC=0 plus every other exit class. It also asserts block-device identity, exact byte size, no child/partition, no filesystem, no mount, no LVM PV (including orphan PV), and exclusion from the canonical root-device ancestry. Later-service RPM absence now distinguishes installed, expected absent, RPM database/query failure, and misleading RC=1 output.
 3. The base record now includes a complete executable workstation Paramiko transfer example. It loads only the two reviewed known-host files with `RejectPolicy`, obtains the SSH credential through `getpass`, creates a root-owned `0600` remote temporary file with `O_EXCL|O_NOFOLLOW`, streams in 64 KiB chunks without output or hashing, performs same-directory atomic promotion, always cleans the exact temporary path, and compares only safe metadata. RabbitMQ's user-present and user-absent rerun branches are executable and behavior-tested.
 4. The `/etc/hosts` transformation removes only the two target aliases, preserves unrelated aliases and comments on the same line, and appends one canonical mapping for each node. A behavior test executes the extracted Python heredoc against mixed-alias/comment fixtures and compares the exact result.
-5. Twelve targeted contract-test cases now cover strict-session short-circuiting, disk-probe exit classes and safety dimensions, hosts preservation, later-package absence classes, transfer-program AST and syntax, RabbitMQ idempotence/authentication failure, live-service assertions, and the ban on `|| true` in protected manual checks. Together with the original 26 tests, the suite contains 38 passing tests.
+5. Fourteen targeted contract-test cases now cover strict-session short-circuiting, disk-probe exit classes and safety dimensions, hosts preservation, later-package absence classes, transfer-program AST and syntax, unowned-temporary cleanup refusal, RabbitMQ idempotence/authentication and user-probe failure, live-service assertions, and the ban on `|| true` in protected manual checks. Together with the original 26 tests, the suite contains 40 passing tests.
+
+## Second-round review remediation
+
+The second review identified one Important and one Minor path; both were reproduced by new failing behavior tests before the documentation code was changed:
+
+- RabbitMQ `list_users` is now an independent captured probe. Its true nonzero status is retained and reported, the transient password variable is cleared, and execution stops before `add_user`, `change_password`, `set_permissions`, or `authenticate_user`. The new RC=7 behavior case proves zero mutation/authentication actions; the existing absent-user, present-user, and authentication-failure paths continue to pass.
+- Secret transfer now records ownership separately for controller and compute as exact path → `(st_dev, st_ino)` mappings. Registration occurs only after remote `O_EXCL|O_NOFOLLOW`, ownership/mode checks, and `fstat`/`lstat` inode equality return success. Streaming, promotion, and cleanup validate that identity; promotion removes the owned entry, and `finally` iterates only entries still owned. The new preexisting-path/O_EXCL-failure case proves that cleanup is not called for an unowned path.
 
 ## Starting-state proof
 
@@ -153,8 +160,8 @@ All snapshots were captured from final remote files after successful checks. Non
 
 ## Required local gates
 
-- TDD review-fix RED evidence: the 12 new Task 5A cases initially failed against the first-round documents for the missing executable contracts; after remediation, all 12 pass.
-- `python -m pytest -q`: 38 passed (26 existing plus 12 targeted Task 5A cases).
+- TDD review-fix RED evidence: 12 first-round and 2 second-round Task 5A cases each failed against the corresponding pre-fix documents for the expected reason; after remediation, all 14 pass.
+- `python -m pytest -q`: 40 passed (26 existing plus 14 targeted Task 5A cases).
 - `git diff --check`: RC=0, no output.
 - `git diff --cached --check`: RC=0, no output.
 - Extracted Python transfer/hosts/Memcached snippets: parsed and compiled or executed by the targeted tests; extracted Bash gate functions: executed with command mocks under Git Bash.

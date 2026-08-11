@@ -186,7 +186,7 @@ LISTEN 0 869 0.0.0.0:3306 0.0.0.0:*
 
 ## RabbitMQ
 
-`<RABBIT_PASS>` 是文档占位符，实际值只从 `/root/.openstack-lab-secrets` 读入当前非交互 shell 的临时变量，从未输出。`configure_rabbitmq` 明确区分用户不存在与已存在两条重跑路径：不存在时先创建；已存在时跳过创建；两条路径都更新密码、重设权限并做受保护认证。认证失败分支先清除变量再调用 `die`，不会被后续 `unset` 的成功状态掩盖：
+`<RABBIT_PASS>` 是文档占位符，实际值只从 `/root/.openstack-lab-secrets` 读入当前非交互 shell 的临时变量，从未输出。`configure_rabbitmq` 先把 `list_users` 作为独立探针执行并保留真实退出码；任何非零返回都在 add/change/set/auth 之前清除变量并终止，不能误判为“用户不存在”。只有探针成功后才区分两条重跑路径：不存在时先创建；已存在时跳过创建；两条路径都更新密码、重设权限并做受保护认证。认证失败分支先清除变量再调用 `die`，不会被后续 `unset` 的成功状态掩盖：
 
 ```bash
 load_rabbit_password() {
@@ -205,10 +205,16 @@ load_rabbit_password() {
 }
 
 configure_rabbitmq() {
-  local rabbit_password=$1
+  local rabbit_password=$1 users rc
   systemctl enable --now rabbitmq-server
-  if rabbitmqctl list_users | \
-      awk '$1 == "openstack" { found=1 } END { exit !found }'; then
+  if users=$(rabbitmqctl list_users); then
+    : "list_users probe completed"
+  else
+    rc=$?
+    unset rabbit_password
+    die "RabbitMQ list_users probe failed (rc=$rc)"
+  fi
+  if awk '$1 == "openstack" { found=1 } END { exit !found }' <<<"$users"; then
     : "openstack user already exists; keep the idempotent update path"
   else
     rabbitmqctl add_user openstack "$rabbit_password" >/dev/null

@@ -991,8 +991,24 @@ def test_manual_secret_transfer_is_strict_exclusive_atomic_and_cleanup_safe() ->
     exclusive_constants = {
         node.value for node in ast.walk(exclusive_tree) if isinstance(node, ast.Constant)
     }
-    assert {"O_EXCL", "O_NOFOLLOW", "fchmod", "fchown", "fsync"} <= exclusive_attributes
-    assert 0o600 in exclusive_constants and 65536 in exclusive_constants
+    assert {"O_EXCL", "O_NOFOLLOW", "fchmod", "fchown", "fstat", "lstat", "fsync"} <= exclusive_attributes
+    assert 0o600 in exclusive_constants
+
+    stream_assignment = next(
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "STREAM_OWNED_PROGRAM" for target in node.targets)
+    )
+    assert isinstance(stream_assignment.value, ast.Constant) and isinstance(stream_assignment.value.value, str)
+    stream_tree = ast.parse(stream_assignment.value.value)
+    stream_attributes = {
+        node.attr for node in ast.walk(stream_tree) if isinstance(node, ast.Attribute)
+    }
+    stream_constants = {
+        node.value for node in ast.walk(stream_tree) if isinstance(node, ast.Constant)
+    }
+    assert {"O_NOFOLLOW", "fstat", "lstat", "ftruncate", "fsync"} <= stream_attributes
+    assert 65536 in stream_constants
 
     connect_calls = [
         node for node in ast.walk(tree)
@@ -1027,7 +1043,67 @@ def test_manual_secret_transfer_is_strict_exclusive_atomic_and_cleanup_safe() ->
     assert "cleanup_exact_temp" in calls
 
 
-def run_rabbit_configuration_harness(existing: bool, auth_ok: bool) -> subprocess.CompletedProcess[str]:
+def test_manual_secret_transfer_does_not_cleanup_a_preexisting_unowned_temp() -> None:
+    source = next(
+        block for block in markdown_fenced_blocks("01-base.md", "python")
+        if "def connect_pinned" in block
+    )
+    tree = ast.parse(source)
+    transfer = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "transfer_secret"
+    )
+    module = ast.Module(body=[transfer], type_ignores=[])
+    namespace: dict[str, object] = {}
+    cleanup_calls: list[str] = []
+
+    class DummySource:
+        def read(self, _size: int) -> bytes:
+            return b""
+
+        def close(self) -> None:
+            return None
+
+    class DummySftp:
+        def open(self, _path: str, _mode: str) -> DummySource:
+            return DummySource()
+
+        def close(self) -> None:
+            return None
+
+    class DummyClient:
+        def open_sftp(self) -> DummySftp:
+            return DummySftp()
+
+    class DummyUuid:
+        hex = "review-temp"
+
+    class DummyUuidModule:
+        @staticmethod
+        def uuid4() -> DummyUuid:
+            return DummyUuid()
+
+    namespace.update(
+        SECRET_PATH="/root/.openstack-lab-secrets",
+        CHUNK_SIZE=65536,
+        uuid=DummyUuidModule,
+        create_exclusive_temp=lambda _client, _path: (_ for _ in ()).throw(FileExistsError("preexisting")),
+        promote_atomic=lambda *_args: None,
+        verify_metadata_equal=lambda *_args: None,
+        cleanup_exact_temp=lambda _client, path: cleanup_calls.append(path),
+    )
+    exec(compile(module, "01-base-transfer-owned-cleanup", "exec"), namespace)
+
+    with pytest.raises(FileExistsError, match="preexisting"):
+        namespace["transfer_secret"](DummyClient(), DummyClient())  # type: ignore[operator]
+    assert cleanup_calls == [], "O_EXCL failure must not remove a preexisting unowned path"
+
+
+def run_rabbit_configuration_harness(
+    existing: bool,
+    auth_ok: bool,
+    list_users_rc: int = 0,
+) -> subprocess.CompletedProcess[str]:
     text = manual_shell_text("02-infrastructure.md")
     definitions = manual_function_definitions(text, ("die", "configure_rabbitmq"))
     user_row = "openstack\t[]" if existing else "guest\t[administrator]"
@@ -1039,7 +1115,7 @@ def run_rabbit_configuration_harness(existing: bool, auth_ok: bool) -> subproces
         systemctl() {{ return 0; }}
         rabbitmqctl() {{
           case "$1" in
-            list_users) printf 'user\\ttags\\n%b\\n' {user_row!r} ;;
+            list_users) printf 'user\\ttags\\n%b\\n' {user_row!r}; return {list_users_rc} ;;
             add_user) printf '%s\\n' add >> "$TRACE" ;;
             change_password) printf '%s\\n' change >> "$TRACE" ;;
             set_permissions) printf '%s\\n' permissions >> "$TRACE" ;;
@@ -1063,6 +1139,18 @@ def test_manual_rabbitmq_configuration_is_idempotent_and_auth_failure_is_fatal()
     assert existing.returncode == 0, existing.stderr
     assert existing.stdout.splitlines() == ["change", "permissions", "auth"]
     assert auth_failure.returncode != 0, "failed RabbitMQ authentication must stop the session"
+
+
+def test_manual_rabbitmq_list_users_probe_failure_is_fatal_before_mutation() -> None:
+    probe_failure = run_rabbit_configuration_harness(
+        existing=False,
+        auth_ok=True,
+        list_users_rc=7,
+    )
+    assert probe_failure.returncode != 0
+    assert probe_failure.stdout.splitlines() == [], (
+        "list_users failure must stop before add/change/set_permissions/authenticate"
+    )
 
 
 def test_manual_service_gates_assert_live_state_not_just_display_it() -> None:

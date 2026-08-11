@@ -395,7 +395,7 @@ mv -f "$tmp" /root/.openstack-lab-secrets
 trap - EXIT
 ```
 
-随后在仓库根目录的工作站会话执行下面完整示例。它只加载已经人工复核并纳入本任务输入的两个 `known_hosts` 文件，使用 Paramiko `RejectPolicy`；登录密码通过 `getpass` 只进入进程内存。controller 文件以 64 KiB 块流经内存写入 compute 上由 `O_EXCL|O_NOFOLLOW` 建立的随机临时文件，不落工作站磁盘，不显示或哈希内容。临时文件在 `/root` 中固定为 `root:root`、`0600`，校验后同目录原子提升；`finally` 对精确临时路径做失败清理。最后只比较文件类型、非零大小、大小相等、UID/GID 与权限，不读取第二遍、更不输出内容：
+随后在仓库根目录的工作站会话执行下面完整示例。它只加载已经人工复核并纳入本任务输入的两个 `known_hosts` 文件，使用 Paramiko `RejectPolicy`；登录密码通过 `getpass` 只进入进程内存。controller 文件以 64 KiB 块流经内存写入 compute 上由 `O_EXCL|O_NOFOLLOW` 建立的随机临时文件，不落工作站磁盘，不显示或哈希内容。独占创建程序先把文件固定为 `root:root`、`0600`，用 `fstat`/`lstat` 验证同一 inode，并只返回非秘密的设备号/inode 握手；工作站收到成功握手后才把精确路径与 inode 登记到 controller/compute 分离的 `owned_temps` 中。流式写入、原子提升和失败清理都再次核对该 inode；提升成功后立即撤销登记，`finally` 只清理由本次任务仍持有的条目。若 `O_EXCL` 因预存在路径失败，该路径从未登记，也绝不会被清理。最后只比较文件类型、非零大小、大小相等、UID/GID 与权限，不读取第二遍、更不输出内容：
 
 ```python
 from getpass import getpass
@@ -414,6 +414,7 @@ CHUNK_SIZE = 65536
 
 CREATE_EXCLUSIVE_PROGRAM = r"""
 import os
+import stat
 import sys
 
 path = sys.argv[1]
@@ -422,6 +423,53 @@ fd = os.open(path, flags, 0o600)
 try:
     os.fchmod(fd, 0o600)
     os.fchown(fd, 0, 0)
+    descriptor = os.fstat(fd)
+    path_info = os.lstat(path)
+    if not stat.S_ISREG(descriptor.st_mode):
+        raise RuntimeError("exclusive temporary is not regular")
+    if (descriptor.st_dev, descriptor.st_ino) != (path_info.st_dev, path_info.st_ino):
+        raise RuntimeError("exclusive temporary inode changed")
+    if descriptor.st_uid != 0 or descriptor.st_gid != 0:
+        raise RuntimeError("exclusive temporary owner is unsafe")
+    if stat.S_IMODE(descriptor.st_mode) != 0o600:
+        raise RuntimeError("exclusive temporary mode is unsafe")
+    os.fsync(fd)
+    print(f"{descriptor.st_dev}:{descriptor.st_ino}", flush=True)
+except BaseException:
+    descriptor = os.fstat(fd)
+    try:
+        path_info = os.lstat(path)
+    except FileNotFoundError:
+        pass
+    else:
+        if (descriptor.st_dev, descriptor.st_ino) == (path_info.st_dev, path_info.st_ino):
+            os.unlink(path)
+    raise
+finally:
+    os.close(fd)
+"""
+
+STREAM_OWNED_PROGRAM = r"""
+import os
+import stat
+import sys
+
+path = sys.argv[1]
+expected = (int(sys.argv[2]), int(sys.argv[3]))
+fd = os.open(path, os.O_WRONLY | os.O_NOFOLLOW)
+try:
+    descriptor = os.fstat(fd)
+    path_info = os.lstat(path)
+    actual = (descriptor.st_dev, descriptor.st_ino)
+    if actual != expected or actual != (path_info.st_dev, path_info.st_ino):
+        raise RuntimeError("owned temporary inode changed")
+    if not stat.S_ISREG(descriptor.st_mode):
+        raise RuntimeError("owned temporary is not regular")
+    if descriptor.st_uid != 0 or descriptor.st_gid != 0:
+        raise RuntimeError("owned temporary owner is unsafe")
+    if stat.S_IMODE(descriptor.st_mode) != 0o600:
+        raise RuntimeError("owned temporary mode is unsafe")
+    os.ftruncate(fd, 0)
     while True:
         chunk = sys.stdin.buffer.read(65536)
         if not chunk:
@@ -441,7 +489,10 @@ import stat
 import sys
 
 temporary, target = sys.argv[1:3]
+expected = (int(sys.argv[3]), int(sys.argv[4]))
 info = os.lstat(temporary)
+if (info.st_dev, info.st_ino) != expected:
+    raise RuntimeError("temporary inode is not owned by this transfer")
 if not stat.S_ISREG(info.st_mode):
     raise RuntimeError("temporary path is not a regular file")
 if info.st_uid != 0 or info.st_gid != 0 or stat.S_IMODE(info.st_mode) != 0o600:
@@ -463,10 +514,15 @@ import os
 import sys
 
 path = sys.argv[1]
+expected = (int(sys.argv[2]), int(sys.argv[3]))
 try:
-    os.unlink(path)
+    info = os.lstat(path)
 except FileNotFoundError:
     pass
+else:
+    if (info.st_dev, info.st_ino) != expected:
+        raise RuntimeError("refusing to clean an unowned temporary inode")
+    os.unlink(path)
 """
 
 
@@ -496,25 +552,52 @@ def remote_command(client, program, *arguments):
 
 
 def create_exclusive_temp(client, temporary):
-    return remote_command(client, CREATE_EXCLUSIVE_PROGRAM, temporary)
+    identity = run_remote_python(client, CREATE_EXCLUSIVE_PROGRAM, temporary).strip().split(":")
+    if len(identity) != 2 or not all(field.isdecimal() for field in identity):
+        raise RuntimeError("exclusive temporary inode handshake is invalid")
+    return int(identity[0]), int(identity[1])
+
+
+def stream_owned_temp(client, temporary, identity):
+    return remote_command(
+        client,
+        STREAM_OWNED_PROGRAM,
+        temporary,
+        str(identity[0]),
+        str(identity[1]),
+    )
 
 
 def run_remote_python(client, program, *arguments):
     remote_stdin, remote_stdout, remote_stderr = remote_command(client, program, *arguments)
     remote_stdin.close()
-    remote_stdout.read()
+    output = remote_stdout.read()
     remote_stderr.read()
     status = remote_stdout.channel.recv_exit_status()
     if status != 0:
         raise RuntimeError(f"remote metadata operation failed with rc={status}")
+    return output.decode("ascii", errors="strict")
 
 
-def promote_atomic(client, temporary, target):
-    run_remote_python(client, PROMOTE_PROGRAM, temporary, target)
+def promote_atomic(client, temporary, target, identity):
+    run_remote_python(
+        client,
+        PROMOTE_PROGRAM,
+        temporary,
+        target,
+        str(identity[0]),
+        str(identity[1]),
+    )
 
 
-def cleanup_exact_temp(client, temporary):
-    run_remote_python(client, CLEANUP_PROGRAM, temporary)
+def cleanup_exact_temp(client, temporary, identity):
+    run_remote_python(
+        client,
+        CLEANUP_PROGRAM,
+        temporary,
+        str(identity[0]),
+        str(identity[1]),
+    )
 
 
 def checked_metadata(sftp, path):
@@ -536,11 +619,18 @@ def verify_metadata_equal(controller_sftp, compute_sftp):
 
 def transfer_secret(controller, compute):
     temporary = SECRET_PATH + ".task5a-" + uuid.uuid4().hex
-    controller_sftp = controller.open_sftp()
-    compute_sftp = compute.open_sftp()
+    owned_temps = {"controller": {}, "compute": {}}
+    controller_sftp = None
+    compute_sftp = None
     try:
+        controller_sftp = controller.open_sftp()
+        compute_sftp = compute.open_sftp()
         source = controller_sftp.open(SECRET_PATH, "rb")
-        remote_stdin, remote_stdout, remote_stderr = create_exclusive_temp(compute, temporary)
+        identity = create_exclusive_temp(compute, temporary)
+        owned_temps["compute"][temporary] = identity
+        remote_stdin, remote_stdout, remote_stderr = stream_owned_temp(
+            compute, temporary, identity
+        )
         try:
             while True:
                 chunk = source.read(CHUNK_SIZE)
@@ -556,12 +646,18 @@ def transfer_secret(controller, compute):
                 raise RuntimeError(f"exclusive streaming transfer failed with rc={status}")
         finally:
             source.close()
-        promote_atomic(compute, temporary, SECRET_PATH)
+        promote_atomic(compute, temporary, SECRET_PATH, identity)
+        del owned_temps["compute"][temporary]
         verify_metadata_equal(controller_sftp, compute_sftp)
     finally:
-        cleanup_exact_temp(compute, temporary)
-        controller_sftp.close()
-        compute_sftp.close()
+        for owned, owned_identity in tuple(owned_temps["controller"].items()):
+            cleanup_exact_temp(controller, owned, owned_identity)
+        for owned, owned_identity in tuple(owned_temps["compute"].items()):
+            cleanup_exact_temp(compute, owned, owned_identity)
+        if controller_sftp is not None:
+            controller_sftp.close()
+        if compute_sftp is not None:
+            compute_sftp.close()
 
 
 password = getpass("SSH root password (memory only): ")
