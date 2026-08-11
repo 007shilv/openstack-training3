@@ -1,0 +1,42 @@
+# Offline repository staging and access verification
+Timestamp (Asia/Shanghai): 2026-08-11
+Repository target: controller:/opt/openstack_repo
+ZIP SHA256: ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978
+ZIP size bytes: 726582890
+ZIP safety scan: PASS (1089 entries; 1079 RPMs; no absolute paths, traversal, symlink, or special entries)
+repodata/repomd.xml SHA256: 6ccbb9e00263dd9c35cb93c9c60d83a4e7ace3d9fd4c5c85abf9e5c722978fec
+
+Controller staging verification:
+- Target was absent before staging; /opt available bytes: 93647896576.
+- Uploaded archive SHA256 and size matched the local ZIP.
+- Extracted to a task-unique /opt/.openstack_repo.staging.<zip-sha256> directory.
+- Verified sole top-level directory openstack_repo, repodata/repomd.xml, 1079 RPMs, and SHA256 of each of the eight core RPMs.
+- Atomically renamed staged openstack_repo to /opt/openstack_repo.
+- Task ZIP, empty staging directory, and atomic-write temporary files were removed; final precise temporary-path check: PASS.
+
+Controller local DNF source:
+[openstack-local]
+baseurl=file:///opt/openstack_repo
+enabled=1
+gpgcheck=0
+dnf repolist --disablerepo='*' --enablerepo='openstack-local': PASS
+openstack-local  Validated local OpenStack repository
+
+Controller FTP service:
+- vsftpd installed only with --disablerepo='*' --enablerepo='openstack-local' (vsftpd-3.0.5-3.oe2403sp3.x86_64).
+- Service: active. IPv4 listener; anonymous enabled; local users and all anonymous writes disabled; anon_root=/opt.
+- Passive ports: 30000-30009. Active firewalld allows ftp service and 30000-30009/tcp.
+- SELinux: Enforcing. No policy or label change was needed because the controller FTP request succeeded.
+- Controller FTP request: ftp://192.168.234.151/openstack_repo/repodata/repomd.xml -> Content-Length: 1569, PASS.
+
+Compute FTP and DNF source:
+[openstack-local]
+baseurl=ftp://192.168.234.151/openstack_repo
+enabled=1
+gpgcheck=0
+curl -fsSI ftp://192.168.234.151/openstack_repo/repodata/repomd.xml -> Content-Length: 1569, PASS.
+dnf repolist --disablerepo='*' --enablerepo='openstack-local': PASS
+openstack-local  Validated controller FTP OpenStack repository
+No OpenStack package installation was performed on compute.
+
+Credentials: <REDACTED>
