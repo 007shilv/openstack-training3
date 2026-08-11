@@ -2629,10 +2629,13 @@ def test_manual_placement_database_uses_parameters_and_exact_scope_validator() -
 class _FakePlacementIdentity:
     def __init__(self, scenario: str) -> None:
         self.scenario = scenario
-        self.user = scenario not in {"zero", "query-error"}
-        self.assignment = scenario not in {"zero", "query-error", "disabled-user"}
-        self.service = scenario not in {"zero", "query-error", "disabled-user", "wrong-assignment"}
-        self.interfaces = [] if scenario == "zero" else ["public", "internal", "admin"]
+        create_path = scenario in {"zero", "bad-created-endpoint", "created-wrong-user", "created-wrong-assignment", "created-wrong-service"}
+        self.user = not create_path
+        self.assignment = not create_path
+        self.service = not create_path
+        if scenario == "partial-endpoint": self.interfaces = ["public"]
+        elif create_path: self.interfaces = []
+        else: self.interfaces = ["public", "internal", "admin"]
         self.mutations: list[tuple[str, ...]] = []
 
     @staticmethod
@@ -2641,25 +2644,35 @@ class _FakePlacementIdentity:
 
     def query(self, args: list[str]) -> object:
         key = tuple(args[:2])
-        if self.scenario == "query-error" and key == ("user", "list"): raise RuntimeError("query failed")
+        error_stage = {
+            "query-user": ("user", "list"), "query-assignment": ("role", "assignment"),
+            "query-service": ("service", "list"), "query-endpoint": ("endpoint", "list"),
+        }.get(self.scenario)
+        if error_stage == key: raise RuntimeError("query failed")
         if key == ("project", "list"): return [{"ID": "project", "Name": "service"}]
         if key == ("project", "show"): return {"id": "project", "name": "service", "domain_id": "default", "enabled": True, "is_domain": False}
         if key == ("role", "list"): return [{"ID": "role", "Name": "admin"}]
         if key == ("role", "show"): return {"id": "role", "name": "admin", "domain_id": None}
         if key == ("user", "list"):
             rows = [{"ID": "user", "Name": "placement"}] if self.user else []
-            return rows + ([{"ID": "duplicate", "Name": "placement"}] if self.scenario == "duplicate" else [])
-        if key == ("user", "show"): return {"id": "user", "name": "placement", "domain_id": "default", "enabled": self.scenario != "disabled-user"}
+            return rows + ([{"ID": "duplicate", "Name": "placement"}] if self.scenario == "duplicate-user" else [])
+        if key == ("user", "show"): return {"id": "wrong" if self.scenario in {"wrong-user", "created-wrong-user"} else "user", "name": "placement", "domain_id": "default", "enabled": self.scenario != "disabled-user"}
         if key == ("role", "assignment"):
             if not self.assignment: return []
-            return [{"Role": "other" if self.scenario == "wrong-assignment" else "role", "User": "user", "Project": "project", "Group": "", "Domain": "", "System": "", "Inherited": False}]
-        if key == ("service", "list"): return [{"ID": "service", "Name": "placement", "Type": "placement"}] if self.service else []
-        if key == ("service", "show"): return {"id": "service", "name": "placement", "type": "placement", "enabled": True}
-        if key == ("endpoint", "list"): return [self.endpoint(i) for i in self.interfaces]
+            rows = [{"Role": "other" if self.scenario in {"wrong-assignment", "created-wrong-assignment"} else "role", "User": "user", "Project": "project", "Group": "", "Domain": "", "System": "", "Inherited": False}]
+            return rows + ([dict(rows[0])] if self.scenario == "duplicate-assignment" else [])
+        if key == ("service", "list"):
+            rows = [{"ID": "service", "Name": "placement", "Type": "placement"}] if self.service else []
+            return rows + ([{"ID": "duplicate-service", "Name": "placement", "Type": "placement"}] if self.scenario == "duplicate-service" else [])
+        if key == ("service", "show"): return {"id": "wrong-service" if self.scenario in {"wrong-service", "created-wrong-service"} else "service", "name": "placement", "type": "placement", "enabled": self.scenario != "disabled-service"}
+        if key == ("endpoint", "list"):
+            rows = [self.endpoint(i) for i in self.interfaces]
+            return rows + ([self.endpoint("public") | {"ID": "endpoint-public-duplicate"}] if self.scenario == "duplicate-endpoint" else [])
         if key == ("endpoint", "show"):
-            interface = args[2].removeprefix("endpoint-")
-            url = "http://wrong:8778" if self.scenario == "bad-created-endpoint" and interface == "internal" else "http://controller:8778"
-            return {"id": args[2], "interface": interface, "region": "RegionOne", "service_id": "service", "url": url, "enabled": True}
+            interface = args[2].removeprefix("endpoint-").split("-duplicate", 1)[0]
+            url = "http://wrong:8778" if self.scenario in {"bad-created-endpoint", "wrong-endpoint"} and interface == "internal" else "http://controller:8778"
+            service_id = "wrong-service" if self.scenario == "wrong-endpoint-service" and interface == "public" else "service"
+            return {"id": args[2], "interface": interface, "region": "RegionOne", "service_id": service_id, "url": url, "enabled": True}
         raise AssertionError(args)
 
     def mutate(self, args: list[str]) -> object:
@@ -2682,13 +2695,39 @@ def test_manual_placement_identity_zero_and_exact_states_succeed(scenario: str) 
     else: assert len(fake.mutations) == 6
 
 
-@pytest.mark.parametrize("scenario", ("duplicate", "query-error", "disabled-user", "wrong-assignment"))
+@pytest.mark.parametrize(
+    "scenario",
+    (
+        "duplicate-user", "query-user", "disabled-user", "wrong-user",
+        "duplicate-assignment", "query-assignment", "wrong-assignment",
+        "duplicate-service", "query-service", "disabled-service", "wrong-service",
+        "partial-endpoint", "duplicate-endpoint", "query-endpoint", "wrong-endpoint", "wrong-endpoint-service",
+    ),
+)
 def test_manual_placement_identity_failure_blocks_downstream_mutations(scenario: str) -> None:
     namespace = _placement_python_function_namespace("ensure_placement_identity_objects")
     fake = _FakePlacementIdentity(scenario)
     with pytest.raises((RuntimeError, ValueError)):
         namespace["ensure_placement_identity_objects"]("memory-only", fake.query, fake.mutate)
     assert fake.mutations == []
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_keys"),
+    (
+        ("created-wrong-user", [("user", "create")]),
+        ("created-wrong-assignment", [("user", "create"), ("role", "add")]),
+        ("created-wrong-service", [("user", "create"), ("role", "add"), ("service", "create")]),
+    ),
+)
+def test_manual_placement_created_stage_failure_blocks_every_later_stage(
+    scenario: str, expected_keys: list[tuple[str, str]]
+) -> None:
+    namespace = _placement_python_function_namespace("ensure_placement_identity_objects")
+    fake = _FakePlacementIdentity(scenario)
+    with pytest.raises(ValueError):
+        namespace["ensure_placement_identity_objects"]("memory-only", fake.query, fake.mutate)
+    assert [args[:2] for args in fake.mutations] == expected_keys
 
 
 def test_manual_placement_endpoint_create_requery_stops_before_admin() -> None:
@@ -2703,7 +2742,7 @@ def test_manual_placement_endpoint_create_requery_stops_before_admin() -> None:
 
 def test_manual_placement_atomic_config_failure_preserves_target_and_snapshots(tmp_path: Path) -> None:
     source = next(block for block in markdown_fenced_blocks("05-placement.md", "python") if "def write_placement_config" in block)
-    namespace: dict[str, object] = {}
+    namespace: dict[str, object] = {"__name__": "test"}
     exec(compile(source, "placement-config", "exec"), namespace)
 
     class Ops:
@@ -2770,3 +2809,186 @@ def test_manual_placement_later_package_and_compute_disk_boundaries_are_explicit
     for marker in ("53687091200", "lsblk -s -nrpo NAME", "wipefs --no-act", "blkid -p", "resource_providers=[]"):
         assert marker in markdown
     assert "没有创建资源提供者" in markdown
+
+
+def test_manual_placement_production_orchestrator_wires_every_stage_and_short_circuits() -> None:
+    namespace = _placement_python_function_namespace("run_placement_deployment")
+    calls: list[str] = []
+    failure: str | None = None
+    def mark(name: str, result: object = None) -> object:
+        calls.append(name)
+        if failure == name: raise RuntimeError(f"{name} failed")
+        return result
+    class Runtime:
+        config_path = Path("/memory/placement.conf"); placement_gid = 987
+        def package_stage(self): return mark("package", {})
+        def validate_package_evidence(self, _e): mark("validate-package")
+        def database_and_grant_stage(self): return mark("database", object())
+        def load_runtime_secret(self): return mark("load-secret", "memory-only")
+        def schema_stage(self): return mark("schema", {})
+        def validate_schema_evidence(self, _e): mark("validate-schema")
+        def upgrade_stage(self): return mark("upgrade", {})
+        def validate_upgrade_evidence(self, _e): mark("validate-upgrade")
+        def apache_hardening_stage(self): return mark("apache", {})
+        def validate_apache_evidence(self, _e): mark("validate-apache")
+        def final_dual_node_audit(self): return mark("final-audit", {"status": "FINAL_AUDIT_PASS"})
+    class Executor:
+        def __init__(self): mark("executor")
+        def query(self, _args): return None
+        def mutate(self, _args): return None
+    namespace.update({
+        "collect_placement_grant_evidence": lambda _cursor: mark("collect-grants", {}),
+        "validate_placement_grant_evidence": lambda _e: mark("validate-grants"),
+        "OpenStackExecutor": Executor,
+        "ensure_placement_identity_objects": lambda *_args: mark("ensure-identity", {}),
+        "validate_placement_identity_evidence": lambda _e: mark("validate-identity"),
+        "write_placement_config": lambda *_args: mark("write-config"),
+        "validate_written_placement_config": lambda *_args: mark("validate-config"),
+        "curl_placement_request": object(),
+        "run_placement_api_validation": lambda _request: mark("api", {"status": "PASS", "providers": 0}),
+    })
+    expected = [
+        "package", "validate-package", "database", "collect-grants", "validate-grants",
+        "load-secret", "executor", "ensure-identity", "validate-identity", "write-config",
+        "validate-config", "schema", "validate-schema", "upgrade", "validate-upgrade",
+        "apache", "validate-apache", "api", "final-audit",
+    ]
+    result = namespace["run_placement_deployment"](Runtime())
+    assert calls == expected and result == {"status": "PASS", "providers": 0}
+    for failing in expected:
+        calls.clear(); failure = failing
+        with pytest.raises(RuntimeError, match=f"{failing} failed"):
+            namespace["run_placement_deployment"](Runtime())
+        assert calls == expected[: expected.index(failing) + 1]
+
+
+def test_manual_placement_starting_gate_has_complete_future_and_partial_state_boundaries() -> None:
+    namespace = _placement_python_function_namespace("run_after_both_placement_gates")
+    controller = namespace["CONTROLLER_GATE"]
+    compute = namespace["COMPUTE_GATE"]
+    for token in (
+        "service project", "global admin role", "EXPECTED_PLACEMENT_RPMS",
+        "partial Placement package state", "nova_api", "nova_cell0", "neutron", "cinder",
+        "User IN ('nova','neutron','cinder','swift')", "openstack-placement-api",
+        "sport = :8778", "placement-api", "http://controller:8778",
+    ):
+        assert token in controller
+    assert "EXPECTED_PLACEMENT_RPMS" in compute and "partial Placement package state" in compute
+    assert all(token in compute for token in ("/dev/sdb", "/dev/sdc", "disk /dev/sdb", "disk /dev/sdc"))
+
+
+def test_manual_placement_partial_transaction_gate_executes_zero_partial_complete_and_probe_error() -> None:
+    namespace = _placement_python_function_namespace("run_after_both_placement_gates")
+    controller = namespace["CONTROLLER_GATE"]
+    match = re.search(r"assert_placement_transaction_absent\(\)\{\n(.*?)\n\}", controller, re.S)
+    assert match
+    definitions = "die(){ exit 1; }\nassert_placement_transaction_absent(){\n" + match.group(1) + "\n}"
+    array_line = next(line for line in controller.splitlines() if line.startswith("EXPECTED_PLACEMENT_RPMS="))
+    packages = [
+        "openstack-placement-api", "openstack-placement-common", "python3-microversion-parse",
+        "python3-os-resource-classes", "python3-os-traits", "python3-placement",
+    ]
+    def run(installed: list[str], probe_error: str = "") -> int:
+        csv = ",".join(installed)
+        script = f"""
+        set -Eeuo pipefail
+        {array_line}
+        {definitions}
+        INSTALLED={shlex.quote(csv)}
+        PROBE_ERROR={shlex.quote(probe_error)}
+        rpm() {{
+          [[ $1 == -q ]] || return 99
+          local p=$2
+          if [[ $p == "$PROBE_ERROR" ]]; then printf 'probe error\n' >&2; return 2; fi
+          if [[ ,$INSTALLED, == *,$p,* ]]; then printf '%s-1\n' "$p"; return 0; fi
+          printf 'package %s is not installed\n' "$p" >&2; return 1
+        }}
+        assert_placement_transaction_absent
+        """
+        return run_git_bash(script).returncode
+    assert run([]) == 0
+    assert run(packages[:1]) != 0
+    assert run(packages[:5]) != 0
+    assert run(packages) != 0
+    assert run([], probe_error="python3-os-traits") != 0
+
+
+def test_manual_placement_final_audits_are_executable_and_block_completion() -> None:
+    namespace = _placement_python_function_namespace("run_placement_final_audits")
+    for name in ("FINAL_CONTROLLER_AUDIT", "FINAL_COMPUTE_AUDIT"):
+        with tempfile.NamedTemporaryFile("w", suffix=".sh", encoding="utf-8", newline="\n", delete=False) as stream:
+            stream.write(namespace[name]); path = Path(stream.name)
+        try:
+            completed = subprocess.run([str(GIT_BASH), "-n", str(path)], text=True, capture_output=True, check=False)
+            assert completed.returncode == 0, completed.stderr
+        finally: path.unlink(missing_ok=True)
+    calls: list[str] = []
+    class Client:
+        def __init__(self, name: str) -> None: self.name = name
+        def close(self) -> None: calls.append(f"close:{self.name}")
+    def connector(name: str, _password: str) -> Client:
+        calls.append(f"connect:{name}"); return Client(name)
+    for failing in ("controller", "compute"):
+        calls.clear()
+        def runner(client: Client, script: str, failing: str = failing) -> None:
+            assert script == namespace[f"FINAL_{client.name.upper()}_AUDIT"]
+            calls.append(f"run:{client.name}")
+            if client.name == failing: raise RuntimeError(f"{failing} failed")
+        with pytest.raises(RuntimeError, match=f"{failing} failed"):
+            namespace["run_placement_final_audits"]("memory-only", connector=connector, runner=runner)
+        assert "FINAL_AUDIT_PASS" not in calls
+
+
+def test_manual_placement_api_production_path_wires_strict_validators() -> None:
+    namespace = _placement_python_function_namespace("run_placement_api_validation")
+    calls: list[tuple[str, bool]] = []
+    version = {"versions": [{"id": "v1.0", "status": "CURRENT", "max_version": "1.39"}]}
+    providers = {"resource_providers": []}
+    def request(path: str, authenticated: bool) -> tuple[int, dict]:
+        calls.append((path, authenticated))
+        if path == "/": return 200, version
+        if not authenticated: return 401, {}
+        return 200, providers
+    result = namespace["run_placement_api_validation"](request)
+    assert result == {"status": "PASS", "providers": 0}
+    assert calls == [("/", False), ("/resource_providers", False), ("/resource_providers", True)]
+    valid_provider = {"uuid": "provider-uuid", "name": "compute", "generation": 0}
+    nonempty = namespace["run_placement_api_validation"](
+        lambda path, auth: (200, version) if path == "/" else ((200, {"resource_providers": [valid_provider]}) if auth else (401, {}))
+    )
+    assert nonempty == {"status": "PASS", "providers": 1}
+    for broken in (
+        lambda path, auth: (500, {}) if path == "/" else (401, {}),
+        lambda path, auth: (200, version) if path == "/" else ((403, {}) if auth else (401, {})),
+        lambda path, auth: (200, version) if path == "/" else ((200, {"resource_providers": [{}]}) if auth else (401, {})),
+    ):
+        with pytest.raises((RuntimeError, ValueError)):
+            namespace["run_placement_api_validation"](broken)
+
+
+def test_manual_placement_hardened_wsgi_is_atomic_and_has_no_global_alias(tmp_path: Path) -> None:
+    source = next(block for block in markdown_fenced_blocks("05-placement.md", "python") if "def write_hardened_placement_wsgi" in block)
+    namespace: dict[str, object] = {"__name__": "test"}; exec(compile(source, "placement-wsgi", "exec"), namespace)
+    payload = namespace["HARDENED_PLACEMENT_WSGI"]
+    assert "Listen 8778" in payload and "<VirtualHost *:8778>" in payload
+    assert "Alias /placement-api" not in payload and "<Location /placement-api>" not in payload
+    target = tmp_path / "00-placement-api.conf"; target.write_text("package-default\n", encoding="utf-8")
+    class Ops:
+        def __getattr__(self, name: str) -> object:
+            if name in {"fchown", "fchmod"}: return lambda *_args: None
+            if name == "replace": return lambda *_args: (_ for _ in ()).throw(OSError("replace failed"))
+            return getattr(os, name)
+    with pytest.raises(OSError, match="replace failed"):
+        namespace["write_hardened_placement_wsgi"](target, 0, 0, ops=Ops(), nonce="failure")
+    assert target.read_text(encoding="utf-8") == "package-default\n"
+    assert not list(tmp_path.glob(".00-placement-api.conf.task5d.*"))
+    snapshot = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-apache-placement.conf").read_text(encoding="utf-8")
+    assert snapshot == payload
+
+
+def test_manual_placement_records_exact_six_nevras_and_history_evidence() -> None:
+    markdown = manual_markdown("05-placement.md")
+    assert "EXACT_PLACEMENT_TRANSACTION_NEVRAS" in markdown
+    assert markdown.count(".oe2403sp2") >= 6
+    for marker in ("dnf history info", "RPM_DELTA=6", "REPO_ROWS=6", "zero remove/replace"):
+        assert marker in markdown
