@@ -17,6 +17,8 @@
 - Compute system disk `/dev/sda` must never be initialized by Cinder or Swift.
 - Cinder uses blank 50 GB `/dev/sdb`; Swift uses blank 50 GB `/dev/sdc`.
 - Part II teaches manual package installation, database/service registration, and manual configuration editing.
+- Every Part II deployment and operations command is typed manually, step by step. Each component must show manual configuration-file editing, manual database synchronization, manual database grants and identity/service/endpoint creation, and manual service enable/start/verification; scripts, agents, and orchestration models may validate these steps but must not replace them in the textbook procedure.
+- Chapter 13 is the explicit exception authorized for agent-driven one-shot script installation; it must remain clearly separated from the manual Part II method.
 - Chapter 13 lets TRAE call the verified scripts once to install OpenStack, then emphasizes multiple operations tasks.
 - Total target is approximately 380 pages; Part III target is approximately 50 pages.
 - Figures are numbered per chapter as `图1.1`; tables as `表1-1`.
@@ -116,4 +118,3 @@
 - [ ] Run a credential scan: `rg -n -S "sk-[A-Za-z0-9_-]{16,}|guosai@205|OS_PASSWORD=." "云计算基础架构平台构建与应用（第三版初稿）.docx" "第三版教材图片" "第三版教材配套环境"` using extracted DOCX XML for the DOCX check; expected result is no unmasked secret.
 - [ ] Generate hashes: `Get-FileHash -Algorithm SHA256 '云计算基础架构平台构建与应用（第三版初稿）.docx','第三版教材配套环境\09_官方来源与下载校验\SHA256SUMS.txt' | Format-List` and save them in `third-edition-work/checkpoints/final.sha256`.
 - [ ] Compare deliverables against every acceptance bullet in the approved design; document each as PASS or FAIL.
-
