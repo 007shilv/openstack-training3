@@ -1,18 +1,29 @@
 # Offline repository staging and access verification
-Timestamp (Asia/Shanghai): 2026-08-11
+Timestamp (Asia/Shanghai): 2026-08-11T12:15:14+08:00
 Repository target: controller:/opt/openstack_repo
 ZIP SHA256: ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978
 ZIP size bytes: 726582890
-ZIP safety scan: PASS (1089 entries; 1079 RPMs; no absolute paths, traversal, symlink, or special entries)
-repodata/repomd.xml SHA256: 6ccbb9e00263dd9c35cb93c9c60d83a4e7ace3d9fd4c5c85abf9e5c722978fec
+ZIP safety scan: PASS (1089 unique normalized relative entries: 3 directories, 1086 files, 1079 RPMs; no absolute paths, traversal, symlink, or special entries)
+repodata/repomd.xml local ZIP-member SHA256: 6ccbb9e00263dd9c35cb93c9c60d83a4e7ace3d9fd4c5c85abf9e5c722978fec
+repodata/repomd.xml remote file SHA256:       6ccbb9e00263dd9c35cb93c9c60d83a4e7ace3d9fd4c5c85abf9e5c722978fec
 
-Controller staging verification:
-- Target was absent before staging; /opt available bytes: 93647896576.
-- Uploaded archive SHA256 and size matched the local ZIP.
-- Extracted to a task-unique /opt/.openstack_repo.staging.<zip-sha256> directory.
-- Verified sole top-level directory openstack_repo, repodata/repomd.xml, 1079 RPMs, and SHA256 of each of the eight core RPMs.
-- Atomically renamed staged openstack_repo to /opt/openstack_repo.
-- Task ZIP, empty staging directory, and atomic-write temporary files were removed; final precise temporary-path check: PASS.
+Post-staging complete-tree verification (read-only):
+- ZIP normalized entries: 1089 (3 directories, 1086 files).
+- controller:/opt/openstack_repo mapped entries: 1089 (3 directories, 1086 files).
+- Missing entries: 0.
+- Extra entries: 0.
+- Type mismatches: 0.
+- File-size mismatches across all 1086 non-directory entries: 0.
+- repomd SHA256 mismatch: 0.
+- Eight core RPM local/remote SHA256 mismatches: 0; individual paths, versions, sizes, and hashes are in rpm-inventory.txt.
+- This exact-set comparison includes the seven non-RPM files and excludes contamination from any earlier staging content.
+- controller:/opt top-level entries: openstack_repo/ only.
+- controller:/opt/.openstack_repo.* residual entries: 0.
+
+Original staging evidence limitation and future procedure:
+- The original staging name used only the ZIP SHA256. Calling that path task-unique was inaccurate: a hash-only name can collide across retries or concurrent runs.
+- The original run checked that its paths did not exist, but no durable lstat/pre-create evidence was saved in the validation artifacts.
+- Future runs must use /opt/.openstack_repo.<zip-sha256>.<random-UUID-or-task-nonce>, record lstat and test ! -e before creation, and create the staging directory with exclusive mkdir. They must validate the complete normalized entry set and sizes before atomic promotion.
 
 Controller local DNF source:
 [openstack-local]
@@ -22,12 +33,29 @@ gpgcheck=0
 dnf repolist --disablerepo='*' --enablerepo='openstack-local': PASS
 openstack-local  Validated local OpenStack repository
 
-Controller FTP service:
-- vsftpd installed only with --disablerepo='*' --enablerepo='openstack-local' (vsftpd-3.0.5-3.oe2403sp3.x86_64).
-- Service: active. IPv4 listener; anonymous enabled; local users and all anonymous writes disabled; anon_root=/opt.
+Controller FTP service and exposure:
+- vsftpd installed only with --disablerepo='*' --enablerepo='openstack-local' (vsftpd-3.0.5-3.oe2403sp3.x86_64); no dependency RPM was added.
+- Service: active. listen=YES; listen_ipv6=NO; anonymous_enable=YES; local_enable=NO; write_enable=NO.
+- anon_upload_enable=NO; anon_mkdir_write_enable=NO; anon_other_write_enable=NO; anon_world_readable_only=YES; anon_root=/opt.
 - Passive ports: 30000-30009. Active firewalld allows ftp service and 30000-30009/tcp.
-- SELinux: Enforcing. No policy or label change was needed because the controller FTP request succeeded.
+- /opt has no readable top-level sibling besides openstack_repo, so the current anonymous FTP root exposes only this repository tree.
+- SELinux: Enforcing. No policy or label change was needed.
 - Controller FTP request: ftp://192.168.234.151/openstack_repo/repodata/repomd.xml -> Content-Length: 1569, PASS.
+
+Task-owned backup cleanup:
+- Parsed exact path: /root/openstack-repo-backups/vsftpd.conf.pre-openstack-repo-ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978.
+- Before deletion it was a regular file, size 5039 bytes, SHA256 fa52b7c07f7499930bbd5fdd890b3828d55250bfa39361837944f6236408e0f6.
+- Its SHA256 exactly matched etc/vsftpd/vsftpd.conf streamed from the verified offline vsftpd RPM, proving it was the package default saved immediately before this task's replacement.
+- Deleted only that exact file; exact post-delete absence check: PASS. It is recoverable by reinstalling or extracting the same vsftpd RPM.
+- /root/openstack-repo-backups is empty but was retained because the original run did not preserve proof that the directory itself was created by this task.
+
+Task 1 baseline comparison:
+- Controller RPM delta: added only vsftpd-3.0.5-3.oe2403sp3.x86_64; removed 0; added OpenStack service packages 0.
+- Compute RPM delta: added 0; removed 0; added OpenStack service packages 0.
+- Compute /dev/sda remains the 200 GiB system disk: sda2 is 192 GiB ext4 mounted at /, and sda3 is swap.
+- Compute /dev/sdb remains a 50 GiB whole disk with no child, filesystem, or mount; read-only blkid probe returned no signature.
+- Compute /dev/sdc remains a 50 GiB whole disk with no child, filesystem, or mount; read-only blkid probe returned no signature.
+- The sda/sdb/sdc mapping, visible signatures, and mount state match the Task 1 baseline. No disk operation was performed.
 
 Compute FTP and DNF source:
 [openstack-local]
