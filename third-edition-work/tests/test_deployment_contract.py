@@ -7,6 +7,9 @@ import json
 import os
 import re
 import shlex
+import subprocess
+import tempfile
+import textwrap
 import zipfile
 from pathlib import Path
 
@@ -421,6 +424,94 @@ def replace_blank_guard_line(text: str, old: str, new: str) -> str:
     body = shell_function_body(text, "assert_blank_data_disk")
     assert body is not None
     return text.replace(body, body.replace(old, new, 1), 1)
+
+
+GIT_BASH = Path(r"C:\Program Files\Git\bin\bash.exe")
+
+
+def shell_function_definition(text: str, name: str) -> str:
+    body = shell_function_body(text, name)
+    assert body is not None, f"missing {name}"
+    return f"{name}() {{\n{body}\n}}"
+
+
+def run_blank_guard_harness(text: str, device: str, scenario: str) -> int:
+    """Execute extracted guard functions with command mocks and no block-device access."""
+    assert GIT_BASH.is_file(), "Git Bash is required for isolated Bash guard tests"
+    functions = "\n\n".join(
+        shell_function_definition(text, name)
+        for name in ("die", "is_block_device", "assert_not_root_ancestor", "assert_blank_data_disk")
+    )
+    root_chain = "/dev/mapper/vg-root\n" + (f"{device}\n" if scenario == "root_ancestor" else "")
+    pvs_mock = ""
+    if scenario != "pvs_missing":
+        pvs_status = "2" if scenario == "pvs_error" else "0"
+        pvs_output = f"pv-uuid {device}" if scenario == "orphan_pv" else ""
+        pvs_mock = f"""
+        pvs() {{
+          [[ {pvs_status} -eq 0 ]] || return {pvs_status}
+          printf '%s\\n' '{pvs_output}'
+        }}
+        """
+    harness = f"""
+    set -euo pipefail
+    {functions}
+    is_block_device() {{ return 0; }}
+    findmnt() {{ printf '%s\\n' /dev/mapper/vg-root; }}
+    readlink() {{
+      [[ "$1" == '-f' ]] || return 2
+      printf '%s\\n' "$2"
+    }}
+    lsblk() {{
+      case " $* " in
+        *" -dn -o TYPE "*) printf '%s\\n' disk ;;
+        *" -bdn -o SIZE "*) printf '%s\\n' 53687091200 ;;
+        *" -s -nrpo NAME "*) printf '%s' '{root_chain}' ;;
+        *) return 0 ;;
+      esac
+    }}
+    awk() {{ return 0; }}
+    blkid() {{ return 0; }}
+    {pvs_mock}
+    PATH=/nonexistent
+    assert_blank_data_disk '{device}' 50
+    """
+    with tempfile.TemporaryDirectory() as directory:
+        harness_path = Path(directory) / "blank-disk-harness.sh"
+        harness_path.write_text(textwrap.dedent(harness), encoding="utf-8", newline="\n")
+        completed = subprocess.run(
+            [str(GIT_BASH), str(harness_path)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    return completed.returncode
+
+
+def blank_guard_behavior_violations(text: str, device: str) -> list[str]:
+    expected = {
+        "blank": 0,
+        "root_ancestor": 1,
+        "pvs_missing": 1,
+        "pvs_error": 1,
+        "orphan_pv": 1,
+    }
+    violations: list[str] = []
+    for scenario, expected_exit in expected.items():
+        actual_exit = run_blank_guard_harness(text, device, scenario)
+        if (actual_exit == 0) != (expected_exit == 0):
+            violations.append(f"{scenario}: expected exit class {expected_exit}, got {actual_exit}")
+    return violations
+
+
+def test_blank_disk_guards_execute_fail_closed_behavior() -> None:
+    for script_name, device in (("14-compute-cinder.sh", "/dev/sdb"), ("16-compute-swift.sh", "/dev/sdc")):
+        text = script_text(script_name)
+        assert blank_guard_behavior_violations(text, device) == [], script_name
+        blank_body = shell_function_body(text, "assert_blank_data_disk")
+        assert blank_body is not None
+        bypassed = text.replace(blank_body, "  return 0\n" + blank_body, 1)
+        assert blank_guard_behavior_violations(bypassed, device), "return-0 mutation must be detected"
 
 
 def test_blank_disk_guards_fail_closed_for_root_and_orphan_pv_states() -> None:

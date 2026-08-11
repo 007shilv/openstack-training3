@@ -12,8 +12,8 @@ b18621b30bd1117d5f4a783f72d035b0ebe728ec08e3373ac43f3b802d9d14ad  third-edition-
 862c0ed326683d8f6ca549e9fd98dd72f73209d4fc2f36b809f7d3357958b47a  third-edition-work/deployment/openstack-ts/final-scripts/11-controller-neutron.sh
 1ca4d01f3e0783a87473ed70a6cb7d0dac9e78f02f712e458a14be95507c6f48  third-edition-work/deployment/openstack-ts/final-scripts/12-compute-neutron.sh
 d97d8781fc54c8c854139b17a2b74ccd53d94f50f7d11dd24bf866d122eb7a63  third-edition-work/deployment/openstack-ts/final-scripts/13-controller-cinder.sh
-fab5df178c31d7142e7a3cd858d07eb808a0d30152fa4f215fe130fcdc0f0f6c  third-edition-work/deployment/openstack-ts/final-scripts/14-compute-cinder.sh
+9286c18bdd52e9f6a303a8e75f9633758b610a742019f50c16728800972a02f2  third-edition-work/deployment/openstack-ts/final-scripts/14-compute-cinder.sh
 6f6371a570cc8566635796287278bf97022755c9ca7630af78b984312e884b13  third-edition-work/deployment/openstack-ts/final-scripts/15-controller-swift.sh
-459c4122d91a0e3849de85de6766b5c2770c6b2d8dac82d9e288287e04b89d43  third-edition-work/deployment/openstack-ts/final-scripts/16-compute-swift.sh
+b5f1549af4fc9a9ad47ea2ec26e7703fd3c1b3d26f7de03eaa52302986dbe83d  third-edition-work/deployment/openstack-ts/final-scripts/16-compute-swift.sh
 ba91eba54e5e89ddd9d4056c973312b331db0136ccb8386bde944a5d6839ef9b  third-edition-work/deployment/openstack-ts/final-scripts/17-controller-horizon.sh
 d4c4928ce097bc252afe0bf0b36587dfa286a5e8fb1b6b0c6a0ddfe6712853ba  third-edition-work/deployment/openstack-ts/remote_exec.py

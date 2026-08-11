@@ -26,3 +26,5 @@ PASS 17-controller-horizon.sh
 Result: 17/17 PASS.
 
 Revalidation after the blank-disk guard repair: 17/17 PASS under the same reviewed host identity and command semantics.
+
+Revalidation after the isolated blank-guard behavior-test repair: 17/17 PASS under the same reviewed host identity and command semantics.

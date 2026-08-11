@@ -80,6 +80,10 @@ die() {
   exit 1
 }
 
+is_block_device() {
+  [[ -b "$1" ]]
+}
+
 require_compute_host() {
   ip -br addr show ens33 2>/dev/null | grep -Fq '192.168.234.150/24' || \
     die 'Refusing Cinder disk work: ens33 is not 192.168.234.150/24.'
@@ -135,7 +139,7 @@ require_safe_cinder_disk() {
 assert_blank_data_disk() {
   local device="$1" expected_size_gib="$2" size_bytes expected_size_bytes mounted partitions fstype label pv_rows pv_uuid pv_name canonical_target canonical_pv
   [[ "${device}" != '/dev/sda' ]] || die 'Refusing to initialize the system disk /dev/sda.'
-  [[ -b "${device}" ]] || die "Missing block device: ${device}"
+  is_block_device "${device}" || die "Missing block device: ${device}"
   [[ "$(lsblk -dn -o TYPE "${device}")" == 'disk' ]] || die "${device} is not a whole disk."
   assert_not_root_ancestor "${device}"
   canonical_target="$(readlink -f "${device}")" || die "Cannot canonicalize disk target: ${device}"
