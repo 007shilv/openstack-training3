@@ -8,8 +8,10 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import textwrap
+import types
 import zipfile
 from pathlib import Path
 
@@ -1183,3 +1185,288 @@ def test_manual_protected_checks_do_not_mask_failures_with_or_true() -> None:
         if offenders:
             violations[document] = offenders
     assert not violations, f"protected manual-install checks mask failures: {violations}"
+
+
+def test_manual_keystone_session_preserves_dependency_order_and_stops_on_failure() -> None:
+    text = manual_shell_text("03-keystone.md")
+    stages = (
+        "stage_starting_state",
+        "stage_package_transaction",
+        "stage_database",
+        "stage_configuration",
+        "stage_schema",
+        "stage_keys",
+        "stage_bootstrap",
+        "stage_apache",
+        "stage_identity_validation",
+        "stage_cross_slice_audit",
+    )
+    active = active_lines(text)
+    assert "set -Eeuo pipefail" in active
+    assert any(first_shell_command(line) == ("trap", ['on_error "$LINENO" "$BASH_COMMAND"', "ERR"]) for line in active)
+    runner = shell_function_body(text, "run_keystone_sequence")
+    assert runner is not None
+    calls = [line.strip() for line in active_lines(runner) if line.strip() in stages]
+    assert calls == list(stages)
+
+    mocks = "\n".join(
+        f"{stage}() {{ printf '%s\\n' {stage}; {'return 31' if stage == 'stage_schema' else 'return 0'}; }}"
+        for stage in stages
+    )
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {shell_function_definition(text, "run_keystone_sequence")}
+        {mocks}
+        run_keystone_sequence
+        """
+    )
+    assert completed.returncode != 0
+    assert completed.stdout.splitlines() == list(stages[:5])
+
+
+def test_manual_keystone_preflight_is_repo_only_and_rejects_unsafe_transactions() -> None:
+    text = manual_shell_text("03-keystone.md")
+    active = "\n".join(active_lines(text))
+    assert "--assumeno" in active
+    assert "--setopt=install_weak_deps=False" in active
+    assert "--disablerepo='*'" in active
+    assert "--enablerepo='openstack-local'" in active
+    assert re.search(r"install\s+openstack-keystone\s+httpd\s+mod_wsgi", active)
+    for forbidden in ("--allowerasing", "--nodeps", "--skip-broken"):
+        assert forbidden not in active_lines(text)
+
+    definitions = manual_function_definitions(text, ("die", "validate_keystone_preflight"))
+    candidates = "openstack-keystone|openstack-local\nhttpd|openstack-local\npython3-mod_wsgi|openstack-local\npython3-keystone|openstack-local"
+    transaction = "Install 4 Packages\nOperation aborted."
+
+    def validate(candidate_text: str, transaction_text: str) -> subprocess.CompletedProcess[str]:
+        return run_git_bash(
+                f"""
+                set -Eeuo pipefail
+                {definitions}
+                validate_keystone_preflight {shlex.quote(candidate_text)} {shlex.quote(transaction_text)}
+                """
+            )
+
+    assert validate(candidates, transaction).returncode == 0
+    assert validate(candidates.replace("python3-keystone|openstack-local", "python3-keystone|external"), transaction).returncode != 0
+    assert validate(candidates, transaction + "\nRemoving: old-package").returncode != 0
+    assert validate(candidates.replace("python3-mod_wsgi|openstack-local\n", ""), transaction).returncode != 0
+
+
+def test_manual_keystone_database_and_configuration_are_secret_safe() -> None:
+    text = manual_shell_text("03-keystone.md")
+    schema_body = shell_function_body(text, "stage_schema")
+    assert schema_body is not None
+    assert "alembic_version" in schema_body
+    assert "migrate_version" not in schema_body
+    python_bodies = [body for _opener, _delimiter, body in shell_sections(text)[1] if "CREATE DATABASE IF NOT EXISTS keystone" in body]
+    assert len(python_bodies) == 1
+    database_source = python_bodies[0]
+    database_tree = ast.parse(database_source)
+    constants = {node.value for node in ast.walk(database_tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert {"localhost", "127.0.0.1", "%"} <= constants
+    assert any("GRANT ALL PRIVILEGES ON keystone.* TO %s@%s" in value for value in constants)
+    assert any("CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s" in value for value in constants)
+    assert not any("@'%'" in value or "@'%%'" in value for value in constants)
+    assert not any(isinstance(node, (ast.JoinedStr, ast.BinOp)) for node in ast.walk(database_tree) if isinstance(node, ast.JoinedStr) or (isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod)))
+
+    config_bodies = [body for _opener, _delimiter, body in shell_sections(text)[1] if "RawConfigParser" in body]
+    assert len(config_bodies) == 1
+    config_tree = ast.parse(config_bodies[0])
+    attributes = {node.attr for node in ast.walk(config_tree) if isinstance(node, ast.Attribute)}
+    names = {node.id for node in ast.walk(config_tree) if isinstance(node, ast.Name)}
+    assert "quote" in names and "replace" in attributes
+    assert "OPENSTACK_DEPLOY_PASSWORD" in config_bodies[0]
+    assert "provider" in config_bodies[0] and "fernet" in config_bodies[0]
+
+    snapshot = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-keystone.conf.sanitized").read_text(encoding="utf-8")
+    assert "mysql+pymysql://keystone:<DB_PASSWORD>@127.0.0.1/keystone" in snapshot
+    assert "provider = fernet" in snapshot
+
+
+def test_manual_keystone_percent_grant_host_is_passed_as_a_database_parameter(monkeypatch: pytest.MonkeyPatch) -> None:
+    text = manual_shell_text("03-keystone.md")
+    database_source = next(
+        body for _opener, _delimiter, body in shell_sections(text)[1]
+        if "CREATE DATABASE IF NOT EXISTS keystone" in body
+    )
+    calls: list[tuple[str, tuple[str, ...] | None]] = []
+
+    class FakeCursor:
+        def __enter__(self) -> "FakeCursor":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def execute(self, sql: str, args: tuple[str, ...] | None = None) -> None:
+            calls.append((sql, args))
+
+        def fetchone(self) -> tuple[int]:
+            return (1,)
+
+    class FakeConnection:
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def close(self) -> None:
+            return None
+
+    fake_pymysql = types.SimpleNamespace(connect=lambda **_kwargs: FakeConnection())
+    monkeypatch.setitem(sys.modules, "pymysql", fake_pymysql)
+    monkeypatch.setenv("OPENSTACK_DEPLOY_PASSWORD", "memory-only-test-value")
+    monkeypatch.setenv("MYSQL_SOCKET", "/memory-only/mysql.sock")
+    exec(compile(database_source, "keystone-parameterized-grants", "exec"), {})
+
+    percent_calls = [args for sql, args in calls if "%s@%s" in sql and args is not None and "%" in args]
+    assert percent_calls
+    assert all("memory-only-test-value" not in sql for sql, _args in calls)
+
+
+def test_manual_keystone_key_classifier_rejects_partial_or_unsafe_repositories() -> None:
+    text = manual_shell_text("03-keystone.md")
+    definitions = manual_function_definitions(text, ("die", "classify_key_repository"))
+
+    def classify(scenario: str) -> subprocess.CompletedProcess[str]:
+        return run_git_bash(
+            f"""
+            set -Eeuo pipefail
+            {definitions}
+            root=$(mktemp -d)
+            trap 'chmod -R u+rwX "$root"; rm -rf "$root"' EXIT
+            KEYSTONE_KEY_OWNER=$(/usr/bin/stat -c '%U:%G' "$root")
+            stat() {{
+              local path="${{@: -1}}" mode
+              if [[ -d $path ]]; then mode=700
+              elif [[ {scenario!r} == badmode && $path == */0 ]]; then mode=644
+              else mode=600
+              fi
+              printf '%s %s\n' "$KEYSTONE_KEY_OWNER" "$mode"
+            }}
+            case {scenario!r} in
+              absent) rmdir "$root" ;;
+              valid) chmod 700 "$root"; printf x >"$root/0"; printf y >"$root/1"; chmod 600 "$root/0" "$root/1" ;;
+              partial) chmod 700 "$root"; printf x >"$root/0"; chmod 600 "$root/0" ;;
+              extra) chmod 700 "$root"; printf x >"$root/0"; printf y >"$root/1"; printf z >"$root/2"; chmod 600 "$root/"* ;;
+              badmode) chmod 700 "$root"; printf x >"$root/0"; printf y >"$root/1"; chmod 644 "$root/0"; chmod 600 "$root/1" ;;
+            esac
+            classify_key_repository "$root"
+            """
+        )
+
+    assert classify("absent").stdout.strip() == "ABSENT"
+    assert classify("valid").stdout.strip() == "VALID"
+    for scenario in ("partial", "extra", "badmode"):
+        assert classify(scenario).returncode != 0
+
+
+@pytest.mark.parametrize(
+    ("state", "marker", "expected", "success"),
+    (
+        ("ABSENT", "absent", "BOOTSTRAP", True),
+        ("FULL", "present", "SKIP", True),
+        ("FULL", "absent", "RECOVER_MARKER", True),
+        ("ABSENT", "present", "", False),
+        ("PARTIAL", "absent", "", False),
+        ("PARTIAL", "present", "", False),
+    ),
+)
+def test_manual_keystone_bootstrap_decision_requires_database_evidence(
+    state: str, marker: str, expected: str, success: bool
+) -> None:
+    text = manual_shell_text("03-keystone.md")
+    definitions = manual_function_definitions(text, ("die", "bootstrap_action"))
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {definitions}
+        bootstrap_action {state!r} {marker!r}
+        """
+    )
+    assert (completed.returncode == 0) is success
+    if success:
+        assert completed.stdout.strip() == expected
+
+    bootstrap_probe = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "BOOTSTRAP_STATE" in body)
+    assert "assignment" in bootstrap_probe
+    assert "identity" in bootstrap_probe
+    assert "RegionOne" in bootstrap_probe
+    assert "<<null>>" in bootstrap_probe, "Antelope's null-domain role sentinel must be recognized"
+    assert {"admin", "internal", "public"} <= set(re.findall(r"['\"](admin|internal|public)['\"]", bootstrap_probe))
+
+
+def test_manual_keystone_endpoint_validator_and_service_project_are_exact() -> None:
+    text = manual_shell_text("03-keystone.md")
+    service_validator = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "IDENTITY_SERVICE_ROWS" in body)
+    good_service = [{"ID": "service-id", "Name": "keystone", "Type": "identity"}]
+    service_ok = subprocess.run(
+        ["python", "-c", service_validator], input=json.dumps(good_service), text=True,
+        capture_output=True, check=False,
+    )
+    service_duplicate = subprocess.run(
+        ["python", "-c", service_validator], input=json.dumps(good_service * 2), text=True,
+        capture_output=True, check=False,
+    )
+    assert service_ok.returncode == 0 and service_ok.stdout.strip() == "service-id"
+    assert service_duplicate.returncode != 0
+    validator = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "EXPECTED_INTERFACES" in body)
+    tree = ast.parse(validator)
+    compile(tree, "keystone-endpoint-validator", "exec")
+    good = [
+        {"Region": "RegionOne", "Service Type": "identity", "Interface": interface, "URL": "http://controller:5000/v3/"}
+        for interface in ("admin", "internal", "public")
+    ]
+
+    def run(rows: list[dict[str, str]]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["python", "-c", validator],
+            input=json.dumps(rows),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    assert run(good).returncode == 0
+    assert run(good[:2]).returncode != 0
+    wrong_region = [dict(row, Region="RegionTwo") for row in good]
+    assert run(wrong_region).returncode != 0
+    duplicate = good[:2] + [dict(good[1])]
+    assert run(duplicate).returncode != 0
+
+    ensure_project = shell_function_body(text, "ensure_service_project")
+    assert ensure_project is not None
+    assert "project list" in ensure_project and "project create" in ensure_project and "project show" in ensure_project
+    assert "--name" not in ensure_project, "this OpenStack CLI does not support project list --name"
+
+
+def test_manual_keystone_final_audit_keeps_later_packages_and_compute_disks_fail_closed() -> None:
+    text = manual_shell_text("03-keystone.md")
+    package_body = shell_function_body(text, "assert_packages_absent")
+    disk_body = shell_function_body(text, "assert_compute_data_disk")
+    assert package_body is not None and disk_body is not None
+    assert "openstack-glance" in text and "python3-horizon" in text
+    assert "findmnt -nro SOURCE /" in disk_body
+    assert "lsblk -s -nrpo NAME" in disk_body
+    assert "wipefs --no-act" in disk_body and "--noheadings" in disk_body
+    assert "blkid -p" in disk_body
+    assert "|| true" not in disk_body
+    assert "/dev/sdb" in text and "/dev/sdc" in text and "53687091200" in text
+
+
+def test_manual_keystone_snapshots_and_openrc_contain_no_embedded_credentials() -> None:
+    snapshots = {
+        "controller-keystone.conf.sanitized",
+        "controller-apache-keystone.conf",
+        "controller-admin-openrc.sanitized",
+    }
+    snapshot_dir = MANUAL_INSTALL_DIR / "config-snapshots"
+    assert snapshots <= {path.name for path in snapshot_dir.iterdir()}
+    combined = "\n".join((snapshot_dir / name).read_text(encoding="utf-8") for name in snapshots)
+    assert "<DB_PASSWORD>" in combined
+    assert "OPENSTACK_DEPLOY_PASSWORD" in combined
+    assert not re.search(
+        r"(?im)^\s*(?:export\s+)?(?:OS_)?(?:TOKEN|PASSWORD)\s*=\s*(?!<|\$|\{|$)[^\s#]+",
+        combined,
+    )

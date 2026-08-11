@@ -1,0 +1,7 @@
+# Sanitized snapshot of /etc/keystone/keystone.conf
+# <DB_PASSWORD> denotes the complete URL-encoded password field.
+[database]
+connection = mysql+pymysql://keystone:<DB_PASSWORD>@127.0.0.1/keystone
+
+[token]
+provider = fernet

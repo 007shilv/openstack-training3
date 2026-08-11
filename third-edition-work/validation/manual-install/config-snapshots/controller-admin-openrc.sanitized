@@ -1,0 +1,29 @@
+# Keystone administrator environment; no credential is stored in this file.
+_openstack_load_admin_env() {
+  local secret_file=/root/.openstack-lab-secrets secret_record line_count metadata
+  [[ -f $secret_file && ! -L $secret_file ]] || return 1
+  metadata=$(stat -c '%U:%G %a' "$secret_file") || return 1
+  [[ $metadata == 'root:root 600' ]] || return 1
+  line_count=$(wc -l <"$secret_file") || return 1
+  [[ $line_count -eq 1 ]] || return 1
+  IFS= read -r secret_record <"$secret_file" || return 1
+  case "$secret_record" in
+    OPENSTACK_DEPLOY_PASSWORD=?*) export OS_PASSWORD=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
+    *) secret_record=; return 1 ;;
+  esac
+  secret_record=
+  export OS_PROJECT_DOMAIN_NAME=Default
+  export OS_USER_DOMAIN_NAME=Default
+  export OS_PROJECT_NAME=admin
+  export OS_USERNAME=admin
+  export OS_AUTH_URL=http://controller:5000/v3
+  export OS_IDENTITY_API_VERSION=3
+  export OS_IMAGE_API_VERSION=2
+  export OS_REGION_NAME=RegionOne
+}
+if ! _openstack_load_admin_env; then
+  unset OS_PASSWORD
+  unset -f _openstack_load_admin_env
+  return 1 2>/dev/null || exit 1
+fi
+unset -f _openstack_load_admin_env
