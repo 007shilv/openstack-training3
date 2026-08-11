@@ -113,6 +113,26 @@ require_safe_cinder_disk() {
   CINDER_DISK_STATE='blank'
 }
 
+assert_blank_data_disk() {
+  local device="$1" expected_size_gib="$2" size_bytes expected_size_bytes mounted partitions vg fstype label
+  [[ "${device}" != '/dev/sda' ]] || die 'Refusing to initialize the system disk /dev/sda.'
+  [[ -b "${device}" ]] || die "Missing block device: ${device}"
+  [[ "$(lsblk -dn -o TYPE "${device}")" == 'disk' ]] || die "${device} is not a whole disk."
+  size_bytes="$(lsblk -bdn -o SIZE "${device}")"
+  expected_size_bytes=$((expected_size_gib * 1024 * 1024 * 1024))
+  [[ "${size_bytes}" == "${expected_size_bytes}" ]] || \
+    die "Unexpected disk size for ${device}: expected ${expected_size_gib} GiB, found ${size_bytes} bytes."
+  mounted="$(lsblk -nrpo NAME,MOUNTPOINT "${device}" | awk 'NF > 1 && $2 != "" {print $1 " " $2}')"
+  [[ -z "${mounted}" ]] || die "Mounted target or child detected: ${mounted}"
+  partitions="$(lsblk -nrpo TYPE "${device}" | awk '$1 == "part" {print}')"
+  [[ -z "${partitions}" ]] || die "Partitioned target is not allowed: ${device}"
+  fstype="$(blkid -o value -s TYPE "${device}" 2>/dev/null || true)"
+  label="$(blkid -o value -s LABEL "${device}" 2>/dev/null || true)"
+  [[ -z "${fstype}" && -z "${label}" ]] || die "Existing filesystem signature on ${device}."
+  vg="$(pvs --noheadings -o vg_name "${device}" 2>/dev/null | xargs || true)"
+  [[ -z "${vg}" ]] || die "Existing LVM physical volume on ${device}: ${vg}"
+}
+
 require_initialization_confirmation() {
   [[ "${ALLOW_DISK_INITIALIZATION:-}" == 'YES' ]] || \
     die "Refusing first initialization of ${CINDER_DEVICE}; set ALLOW_DISK_INITIALIZATION=YES after verifying the target."
@@ -128,6 +148,7 @@ fi
 # The guard accepts only the known idempotent LVM state or a blank /dev/sdb.
 require_safe_cinder_disk
 if [[ "${CINDER_DISK_STATE}" == 'blank' ]]; then
+  assert_blank_data_disk "${CINDER_DEVICE}" 50
   require_initialization_confirmation
   pvcreate "${CINDER_DEVICE}"
   vgcreate "${CINDER_VG}" "${CINDER_DEVICE}"
