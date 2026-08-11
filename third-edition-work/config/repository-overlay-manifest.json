@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "overlay_id": "lab-task-4b-selinux-policy-dependency-closure",
+  "base_repository": {
+    "original_rpm_count": 1079,
+    "original_zip_sha256": "ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978",
+    "original_zip_size_bytes": 726582890
+  },
+  "cache_relative_directory": "third-edition-work/environment-cache/repository-overlay",
+  "packages": [
+    {
+      "arch": "x86_64",
+      "epoch": 0,
+      "filename": "memcached-selinux-1.6.22-4.oe2403sp3.x86_64.rpm",
+      "name": "memcached-selinux",
+      "nevra": "memcached-selinux-0:1.6.22-4.oe2403sp3.x86_64",
+      "release": "4.oe2403sp3",
+      "rpm_signature": {
+        "key_id": "b675600b",
+        "result": "Header V4 RSA/SHA256 Signature OK; payload SHA256 digest OK"
+      },
+      "sha256": "d19f42f77449b9f1d4c600d396d18baa09c959864ad39e8d01969ca62793ec77",
+      "size_bytes": 16449,
+      "source_repository_baseurl": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/",
+      "source_repository_id": "everything",
+      "source_rpm": "memcached-1.6.22-4.oe2403sp3.src.rpm",
+      "source_url": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/Packages/memcached-selinux-1.6.22-4.oe2403sp3.x86_64.rpm",
+      "version": "1.6.22"
+    },
+    {
+      "arch": "noarch",
+      "epoch": 0,
+      "filename": "mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm",
+      "name": "mysql-selinux",
+      "nevra": "mysql-selinux-0:1.0.10-1.oe2403sp3.noarch",
+      "release": "1.oe2403sp3",
+      "rpm_signature": {
+        "key_id": "b675600b",
+        "result": "Header V4 RSA/SHA256 Signature OK; payload SHA256 digest OK"
+      },
+      "sha256": "079ab9c805f999c3c4c96ac0247a3150ea5e3d34c37330bdc056c471d28cbb95",
+      "size_bytes": 31617,
+      "source_repository_baseurl": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/",
+      "source_repository_id": "everything",
+      "source_rpm": "mysql-selinux-1.0.10-1.oe2403sp3.src.rpm",
+      "source_url": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/Packages/mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm",
+      "version": "1.0.10"
+    }
+  ],
+  "repository_relative_directory": "openstack_repo/Packages",
+  "signing_key": {
+    "configured_gpgkey_url": "http://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/RPM-GPG-KEY-openEuler",
+    "local_key_sha256": "006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1"
+  }
+}

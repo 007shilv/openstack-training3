@@ -29,6 +29,7 @@ worktrees/
 /third-edition-work/render/
 /third-edition-work/validation/
 /third-edition-work/checkpoints/
+/third-edition-work/environment-cache/
 
 # Python and tool caches
 __pycache__/

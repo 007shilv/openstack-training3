@@ -1,0 +1,163 @@
+# Lab Task 4B — SP3 SELinux-policy dependency closure
+Timestamp (Asia/Shanghai): 2026-08-11T12:59:18+08:00
+Controller: 192.168.234.151 (reviewed controller known_hosts; RejectPolicy)
+Compute: 192.168.234.150 (reviewed compute known_hosts; RejectPolicy)
+Credentials: runtime-only; not recorded
+
+## Immutable input and initial state
+
+- Original ZIP: openstack_repo.zip
+- ZIP size: 726582890 bytes
+- ZIP SHA256 after Task 4B: ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978
+- Original ZIP inventory remains 1079 RPMs. The ZIP was not edited, repacked, or replaced.
+- Pre-change controller repository: 1079 RPMs; repodata/repomd.xml SHA256 6ccbb9e00263dd9c35cb93c9c60d83a4e7ace3d9fd4c5c85abf9e5c722978fec.
+- Before the no-change DNF check, controller and compute reported mariadb-config, mariadb, mariadb-server, python3-PyMySQL, rabbitmq-server, memcached, python3-memcached, python3-openstackclient, mysql-selinux, and memcached-selinux as not installed. Neither node had an installed Keystone, Glance, Placement, Nova, Neutron, Cinder, Swift, or Horizon service package.
+
+## Before: isolated no-change Task 5A resolution
+
+Command class: DNF install with --assumeno, --disablerepo='*', --enablerepo=openstack-local, and install_weak_deps=False. No --allowerasing, --nodeps, --skip-broken, or external repository was used.
+
+Requested package set:
+  mariadb-config mariadb mariadb-server python3-PyMySQL rabbitmq-server
+  memcached python3-memcached python3-openstackclient
+
+Result: BEFORE_DNF_RC=1 before a transaction plan was produced.
+
+Error evidence:
+  package mariadb-server-4:10.5.29-4.oe2403sp3.x86_64 from openstack-local
+  requires (mysql-selinux if selinux-policy-targeted), but none of the providers
+  can be installed.
+
+  package memcached-1.6.22-4.oe2403sp3.x86_64 from openstack-local
+  requires (memcached-selinux if selinux-policy-targeted), but none of the
+  providers can be installed.
+
+  Installed selinux-policy and selinux-policy-targeted were both
+  40.7-6.oe2403sp3. The original repository had no mysql-selinux or
+  memcached-selinux provider. The failed/no-change check installed nothing.
+
+## Official SP3 query, selection, dependencies, and provenance
+
+Enabled official SP3 repository used for both query and download:
+  ID: everything
+  Base URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/
+  Configured gpgcheck: 1
+  Configured GPG key URL:
+    http://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/RPM-GPG-KEY-openEuler
+  Local official key SHA256:
+    006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1
+
+Exact selected packages (the exact-NEVRA queries each returned one official location):
+
+1. memcached-selinux-0:1.6.22-4.oe2403sp3.x86_64
+   Repository ID: everything
+   Source RPM: memcached-1.6.22-4.oe2403sp3.src.rpm
+   URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/Packages/memcached-selinux-1.6.22-4.oe2403sp3.x86_64.rpm
+   Size: 16449 bytes
+   SHA256: d19f42f77449b9f1d4c600d396d18baa09c959864ad39e8d01969ca62793ec77
+   Signature: Header V4 RSA/SHA256 Signature, key ID b675600b: OK
+   Payload: SHA256 digest: OK
+
+2. mysql-selinux-0:1.0.10-1.oe2403sp3.noarch
+   Repository ID: everything
+   Source RPM: mysql-selinux-1.0.10-1.oe2403sp3.src.rpm
+   URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/Packages/mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm
+   Size: 31617 bytes
+   SHA256: 079ab9c805f999c3c4c96ac0247a3150ea5e3d34c37330bdc056c471d28cbb95
+   Signature: Header V4 RSA/SHA256 Signature, key ID b675600b: OK
+   Payload: SHA256 digest: OK
+
+Signature verification used an isolated temporary rpmdb containing only the configured official openEuler key. Both Header RSA/SHA256 signatures, header digests, payload SHA256 digests, and MD5 digests returned OK.
+
+Candidate resolution also showed policycoreutils-python-utils-3.5-4.oe2403sp3.noarch as a required dependency. It and every other direct/transitive requirement were already supplied by the original reviewed repository or installed SP3 system; no third overlay RPM was required.
+
+The update repository also advertised memcached-selinux-1.6.22-5.oe2403sp3. It was not selected: the immutable local repository contains memcached-1.6.22-4.oe2403sp3, and the selected SELinux subpackage is the uniquely located policy built by the same memcached-1.6.22-4 source RPM. mysql-selinux had one advertised SP3 candidate. No package-source ambiguity remained after exact EVR pairing.
+
+## Staging and candidate validation
+
+- Nonce: 10149dbfc0998dded61b930bacaf67e1
+- Exclusive staging path: /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1
+- Reserved rollback path: /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1
+- /opt was verified as the exact root-owned, non-symlink parent before creation.
+- The staging directory was created exclusively as root:root mode 0700.
+- The exclusive root-only mode-0600 staging marker SHA256 was 2c1a8918aa4c574304ea34f102066004d8cca91a07226b00f6d67f6ee30c09e9.
+- The reviewed repository was copied into the task-owned candidate; only the two verified overlay RPMs were added under Packages/.
+- createrepo_c 1.0.1 was extracted from the reviewed repository into the private staging directory and run as `createrepo_c --update`; no repository tool package was installed.
+- Candidate count: 1081 RPMs.
+- Candidate repodata/repomd.xml SHA256: e5cecca736e5eee2477211225397d1f65d55ae03772ed5224f99634a50a5a3dc.
+- Overlay hashes in candidate matched the official downloads and local cache: 2/2.
+- All eight Task 4 core RPM hashes were unchanged: 8/8.
+- Candidate metadata parsed with all configured repositories disabled.
+
+Candidate transaction plan (all packages came from task4b-candidate):
+  Direct installs: mariadb-config, mariadb, mariadb-server, python3-PyMySQL,
+    rabbitmq-server, memcached, python3-memcached, python3-openstackclient.
+  Policy entries: memcached-selinux-1.6.22-4.oe2403sp3.x86_64 (16 k),
+    mysql-selinux-1.0.10-1.oe2403sp3.noarch (31 k), and
+    policycoreutils-python-utils-3.5-4.oe2403sp3.noarch (22 k).
+  Transaction summary: Install 163 Packages; total size 123 M;
+    installed size 466 M.
+  Resolution result: Dependencies resolved; Operation aborted by --assumeno.
+  Removing/Erasing entries: 0.
+  Installed packages: 0.
+
+The temporary repofrompath repository was explicitly set to gpgcheck=0 for the DNF plan, matching the deployed openstack-local contract. Overlay integrity did not depend on that setting: the two new RPMs had already passed the isolated official-key signature check and exact SHA256 verification.
+
+## Recoverable promotion, verification, and cleanup
+
+- The rollback directory was created exclusively as root:root mode 0700.
+- Its exclusive root-only mode-0600 marker SHA256 was eb5c0a2a4f0a150ded4560bfc6c293c075a636b38b2d47721d06ef85d905ecdb.
+- Exact swap: /opt/openstack_repo -> rollback/repo, then candidate -> /opt/openstack_repo.
+- The old repository remained available at the marker-owned rollback path until every post-promotion check passed.
+- Rollback action on any failure was defined as moving the promoted candidate back into the marker-owned staging directory and restoring rollback/repo to /opt/openstack_repo. No rollback was needed.
+
+Controller post-promotion:
+  RPM count: 1081
+  DNF available-package count: 1081
+  repomd SHA256: e5cecca736e5eee2477211225397d1f65d55ae03772ed5224f99634a50a5a3dc
+  memcached-selinux SHA256: d19f42f77449b9f1d4c600d396d18baa09c959864ad39e8d01969ca62793ec77
+  mysql-selinux SHA256: 079ab9c805f999c3c4c96ac0247a3150ea5e3d34c37330bdc056c471d28cbb95
+  Eight core hashes retained: 8/8
+  Controller file-repo makecache and exact-NEVRA repoquery: PASS
+  Controller FTP hashes for repomd and both overlays: MATCH
+
+Compute post-promotion:
+  DNF available-package count through openstack-local FTP: 1081
+  Exact policy NEVRAs visible: 2/2
+  FTP hashes for repomd and both overlays: MATCH controller
+  No target infrastructure or OpenStack service package installed
+
+After: isolated openstack-local Task 5A resolution:
+  Dependencies resolved.
+  memcached-selinux-1.6.22-4.oe2403sp3 selected from openstack-local.
+  mysql-selinux-1.0.10-1.oe2403sp3 selected from openstack-local.
+  Transaction summary: Install 163 Packages; 123 M; installed size 466 M.
+  Removing/Erasing entries: 0.
+  Operation aborted by --assumeno; AFTER_DNF_RC=1 is the expected user-abort code.
+  Post-check RPM queries prove all requested infrastructure and policy packages remain not installed.
+
+Compute disk state before and after:
+  /dev/sda: 214748364800-byte GPT system disk; sda2 is the same ext4 root
+    UUID 95bccd1c-608a-4db8-9d02-c46916b91f6f; sda3 is the same swap
+    UUID 5f3840af-7562-425d-bad2-01b3135ae355.
+  /dev/sdb: 53687091200-byte whole disk, no partition, filesystem, label, UUID,
+    mount, or read-only blkid signature.
+  /dev/sdc: 53687091200-byte whole disk, no partition, filesystem, label, UUID,
+    mount, or read-only blkid signature.
+  No disk command with write semantics was run.
+
+Cleanup authorization revalidated both exact /opt children, nonce, root ownership, modes, non-symlink state, markers, expected child sets, old 1079-RPM/repomd identity, and promoted 1081-RPM/overlay identity. Only the authorized staging and rollback objects were removed. Their exact post-cleanup absence passed, and /opt again contained only openstack_repo.
+
+## Local final-environment cache
+
+Ignored cache directory:
+  third-edition-work/environment-cache/repository-overlay/
+
+Cached RPMs:
+  memcached-selinux-1.6.22-4.oe2403sp3.x86_64.rpm
+  mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm
+
+The deterministic tracked manifest is:
+  third-edition-work/config/repository-overlay-manifest.json
+
+The manifest records filenames, NEVRAs, official repository/URLs, source RPMs, sizes, signatures, and SHA256 values so final packaging can copy and verify the ignored binaries without changing the original ZIP.

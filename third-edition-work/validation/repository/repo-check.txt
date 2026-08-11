@@ -75,3 +75,44 @@ openstack-local  Validated controller FTP OpenStack repository
 No OpenStack package installation was performed on compute.
 
 Credentials: <REDACTED>
+
+## Lab Task 4B addendum — SELinux policy dependency closure
+
+Timestamp (Asia/Shanghai): 2026-08-11T12:59:18+08:00
+
+This addendum describes the promoted controller repository only. It does not
+change or reinterpret the immutable `openstack_repo.zip` inventory above. The
+original ZIP remains 726582890 bytes with SHA256
+ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978
+and still contains 1079 RPMs.
+
+Two exact official openEuler 24.03 LTS SP3 `everything` RPMs were overlaid:
+
+- memcached-selinux-1.6.22-4.oe2403sp3.x86_64.rpm
+  SHA256 d19f42f77449b9f1d4c600d396d18baa09c959864ad39e8d01969ca62793ec77
+- mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm
+  SHA256 079ab9c805f999c3c4c96ac0247a3150ea5e3d34c37330bdc056c471d28cbb95
+
+Both RPM Header V4 RSA/SHA256 signatures and payload SHA256 digests verified
+OK against the configured official openEuler key in an isolated rpmdb.
+
+Post-promotion controller repository:
+
+- RPM count: 1081
+- repodata/repomd.xml SHA256:
+  e5cecca736e5eee2477211225397d1f65d55ae03772ed5224f99634a50a5a3dc
+- Eight original core RPM hashes retained: 8/8
+- Controller file DNF, controller FTP, and compute FTP DNF: PASS
+- Controller and compute available-package counts: 1081 / 1081
+- Controller/FTP/compute hashes for repomd and both overlays: MATCH
+- Task 5A isolated resolution: Dependencies resolved; Install 163 Packages;
+  Removing/Erasing entries 0; operation aborted by `--assumeno`; installed 0
+- No new infrastructure or OpenStack service package on either node
+- Compute /dev/sda, /dev/sdb, and /dev/sdc state unchanged
+- Marker-authorized staging and rollback cleanup: PASS; exact paths absent
+
+The complete before/after, provenance, signature, promotion, cleanup, two-node,
+and disk evidence is in `dependency-closure.txt`. Final packaging must use the
+tracked `third-edition-work/config/repository-overlay-manifest.json` together
+with the ignored `third-edition-work/environment-cache/repository-overlay/`
+payloads; the original ZIP must remain unchanged.
