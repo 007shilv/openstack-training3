@@ -1351,6 +1351,7 @@ def test_manual_keystone_key_classifier_rejects_partial_or_unsafe_repositories()
               partial) chmod 700 "$root"; printf x >"$root/0"; chmod 600 "$root/0" ;;
               extra) chmod 700 "$root"; printf x >"$root/0"; printf y >"$root/1"; printf z >"$root/2"; chmod 600 "$root/"* ;;
               badmode) chmod 700 "$root"; printf x >"$root/0"; printf y >"$root/1"; chmod 644 "$root/0"; chmod 600 "$root/1" ;;
+              zerobyte) chmod 700 "$root"; : >"$root/0"; printf y >"$root/1"; chmod 600 "$root/0" "$root/1" ;;
             esac
             classify_key_repository "$root"
             """
@@ -1358,7 +1359,7 @@ def test_manual_keystone_key_classifier_rejects_partial_or_unsafe_repositories()
 
     assert classify("absent").stdout.strip() == "ABSENT"
     assert classify("valid").stdout.strip() == "VALID"
-    for scenario in ("partial", "extra", "badmode"):
+    for scenario in ("partial", "extra", "badmode", "zerobyte"):
         assert classify(scenario).returncode != 0
 
 
@@ -1399,6 +1400,7 @@ def test_manual_keystone_bootstrap_decision_requires_database_evidence(
 
 def test_manual_keystone_endpoint_validator_and_service_project_are_exact() -> None:
     text = manual_shell_text("03-keystone.md")
+    assert 'endpoint list --service "$identity_service_id" -f json' in text
     service_validator = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "IDENTITY_SERVICE_ROWS" in body)
     good_service = [{"ID": "service-id", "Name": "keystone", "Type": "identity"}]
     service_ok = subprocess.run(
@@ -1470,3 +1472,367 @@ def test_manual_keystone_snapshots_and_openrc_contain_no_embedded_credentials() 
         r"(?im)^\s*(?:export\s+)?(?:OS_)?(?:TOKEN|PASSWORD)\s*=\s*(?!<|\$|\{|$)[^\s#]+",
         combined,
     )
+
+
+def extract_python_definitions(source: str, names: set[str]) -> dict[str, object]:
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in names
+    ]
+    assert {node.name for node in selected} == names
+    namespace: dict[str, object] = {"json": json}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), "extracted-task5b-python", "exec"), namespace)
+    return namespace
+
+
+def test_manual_keystone_bootstrap_full_classifier_binds_exact_relations() -> None:
+    text = manual_shell_text("03-keystone.md")
+    source = next(
+        body for _opener, _delimiter, body in shell_sections(text)[1]
+        if "def classify_bootstrap_evidence" in body
+    )
+    classifier = extract_python_definitions(source, {"classify_bootstrap_evidence"})[
+        "classify_bootstrap_evidence"
+    ]
+    evidence = {
+        "projects": [{"id": "project-id", "name": "admin", "domain_id": "default", "enabled": 1, "is_domain": 0}],
+        "users": [{"id": "user-id", "name": "admin", "domain_id": "default", "enabled": 1}],
+        "roles": [{"id": "role-id", "name": "admin", "domain_id": "<<null>>"}],
+        "assignments": [{"type": "UserProject", "actor_id": "user-id", "target_id": "project-id", "role_id": "role-id", "inherited": 0}],
+        "services": [{"id": "service-id", "type": "identity", "enabled": 1, "extra": '{"name": "keystone"}'}],
+        "regions": [{"id": "RegionOne"}],
+        "endpoints": [
+            {"service_id": "service-id", "interface": interface, "region_id": "RegionOne", "url": "http://controller:5000/v3/", "enabled": 1}
+            for interface in ("admin", "internal", "public")
+        ],
+    }
+    assert classifier(evidence) == "FULL"  # type: ignore[operator]
+    assert classifier({key: [] for key in evidence}) == "ABSENT"  # type: ignore[operator]
+
+    mutations: list[dict[str, list[dict[str, object]]]] = []
+    extra_identity = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    extra_identity["services"].append(
+        {"id": "disabled-service", "type": "identity", "enabled": 0, "extra": '{"name": "keystone"}'}
+    )
+    mutations.append(extra_identity)
+    wrong_name = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    wrong_name["services"][0]["extra"] = '{"name": "not-keystone"}'
+    mutations.append(wrong_name)
+    wrong_domain = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    wrong_domain["roles"][0]["domain_id"] = "default"
+    mutations.append(wrong_domain)
+    duplicate_endpoint = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    duplicate_endpoint["endpoints"].append(dict(duplicate_endpoint["endpoints"][0]))
+    mutations.append(duplicate_endpoint)
+    wrong_service_binding = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    wrong_service_binding["endpoints"][0]["service_id"] = "other-service"
+    mutations.append(wrong_service_binding)
+    wrong_assignment = {key: [dict(row) for row in rows] for key, rows in evidence.items()}
+    wrong_assignment["assignments"][0]["role_id"] = "domain-role-id"
+    mutations.append(wrong_assignment)
+    for mutated in mutations:
+        assert classifier(mutated) == "PARTIAL"  # type: ignore[operator]
+
+
+def test_manual_keystone_cli_validates_admin_objects_and_exact_assignment() -> None:
+    text = manual_shell_text("03-keystone.md")
+    active = "\n".join(active_lines(text))
+    for command in (
+        "openstack project show admin -f json",
+        "openstack user show admin -f json",
+        "openstack role show admin -f json",
+        "openstack role assignment list",
+    ):
+        assert command in active
+    source = next(
+        body for _opener, _delimiter, body in shell_sections(text)[1]
+        if "def validate_admin_cli_evidence" in body
+    )
+    validator = extract_python_definitions(source, {"validate_admin_cli_evidence"})[
+        "validate_admin_cli_evidence"
+    ]
+    evidence = {
+        "project": {"id": "project-id", "name": "admin", "domain_id": "default", "enabled": True, "is_domain": False},
+        "user": {"id": "user-id", "name": "admin", "domain_id": "default", "enabled": True},
+        "role": {"id": "role-id", "name": "admin", "domain_id": None},
+        "assignments": [{"Role": "role-id", "User": "user-id", "Project": "project-id", "Group": "", "Domain": "", "System": "", "Inherited": False}],
+    }
+    assert validator(evidence) == ("project-id", "user-id", "role-id")  # type: ignore[operator]
+    wrong_role = {key: (dict(value) if isinstance(value, dict) else [dict(row) for row in value]) for key, value in evidence.items()}
+    wrong_role["role"]["domain_id"] = "default"  # type: ignore[index]
+    with pytest.raises(ValueError):
+        validator(wrong_role)  # type: ignore[operator]
+    wrong_assignment = {key: (dict(value) if isinstance(value, dict) else [dict(row) for row in value]) for key, value in evidence.items()}
+    wrong_assignment["assignments"][0]["Role"] = "other-role"  # type: ignore[index]
+    with pytest.raises(ValueError):
+        validator(wrong_assignment)  # type: ignore[operator]
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_success"),
+    (
+        ("missing", False),
+        ("symlink", False),
+        ("wrong_owner", False),
+        ("wrong_mode", False),
+        ("wrong_nlink", False),
+        ("multiline", False),
+        ("malformed", False),
+        ("empty", False),
+        ("success", True),
+    ),
+)
+def test_manual_keystone_runtime_secret_loader_is_uniform_and_fail_closed(
+    scenario: str, expected_success: bool
+) -> None:
+    text = manual_shell_text("03-keystone.md")
+    definitions = manual_function_definitions(text, ("die", "load_runtime_secret"))
+    loader_body = shell_function_body(text, "load_runtime_secret")
+    assert loader_body is not None
+    assert loader_body.index("stat -c") < loader_body.index("mapfile")
+    assert "^OPENSTACK_DEPLOY_PASSWORD=(.+)$" in loader_body
+    assert manual_markdown("03-keystone.md").count("load_runtime_secret ") >= 4
+    snapshot_text = (
+        MANUAL_INSTALL_DIR / "config-snapshots" / "controller-admin-openrc.sanitized"
+    ).read_text(encoding="utf-8")
+    assert shell_function_body(snapshot_text, "_openstack_load_runtime_secret") == loader_body
+    markdown = manual_markdown("03-keystone.md")
+    assert markdown.index("load_runtime_secret DB_PASS") < markdown.index(
+        "CREATE DATABASE IF NOT EXISTS keystone"
+    )
+    assert markdown.index("load_runtime_secret CONFIG_PASS") < markdown.index(
+        'parser = configparser.RawConfigParser'
+    )
+    assert markdown.index("load_runtime_secret ADMIN_PASS") < markdown.index(
+        "keystone-manage bootstrap"
+    )
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {definitions}
+        root=$(mktemp -d)
+        trap 'chmod -R u+rwX "$root"; rm -rf "$root"' EXIT
+        path="$root/secret"
+        case {scenario!r} in
+          missing) : ;;
+          symlink) printf '%s\n' 'OPENSTACK_DEPLOY_PASSWORD=memory-only' >"$root/target"; ln -s "$root/target" "$path" ;;
+          multiline) printf '%s\n%s\n' 'OPENSTACK_DEPLOY_PASSWORD=memory-only' extra >"$path" ;;
+          malformed) printf '%s\n' 'WRONG_KEY=memory-only' >"$path" ;;
+          empty) printf '%s\n' 'OPENSTACK_DEPLOY_PASSWORD=' >"$path" ;;
+          *) printf '%s\n' 'OPENSTACK_DEPLOY_PASSWORD=memory-only' >"$path" ;;
+        esac
+        stat() {{
+          case {scenario!r} in
+            wrong_owner) printf '%s\n' 'nobody:nobody 600 1' ;;
+            wrong_mode) printf '%s\n' 'root:root 644 1' ;;
+            wrong_nlink) printf '%s\n' 'root:root 600 2' ;;
+            *) printf '%s\n' 'root:root 600 1' ;;
+          esac
+        }}
+        readlink() {{
+          [[ {scenario!r} == symlink ]] && return 0
+          command readlink "$@"
+        }}
+        value=UNCHANGED
+        set +e
+        load_runtime_secret value "$path"
+        rc=$?
+        set -e
+        if [[ $rc -eq 0 ]]; then
+          [[ "$value" == memory-only ]] || exit 91
+          printf '%s\n' SUCCESS
+        else
+          [[ "$value" == UNCHANGED ]] || exit 92
+          printf '%s\n' FAILURE
+        fi
+        """
+    )
+    assert (completed.returncode == 0) is True, completed.stderr
+    assert (completed.stdout.strip() == "SUCCESS") is expected_success
+
+
+def test_manual_keystone_dual_node_starting_gate_precedes_mutation_and_short_circuits() -> None:
+    markdown = manual_markdown("03-keystone.md")
+    gate_call = markdown.index("def run_dual_node_starting_gate(")
+    assert gate_call < markdown.index("dnf -y --setopt=install_weak_deps=False")
+    assert gate_call < markdown.index("CREATE DATABASE IF NOT EXISTS keystone")
+    source = next(
+        block for block in markdown_fenced_blocks("03-keystone.md", "python")
+        if "CONTROLLER_GATE" in block and "COMPUTE_GATE" in block
+    )
+    assert all(token in source for token in (
+        "192.168.234.151/24", "192.168.234.150/24", "ens34", "chronyd",
+        "openstack-local", "information_schema.SCHEMATA", "/etc/keystone/keystone.conf",
+        "/root/.keystone-bootstrap-complete", "sport = :5000", "/dev/sdb", "/dev/sdc",
+        "lsblk -s -nrpo NAME", "blkid -p", "wipefs --no-act",
+    ))
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "run_dual_node_starting_gate"
+    ]
+    namespace: dict[str, object] = {
+        "os": os,
+        "Path": Path,
+        "stat": __import__("stat"),
+        "uuid": __import__("uuid"),
+    }
+    exec(compile(ast.Module(body=selected, type_ignores=[]), "dual-node-gate", "exec"), namespace)
+    calls: list[str] = []
+
+    class FakeClient:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def close(self) -> None:
+            calls.append(f"close:{self.name}")
+
+    def connector(name: str, _password: str) -> FakeClient:
+        calls.append(f"connect:{name}")
+        return FakeClient(name)
+
+    def failing_runner(client: FakeClient, _script: str) -> None:
+        calls.append(f"run:{client.name}")
+        if client.name == "controller":
+            raise RuntimeError("controller gate failed")
+
+    with pytest.raises(RuntimeError, match="controller gate failed"):
+        namespace["run_dual_node_starting_gate"](
+            "memory-only", connector=connector, runner=failing_runner,
+            controller_gate="controller-script", compute_gate="compute-script",
+        )
+    assert calls == ["connect:controller", "run:controller", "close:controller"]
+
+    calls.clear()
+
+    def successful_runner(client: FakeClient, _script: str) -> None:
+        calls.append(f"run:{client.name}")
+
+    namespace["run_dual_node_starting_gate"](
+        "memory-only", connector=connector, runner=successful_runner,
+        controller_gate="controller-script", compute_gate="compute-script",
+    )
+    assert calls == [
+        "connect:controller", "run:controller", "close:controller",
+        "connect:compute", "run:compute", "close:compute",
+    ]
+
+    calls.clear()
+
+    def compute_failing_runner(client: FakeClient, _script: str) -> None:
+        calls.append(f"run:{client.name}")
+        if client.name == "compute":
+            raise RuntimeError("compute gate failed")
+
+    with pytest.raises(RuntimeError, match="compute gate failed"):
+        namespace["run_dual_node_starting_gate"](
+            "memory-only", connector=connector, runner=compute_failing_runner,
+            controller_gate="controller-script", compute_gate="compute-script",
+        )
+    assert calls == [
+        "connect:controller", "run:controller", "close:controller",
+        "connect:compute", "run:compute", "close:compute",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_success", "expected_creates"),
+    (("zero", True, 1), ("one", True, 0), ("duplicate", False, 0), ("query_failure", False, 0)),
+)
+def test_manual_keystone_service_project_executes_production_branches(
+    scenario: str, expected_success: bool, expected_creates: int
+) -> None:
+    text = manual_shell_text("03-keystone.md")
+    definitions = manual_function_definitions(text, ("die", "service_project_ids", "ensure_service_project"))
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {definitions}
+        state=$(mktemp)
+        trace=$(mktemp)
+        trap 'rm -f "$state" "$trace"' EXIT
+        printf '%s\n' {scenario!r} >"$state"
+        python3() {{ command python "$@"; }}
+        openstack() {{
+          if [[ "$1 $2" == 'project list' ]]; then
+            [[ $(<"$state") != query_failure ]] || return 7
+            case $(<"$state") in
+              zero) printf '%s\n' '[]' ;;
+              one) printf '%s\n' '[{{"ID":"service-id","Name":"service"}}]' ;;
+              duplicate) printf '%s\n' '[{{"ID":"one","Name":"service"}},{{"ID":"two","Name":"service"}}]' ;;
+            esac
+          elif [[ "$1 $2" == 'project create' ]]; then
+            printf '%s\n' create >>"$trace"
+            printf '%s\n' one >"$state"
+          elif [[ "$1 $2" == 'project show' ]]; then
+            local index column=''
+            for ((index=1; index<=$#; index++)); do
+              if [[ "${{!index}}" == -c ]]; then index=$((index+1)); column=${{!index}}; fi
+            done
+            case "$column" in
+              id) printf '%s\n' service-id ;;
+              name) printf '%s\n' service ;;
+              domain_id) printf '%s\n' default ;;
+              enabled) printf '%s\n' True ;;
+              *) return 9 ;;
+            esac
+          else
+            return 10
+          fi
+        }}
+        set +e
+        ensure_service_project
+        rc=$?
+        set -e
+        printf 'RC=%s CREATES=%s\n' "$rc" "$(wc -l <"$trace")"
+        """
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert ("RC=0" in completed.stdout) is expected_success
+    assert f"CREATES={expected_creates}" in completed.stdout
+
+
+def test_manual_keystone_admin_openrc_installer_is_exclusive_atomic_and_cleanup_exact(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    text = manual_shell_text("03-keystone.md")
+    source = next(
+        body for _opener, _delimiter, body in shell_sections(text)[1]
+        if "ADMIN_OPENRC_CONTENT" in body and "def install_admin_openrc" in body
+    )
+    tree = ast.parse(source)
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert {"O_EXCL", "O_NOFOLLOW", "fchmod", "fchown", "fsync", "replace", "lstat"} <= attributes
+    selected = [
+        node for node in tree.body
+        if (isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "ADMIN_OPENRC_CONTENT" for target in node.targets))
+        or (isinstance(node, ast.FunctionDef) and node.name == "install_admin_openrc")
+    ]
+    namespace: dict[str, object] = {
+        "os": os,
+        "Path": Path,
+        "stat": __import__("stat"),
+        "uuid": __import__("uuid"),
+    }
+    exec(compile(ast.Module(body=selected, type_ignores=[]), "admin-openrc-installer", "exec"), namespace)
+
+    class OpsProxy:
+        def __init__(self, fail_replace: bool) -> None:
+            self.fail_replace = fail_replace
+
+        def __getattr__(self, name: str) -> object:
+            if name in {"fchown", "chown"}:
+                return lambda *_args: None
+            if name == "replace" and self.fail_replace:
+                return lambda *_args: (_ for _ in ()).throw(OSError("replace failure"))
+            return getattr(os, name)
+
+    target = tmp_path / "admin-openrc"
+    target.write_text("preexisting\n", encoding="utf-8")
+    with pytest.raises(OSError, match="replace failure"):
+        namespace["install_admin_openrc"](
+            target=target, owner_uid=0, owner_gid=0, ops=OpsProxy(True), nonce="review-failure"
+        )
+    assert target.read_text(encoding="utf-8") == "preexisting\n"
+    assert list(tmp_path.glob(".admin-openrc.task5b.*")) == []

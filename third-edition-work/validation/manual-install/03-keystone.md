@@ -4,6 +4,161 @@
 
 依赖顺序必须固定为：起始状态门禁 → 离线包事务 → 数据库和三主机授权 → 配置和原包备份 → 数据库同步 → Fernet/credential 密钥 → bootstrap → Apache/WSGI → API/CLI 和 `service` 项目 → 双节点收口。前一门禁失败时不得跳到后一门禁。
 
+## 断线续接和双节点零变更门禁
+
+在执行任何 DNF 或 SQL 变更前，先在 Windows 工作站运行下列程序。它只使用两个已审查的主机密钥文件和 `RejectPolicy`；controller 失败时不会连接 compute，compute 失败时不会进入安装。登录密码由 `getpass` 只读入内存。
+
+```python
+from __future__ import annotations
+
+import getpass
+from pathlib import Path
+
+import paramiko
+
+
+HOSTS = {
+    "controller": ("192.168.234.151", Path(".superpowers/sdd/known_hosts.controller")),
+    "compute": ("192.168.234.150", Path(".superpowers/sdd/known_hosts.compute")),
+}
+
+CONTROLLER_GATE = r'''
+set -Eeuo pipefail
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+[[ $(hostnamectl --static) == controller ]] || die "controller hostname drift"
+ip -4 -o addr show dev ens33 | grep -Fq '192.168.234.151/24' || die "controller ens33 drift"
+ens34_output=$(ip -4 -o addr show dev ens34) || die "controller ens34 probe failed"
+[[ -z $ens34_output ]] || die "controller ens34 has IPv4"
+for service in chronyd mariadb rabbitmq-server memcached; do
+  systemctl is-active --quiet "$service" || die "$service inactive"
+  systemctl is-enabled --quiet "$service" || die "$service disabled"
+done
+[[ $(mysql -uroot --batch --skip-column-names -e 'SELECT 1;') == 1 ]] || die "MariaDB local access failed"
+repo=$(dnf -q repolist --disablerepo='*' --enablerepo='openstack-local') || die "local repo probe failed"
+grep -Fq openstack-local <<<"$repo" || die "openstack-local missing"
+for package in openstack-keystone httpd python3-mod_wsgi openstack-glance openstack-placement-api \
+  openstack-nova-common openstack-neutron-common openstack-cinder-common openstack-swift-common python3-horizon; do
+  if output=$(LC_ALL=C rpm -q "$package" 2>&1); then
+    die "unexpected package installed: $package"
+  else
+    rc=$?
+    [[ $rc -eq 1 && $output == "package $package is not installed" ]] || die "RPM probe failed: $package"
+  fi
+done
+keystone_database_count=$(mysql -uroot --batch --skip-column-names -e \
+  "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='keystone';") ||
+  die "Keystone database probe failed"
+[[ $keystone_database_count =~ ^[0-9]+$ && $keystone_database_count -eq 0 ]] ||
+  die "Keystone database already exists"
+keystone_database_hosts=$(mysql -uroot --batch --skip-column-names -e \
+  "SELECT Host FROM mysql.user WHERE User='keystone';") || die "Keystone user probe failed"
+[[ -z $keystone_database_hosts ]] || die "Keystone database users already exist"
+for path in /etc/keystone/keystone.conf /etc/keystone/fernet-keys /etc/keystone/credential-keys \
+  /etc/httpd/conf.d/wsgi-keystone.conf /root/.keystone-bootstrap-complete /root/admin-openrc; do
+  [[ ! -e $path && ! -L $path ]] || die "unexpected Keystone path: $path"
+done
+port_5000=$(ss -H -lnt '( sport = :5000 )') || die "port 5000 probe failed"
+[[ -z $port_5000 ]] || die "port 5000 already listens"
+printf '%s\n' CONTROLLER_STARTING_GATE=PASS
+'''
+
+COMPUTE_GATE = r'''
+set -Eeuo pipefail
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+[[ $(hostnamectl --static) == compute ]] || die "compute hostname drift"
+ip -4 -o addr show dev ens33 | grep -Fq '192.168.234.150/24' || die "compute ens33 drift"
+ens34_output=$(ip -4 -o addr show dev ens34) || die "compute ens34 probe failed"
+[[ -z $ens34_output ]] || die "compute ens34 has IPv4"
+systemctl is-active --quiet chronyd || die "chronyd inactive"
+systemctl is-enabled --quiet chronyd || die "chronyd disabled"
+repo=$(dnf -q repolist --disablerepo='*' --enablerepo='openstack-local') || die "local repo probe failed"
+grep -Fq openstack-local <<<"$repo" || die "openstack-local missing"
+for package in openstack-keystone openstack-glance openstack-placement-api openstack-nova-common \
+  openstack-neutron-common openstack-cinder-common openstack-swift-common python3-horizon; do
+  if output=$(LC_ALL=C rpm -q "$package" 2>&1); then die "unexpected package installed: $package"; else
+    rc=$?; [[ $rc -eq 1 && $output == "package $package is not installed" ]] || die "RPM probe failed: $package"
+  fi
+done
+root_source=$(findmnt -nro SOURCE /) || die "root source discovery failed"
+root_source=$(readlink -f "$root_source") || die "root source canonicalization failed"
+root_chain=$(lsblk -s -nrpo NAME "$root_source") || die "root ancestry probe failed"
+for device in /dev/sdb /dev/sdc; do
+  [[ -b $device ]] || die "$device is not a block device"
+  [[ $(blockdev --getsize64 "$device") == 53687091200 ]] || die "$device size drift"
+  [[ $(lsblk -dnro TYPE "$device") == disk ]] || die "$device is not a whole disk"
+  ! grep -Fxq "$device" <<<"$root_chain" || die "$device is a root ancestor"
+  [[ $(lsblk -nrpo NAME "$device" | sed '/^[[:space:]]*$/d' | wc -l) -eq 1 ]] || die "$device has children"
+  filesystem_mount=$(lsblk -dnro FSTYPE,MOUNTPOINT "$device") ||
+    die "$device filesystem/mount probe failed"
+  [[ -z ${filesystem_mount//[[:space:]]/} ]] || die "$device has filesystem or mount"
+  wipefs_output=$(wipefs --no-act --noheadings --output TYPE "$device") || die "wipefs read-only probe failed"
+  [[ -z ${wipefs_output//[[:space:]]/} ]] || die "$device has a wipefs signature"
+  if blkid -p "$device" >/dev/null 2>&1; then die "$device has a signature"; else
+    rc=$?; [[ $rc -eq 2 ]] || die "$device blkid probe failed"
+  fi
+done
+printf '%s\n' COMPUTE_STARTING_GATE=PASS
+'''
+
+
+def connect_pinned(node: str, login_password: str) -> paramiko.SSHClient:
+    host, known_hosts = HOSTS[node]
+    client = paramiko.SSHClient()
+    client.load_host_keys(str(known_hosts))
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    client.connect(
+        host, username="root", password=login_password,
+        look_for_keys=False, allow_agent=False,
+        timeout=10, auth_timeout=10, banner_timeout=10,
+    )
+    return client
+
+
+def run_remote_gate(client: paramiko.SSHClient, script: str) -> None:
+    stdin, stdout, stderr = client.exec_command("bash -s")
+    stdin.write(script)
+    stdin.channel.shutdown_write()
+    safe_stdout = stdout.read().decode("utf-8", errors="replace")
+    safe_stderr = stderr.read().decode("utf-8", errors="replace")
+    rc = stdout.channel.recv_exit_status()
+    if rc != 0:
+        raise RuntimeError(safe_stderr or f"remote gate failed rc={rc}")
+    print(safe_stdout, end="")
+
+
+def run_dual_node_starting_gate(
+    login_password: str,
+    connector=None,
+    runner=None,
+    controller_gate=None,
+    compute_gate=None,
+) -> None:
+    connector = connector or connect_pinned
+    runner = runner or run_remote_gate
+    controller_gate = controller_gate or CONTROLLER_GATE
+    compute_gate = compute_gate or COMPUTE_GATE
+    controller = connector("controller", login_password)
+    try:
+        runner(controller, controller_gate)
+    finally:
+        controller.close()
+    compute = connector("compute", login_password)
+    try:
+        runner(compute, compute_gate)
+    finally:
+        compute.close()
+
+
+if __name__ == "__main__":
+    login_password = getpass.getpass("VM root password: ")
+    try:
+        run_dual_node_starting_gate(login_password)
+    finally:
+        login_password = ""
+```
+
+本次断线后的实际输出为 controller 和 compute 门禁均 PASS；Keystone 包、库、用户、配置、密钥、marker、openrc 和 5000 监听均不存在，compute 两块数据盘通过签名边界检查，因此没有局部 5B 变更需要恢复。
+
 ## 严格会话与起始状态
 
 在 controller 开启一个新的 root Bash 会话。错误陷阱只显示行号和命令名，不显示运行时秘密。
@@ -14,6 +169,28 @@ set -Eeuo pipefail
 die() {
   printf 'ERROR: %s\n' "$*" >&2
   return 1
+}
+
+load_runtime_secret() {
+  local output_name=$1 path=${2:-/root/.openstack-lab-secrets} metadata secret_value readlink_rc
+  local -a lines=()
+  [[ -e $path ]] || return 1
+  [[ -f $path ]] || return 1
+  [[ ! -L $path ]] || return 1
+  if readlink -- "$path" >/dev/null 2>&1; then
+    return 1
+  else
+    readlink_rc=$?
+    [[ $readlink_rc -eq 1 ]] || return 1
+  fi
+  metadata=$(stat -c '%U:%G %a %h' -- "$path") || return 1
+  [[ $metadata == 'root:root 600 1' ]] || return 1
+  mapfile -t lines <"$path" || return 1
+  [[ ${lines[0]+present} == present ]] || return 1
+  [[ ${lines[1]+present} != present ]] || return 1
+  [[ ${lines[0]} =~ ^OPENSTACK_DEPLOY_PASSWORD=(.+)$ ]] || return 1
+  secret_value=${BASH_REMATCH[1]}
+  printf -v "$output_name" '%s' "$secret_value"
 }
 
 on_error() {
@@ -121,16 +298,10 @@ python3-mod_wsgi    5.0.0-1.oe2403sp3   x86_64
 运行时密码仅从 `/root/.openstack-lab-secrets` 读入内存。数据库账户名、主机和密码都作为 PyMySQL 参数传递；特别是 `%` 主机也作为参数，不进行 SQL 字符串拼接。
 
 ```bash
-[[ $(stat -c '%U:%G %a' /root/.openstack-lab-secrets) == 'root:root 600' ]] ||
-  die "runtime secret metadata drift"
-[[ $(wc -l </root/.openstack-lab-secrets) -eq 1 ]] || die "runtime secret line-count drift"
-IFS= read -r secret_record </root/.openstack-lab-secrets
-case "$secret_record" in
-  OPENSTACK_DEPLOY_PASSWORD=?*) OPENSTACK_DEPLOY_PASSWORD=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
-  *) die "runtime secret format drift" ;;
-esac
-secret_record=
-export OPENSTACK_DEPLOY_PASSWORD
+DB_PASS=
+load_runtime_secret DB_PASS /root/.openstack-lab-secrets || die "runtime secret gate failed before database work"
+export OPENSTACK_DEPLOY_PASSWORD=$DB_PASS
+DB_PASS=
 MYSQL_SOCKET=$(mysql -uroot --batch --skip-column-names -e 'SELECT @@socket;')
 [[ -S $MYSQL_SOCKET ]] || die "MariaDB socket probe failed"
 export MYSQL_SOCKET
@@ -177,7 +348,7 @@ finally:
     probe.close()
 PY
 
-unset OPENSTACK_DEPLOY_PASSWORD MYSQL_SOCKET
+unset OPENSTACK_DEPLOY_PASSWORD MYSQL_SOCKET DB_PASS
 mysql -uroot --batch --skip-column-names -e \
   "SELECT Host FROM mysql.user WHERE User='keystone' ORDER BY Host;"
 ```
@@ -191,6 +362,10 @@ mysql -uroot --batch --skip-column-names -e \
 配置前运行 `rpm -V openstack-keystone httpd python3-mod_wsgi`，无差异。将包默认文件保存到只允许 root 访问的备份目录；实际目录是 `/root/openstack-lab-backups/task-5b-20260811T072646Z`。
 
 ```bash
+rpm_verify=$(rpm -V openstack-keystone httpd python3-mod_wsgi) ||
+  die "installed package defaults failed rpm verification"
+[[ -z $rpm_verify ]] || die "package-default verification produced differences"
+
 backup_dir=/root/openstack-lab-backups/task-5b-20260811T072646Z
 install -d -m 0700 -o root -g root "$backup_dir"
 (
@@ -206,13 +381,10 @@ install -d -m 0700 -o root -g root "$backup_dir"
 下列程序保留 `root:keystone 0640`，把密码进行 URL 编码后原子替换配置。真实连接串不输出、不散列、不复制到教材。
 
 ```bash
-IFS= read -r secret_record </root/.openstack-lab-secrets
-case "$secret_record" in
-  OPENSTACK_DEPLOY_PASSWORD=?*) OPENSTACK_DEPLOY_PASSWORD=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
-  *) die "runtime secret format drift" ;;
-esac
-secret_record=
-export OPENSTACK_DEPLOY_PASSWORD
+CONFIG_PASS=
+load_runtime_secret CONFIG_PASS /root/.openstack-lab-secrets || die "runtime secret gate failed before configuration"
+export OPENSTACK_DEPLOY_PASSWORD=$CONFIG_PASS
+CONFIG_PASS=
 
 python3 - <<'PY'
 import configparser
@@ -249,7 +421,7 @@ finally:
         os.unlink(temporary_name)
 PY
 restorecon -F /etc/keystone/keystone.conf
-unset OPENSTACK_DEPLOY_PASSWORD
+unset OPENSTACK_DEPLOY_PASSWORD CONFIG_PASS
 ```
 
 脱敏快照用 `<DB_PASSWORD>` 替换完整 URL 编码后的密码字段；占位符所在位置保持连接 URL 的语义不变。
@@ -296,6 +468,7 @@ classify_key_repository() {
     die "key repository directory metadata mismatch"
   for path in "$directory/0" "$directory/1"; do
     [[ -f $path && ! -L $path ]] || die "key entry is not a regular file"
+    [[ -s $path ]] || die "key entry is empty"
     [[ $(stat -c '%U:%G %a' "$path") == "$KEYSTONE_KEY_OWNER 600" ]] ||
       die "key entry metadata mismatch"
   done
@@ -346,39 +519,100 @@ probe_bootstrap_state() {
   MYSQL_SOCKET=$(mysql -uroot --batch --skip-column-names -e 'SELECT @@socket;')
   export MYSQL_SOCKET
   python3 - <<'PY'
+import json
 import os
 import pymysql
+
+
+def classify_bootstrap_evidence(evidence):
+    if all(not rows for rows in evidence.values()):
+        return "ABSENT"
+
+    projects = evidence["projects"]
+    users = evidence["users"]
+    roles = evidence["roles"]
+    services = evidence["services"]
+    regions = evidence["regions"]
+    if not (
+        len(projects) == 1
+        and projects[0].get("name") == "admin"
+        and projects[0].get("domain_id") == "default"
+        and projects[0].get("enabled") == 1
+        and projects[0].get("is_domain") == 0
+        and len(users) == 1
+        and users[0].get("name") == "admin"
+        and users[0].get("domain_id") == "default"
+        and users[0].get("enabled") == 1
+        and len(roles) == 1
+        and roles[0].get("name") == "admin"
+        and roles[0].get("domain_id") in (None, "<<null>>")
+        and len(services) == 1
+        and services[0].get("type") == "identity"
+        and services[0].get("enabled") == 1
+        and len(regions) == 1
+        and regions[0].get("id") == "RegionOne"
+    ):
+        return "PARTIAL"
+
+    service_extra = services[0].get("extra") or "{}"
+    try:
+        service_extra = service_extra if isinstance(service_extra, dict) else json.loads(service_extra)
+    except (TypeError, ValueError):
+        return "PARTIAL"
+    if service_extra.get("name") != "keystone":
+        return "PARTIAL"
+
+    project_id = projects[0].get("id")
+    user_id = users[0].get("id")
+    role_id = roles[0].get("id")
+    service_id = services[0].get("id")
+    matching_assignments = [
+        row for row in evidence["assignments"]
+        if row.get("type") == "UserProject"
+        and row.get("actor_id") == user_id
+        and row.get("target_id") == project_id
+        and row.get("role_id") == role_id
+        and row.get("inherited") == 0
+    ]
+    if len(matching_assignments) != 1:
+        return "PARTIAL"
+
+    endpoints = evidence["endpoints"]
+    expected_interfaces = {"admin", "internal", "public"}
+    if len(endpoints) != 3 or {row.get("interface") for row in endpoints} != expected_interfaces:
+        return "PARTIAL"
+    if any(
+        row.get("service_id") != service_id
+        or row.get("region_id") != "RegionOne"
+        or row.get("url") != "http://controller:5000/v3/"
+        or row.get("enabled") != 1
+        for row in endpoints
+    ):
+        return "PARTIAL"
+    return "FULL"
+
 
 connection = pymysql.connect(
     unix_socket=os.environ["MYSQL_SOCKET"], user="root", database="keystone", charset="utf8mb4"
 )
-queries = (
-    ("admin_project", "SELECT COUNT(*) FROM project WHERE name='admin' AND domain_id='default' AND enabled=1 AND is_domain=0", 1),
-    ("admin_user", "SELECT COUNT(*) FROM local_user AS l JOIN user AS u ON u.id=l.user_id WHERE l.name='admin' AND l.domain_id='default' AND u.enabled=1", 1),
-    ("admin_role", "SELECT COUNT(*) FROM role WHERE name='admin' AND (domain_id IS NULL OR domain_id='<<null>>')", 1),
-    ("assignment", "SELECT COUNT(*) FROM assignment AS a JOIN local_user AS l ON l.user_id=a.actor_id JOIN project AS p ON p.id=a.target_id JOIN role AS r ON r.id=a.role_id WHERE a.type='UserProject' AND l.name='admin' AND l.domain_id='default' AND p.name='admin' AND p.domain_id='default' AND r.name='admin' AND a.inherited=0", 1),
-    ("identity", "SELECT COUNT(*) FROM service WHERE type='identity' AND enabled=1", 1),
-    ("region", "SELECT COUNT(*) FROM region WHERE id='RegionOne'", 1),
-    ("endpoint_total", "SELECT COUNT(*) FROM endpoint AS e JOIN service AS s ON s.id=e.service_id WHERE s.type='identity'", 3),
-    ("admin", "SELECT COUNT(*) FROM endpoint AS e JOIN service AS s ON s.id=e.service_id WHERE s.type='identity' AND e.enabled=1 AND e.region_id='RegionOne' AND e.url='http://controller:5000/v3/' AND e.interface='admin'", 1),
-    ("internal", "SELECT COUNT(*) FROM endpoint AS e JOIN service AS s ON s.id=e.service_id WHERE s.type='identity' AND e.enabled=1 AND e.region_id='RegionOne' AND e.url='http://controller:5000/v3/' AND e.interface='internal'", 1),
-    ("public", "SELECT COUNT(*) FROM endpoint AS e JOIN service AS s ON s.id=e.service_id WHERE s.type='identity' AND e.enabled=1 AND e.region_id='RegionOne' AND e.url='http://controller:5000/v3/' AND e.interface='public'", 1),
-)
-observed = []
+queries = {
+    "projects": "SELECT id,name,domain_id,enabled,is_domain FROM project WHERE name='admin'",
+    "users": "SELECT u.id,l.name,l.domain_id,u.enabled FROM local_user AS l JOIN user AS u ON u.id=l.user_id WHERE l.name='admin'",
+    "roles": "SELECT id,name,domain_id FROM role WHERE name='admin'",
+    "assignments": "SELECT type,actor_id,target_id,role_id,inherited FROM assignment",
+    "services": "SELECT id,type,enabled,extra FROM service WHERE type='identity'",
+    "regions": "SELECT id FROM region WHERE id='RegionOne'",
+    "endpoints": "SELECT e.service_id,e.interface,e.region_id,e.url,e.enabled FROM endpoint AS e JOIN service AS s ON s.id=e.service_id WHERE s.type='identity'",
+}
+evidence = {}
 try:
-    with connection.cursor() as cursor:
-        for name, sql, expected in queries:
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        for name, sql in queries.items():
             cursor.execute(sql)
-            observed.append((name, cursor.fetchone()[0], expected))
+            evidence[name] = list(cursor.fetchall())
 finally:
     connection.close()
-if all(actual == 0 for _name, actual, _expected in observed):
-    state = "ABSENT"
-elif all(actual == expected for _name, actual, expected in observed):
-    state = "FULL"
-else:
-    state = "PARTIAL"
-print(f"BOOTSTRAP_STATE={state}")
+print(f"BOOTSTRAP_STATE={classify_bootstrap_evidence(evidence)}")
 PY
   unset MYSQL_SOCKET
 }
@@ -400,12 +634,9 @@ action=$(bootstrap_action "$state" "$marker_state")
 ```bash
 case "$action" in
   BOOTSTRAP)
-    IFS= read -r secret_record </root/.openstack-lab-secrets
-    case "$secret_record" in
-      OPENSTACK_DEPLOY_PASSWORD=?*) ADMIN_PASS=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
-      *) die "runtime secret format drift" ;;
-    esac
-    secret_record=
+    ADMIN_PASS=
+    load_runtime_secret ADMIN_PASS /root/.openstack-lab-secrets ||
+      die "runtime secret gate failed before bootstrap"
     keystone-manage bootstrap \
       --bootstrap-password "$ADMIN_PASS" \
       --bootstrap-username admin \
@@ -476,45 +707,187 @@ systemctl enable --now httpd
 `admin-openrc` 本身不保存密码。每次 source 都要求秘密文件是 root 所有、0600、非符号链接且只有一条格式正确的记录；任何异常都会清除 `OS_PASSWORD` 并返回失败。
 
 ```bash
-cat >/root/admin-openrc <<'EOF'
-# Keystone administrator environment; no credential is stored in this file.
-_openstack_load_admin_env() {
-  local secret_file=/root/.openstack-lab-secrets secret_record line_count metadata
-  [[ -f $secret_file && ! -L $secret_file ]] || return 1
-  metadata=$(stat -c '%U:%G %a' "$secret_file") || return 1
-  [[ $metadata == 'root:root 600' ]] || return 1
-  line_count=$(wc -l <"$secret_file") || return 1
-  [[ $line_count -eq 1 ]] || return 1
-  IFS= read -r secret_record <"$secret_file" || return 1
-  case "$secret_record" in
-    OPENSTACK_DEPLOY_PASSWORD=?*) export OS_PASSWORD=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
-    *) secret_record=; return 1 ;;
-  esac
-  secret_record=
-  export OS_PROJECT_DOMAIN_NAME=Default
-  export OS_USER_DOMAIN_NAME=Default
-  export OS_PROJECT_NAME=admin
-  export OS_USERNAME=admin
-  export OS_AUTH_URL=http://controller:5000/v3
-  export OS_IDENTITY_API_VERSION=3
-  export OS_IMAGE_API_VERSION=2
-  export OS_REGION_NAME=RegionOne
+python3 - <<'PY'
+import os
+from pathlib import Path
+import stat
+import uuid
+
+
+ADMIN_OPENRC_CONTENT = r'''# Keystone administrator environment; no credential is stored in this file.
+_openstack_load_runtime_secret() {
+  local output_name=$1 path=${2:-/root/.openstack-lab-secrets} metadata secret_value readlink_rc
+  local -a lines=()
+  [[ -e $path ]] || return 1
+  [[ -f $path ]] || return 1
+  [[ ! -L $path ]] || return 1
+  if readlink -- "$path" >/dev/null 2>&1; then
+    return 1
+  else
+    readlink_rc=$?
+    [[ $readlink_rc -eq 1 ]] || return 1
+  fi
+  metadata=$(stat -c '%U:%G %a %h' -- "$path") || return 1
+  [[ $metadata == 'root:root 600 1' ]] || return 1
+  mapfile -t lines <"$path" || return 1
+  [[ ${lines[0]+present} == present ]] || return 1
+  [[ ${lines[1]+present} != present ]] || return 1
+  [[ ${lines[0]} =~ ^OPENSTACK_DEPLOY_PASSWORD=(.+)$ ]] || return 1
+  secret_value=${BASH_REMATCH[1]}
+  printf -v "$output_name" '%s' "$secret_value"
 }
-if ! _openstack_load_admin_env; then
+if ! _openstack_load_runtime_secret OS_PASSWORD /root/.openstack-lab-secrets; then
   unset OS_PASSWORD
-  unset -f _openstack_load_admin_env
+  unset -f _openstack_load_runtime_secret
   return 1 2>/dev/null || exit 1
 fi
-unset -f _openstack_load_admin_env
-EOF
-chown root:root /root/admin-openrc
-chmod 0600 /root/admin-openrc
+unset -f _openstack_load_runtime_secret
+export OS_PASSWORD
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_NAME=admin
+export OS_USERNAME=admin
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+export OS_REGION_NAME=RegionOne
+'''
+
+
+def install_admin_openrc(
+    target=Path("/root/admin-openrc"), owner_uid=0, owner_gid=0, ops=os, nonce=None
+):
+    target = Path(target)
+    nonce = nonce or uuid.uuid4().hex
+    temporary = target.parent / f".admin-openrc.task5b.{nonce}"
+    no_follow = ops.O_NOFOLLOW if hasattr(ops, "O_NOFOLLOW") else 0
+    flags = ops.O_WRONLY | ops.O_CREAT | ops.O_EXCL | no_follow
+    descriptor = None
+    created = False
+    identity = None
+    try:
+        descriptor = ops.open(str(temporary), flags, 0o600)
+        created = True
+        metadata = ops.fstat(descriptor)
+        identity = (metadata.st_dev, metadata.st_ino)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise RuntimeError("exclusive admin-openrc temporary is unsafe")
+        ops.fchmod(descriptor, 0o600)
+        ops.fchown(descriptor, owner_uid, owner_gid)
+        payload = ADMIN_OPENRC_CONTENT.encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            written = ops.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise RuntimeError("admin-openrc short write")
+            offset += written
+        ops.fsync(descriptor)
+        ops.close(descriptor)
+        descriptor = None
+        ops.replace(str(temporary), str(target))
+        created = False
+        directory_flags = ops.O_RDONLY | (ops.O_DIRECTORY if hasattr(ops, "O_DIRECTORY") else 0)
+        directory_descriptor = ops.open(str(target.parent), directory_flags)
+        try:
+            ops.fsync(directory_descriptor)
+        finally:
+            ops.close(directory_descriptor)
+    finally:
+        if descriptor is not None:
+            ops.close(descriptor)
+        if created and identity is not None:
+            try:
+                current = ops.lstat(str(temporary))
+            except FileNotFoundError:
+                current = None
+            if (
+                current is not None
+                and (current.st_dev, current.st_ino) == identity
+                and stat.S_ISREG(current.st_mode)
+                and current.st_nlink == 1
+            ):
+                ops.unlink(str(temporary))
+
+
+install_admin_openrc()
+PY
 restorecon -F /root/admin-openrc
-source /root/admin-openrc
-openstack token issue -f value -c expires >/dev/null
+[[ -f /root/admin-openrc && ! -L /root/admin-openrc ]] || die "admin-openrc is not a regular file"
+[[ $(stat -c '%U:%G %a %h' /root/admin-openrc) == 'root:root 600 1' ]] ||
+  die "admin-openrc final metadata drift"
+source /root/admin-openrc || die "admin-openrc failed closed"
 ```
 
-令牌只验证签发成功，不输出 token ID。随后精确验证 identity 服务与端点。以下 Python 验证器在教材测试中可直接从代码块提取，并对缺项、重复接口、错误 Region 或 URL 的变体失败。
+先验证 admin 项目、用户、全局角色和三者精确绑定的项目授权。本环境已只读实测下列 CLI JSON 语法兼容。
+
+```bash
+admin_project_json=$(mktemp /root/.task5b-admin-project.XXXXXX)
+admin_user_json=$(mktemp /root/.task5b-admin-user.XXXXXX)
+admin_role_json=$(mktemp /root/.task5b-admin-role.XXXXXX)
+admin_assignment_json=$(mktemp /root/.task5b-admin-assignment.XXXXXX)
+trap 'rm -f -- "$admin_project_json" "$admin_user_json" "$admin_role_json" "$admin_assignment_json"' EXIT
+openstack project show admin -f json >"$admin_project_json"
+openstack user show admin -f json >"$admin_user_json"
+openstack role show admin -f json >"$admin_role_json"
+admin_project_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$admin_project_json")
+admin_user_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$admin_user_json")
+admin_role_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$admin_role_json")
+openstack role assignment list --user "$admin_user_id" --project "$admin_project_id" \
+  --role "$admin_role_id" -f json >"$admin_assignment_json"
+
+python3 - "$admin_project_json" "$admin_user_json" "$admin_role_json" "$admin_assignment_json" <<'PY'
+import json
+import sys
+
+
+def validate_admin_cli_evidence(evidence):
+    project = evidence["project"]
+    user = evidence["user"]
+    role = evidence["role"]
+    if not (
+        project.get("name") == "admin"
+        and project.get("domain_id") == "default"
+        and project.get("enabled") is True
+        and project.get("is_domain") is False
+        and user.get("name") == "admin"
+        and user.get("domain_id") == "default"
+        and user.get("enabled") is True
+        and role.get("name") == "admin"
+        and role.get("domain_id") is None
+    ):
+        raise ValueError("admin project/user/global-role mismatch")
+    project_id, user_id, role_id = project.get("id"), user.get("id"), role.get("id")
+    assignments = evidence["assignments"]
+    if len(assignments) != 1:
+        raise ValueError("admin assignment cardinality mismatch")
+    row = assignments[0]
+    if not (
+        row.get("Role") == role_id
+        and row.get("User") == user_id
+        and row.get("Project") == project_id
+        and row.get("Group") == ""
+        and row.get("Domain") == ""
+        and row.get("System") == ""
+        and row.get("Inherited") is False
+    ):
+        raise ValueError("admin assignment binding mismatch")
+    return project_id, user_id, role_id
+
+
+if len(sys.argv) > 1:
+    evidence = {
+        "project": json.load(open(sys.argv[1], encoding="utf-8")),
+        "user": json.load(open(sys.argv[2], encoding="utf-8")),
+        "role": json.load(open(sys.argv[3], encoding="utf-8")),
+        "assignments": json.load(open(sys.argv[4], encoding="utf-8")),
+    }
+    validate_admin_cli_evidence(evidence)
+PY
+rm -f -- "$admin_project_json" "$admin_user_json" "$admin_role_json" "$admin_assignment_json"
+trap - EXIT
+```
+
+然后精确验证 identity 服务与端点，最后签发但不显示 token。以下 Python 验证器在教材测试中可直接从代码块提取，并对缺项、重复接口、错误 Region 或 URL 的变体失败。
 
 ```bash
 service_json=$(mktemp)
@@ -538,7 +911,7 @@ PY
 [[ $(openstack service show "$identity_service_id" -f value -c enabled) == True ]] ||
   die "identity service disabled"
 
-openstack endpoint list --service identity -f json >"$endpoint_json"
+openstack endpoint list --service "$identity_service_id" -f json >"$endpoint_json"
 python3 - "$endpoint_json" <<'PY'
 import json
 import sys
@@ -559,6 +932,7 @@ if any(row.get("Service Type") != "identity" for row in rows):
 if any(row.get("URL") != EXPECTED_URL for row in rows):
     raise SystemExit("identity endpoint URL mismatch")
 PY
+openstack token issue -f value -c expires >/dev/null || die "protected token issuance failed"
 rm -f -- "$service_json" "$endpoint_json"
 trap - EXIT
 ```
@@ -566,20 +940,35 @@ trap - EXIT
 `service` 项目只允许 0 或 1 条。这个 OpenStack CLI 版本不支持 `project list --name`，所以先取得 Default 域的 JSON，再本地精确过滤；命令失败不会误判为“不存在”。
 
 ```bash
-ensure_service_project() {
-  local rows count
-  rows=$(openstack project list --domain default -f json | python3 -c '
+service_project_ids() {
+  openstack project list --domain default -f json | python3 -c '
 import json, sys
 for row in json.load(sys.stdin):
     if row.get("Name") == "service":
         print(row.get("ID", ""))
-') || die "service project list probe failed"
+'
+}
+
+ensure_service_project() {
+  local rows count project_id
+  if ! rows=$(service_project_ids); then
+    die "service project list probe failed"
+    return 1
+  fi
   count=$(sed '/^[[:space:]]*$/d' <<<"$rows" | wc -l)
   case "$count" in
     0) openstack project create --domain default --description 'Service Project' service >/dev/null ;;
     1) : "service project already exists" ;;
-    *) die "service project cardinality mismatch: $count" ;;
+    *) die "service project cardinality mismatch before create: $count"; return 1 ;;
   esac
+  if ! rows=$(service_project_ids); then
+    die "service project post-create list probe failed"
+    return 1
+  fi
+  count=$(sed '/^[[:space:]]*$/d' <<<"$rows" | wc -l)
+  [[ $count -eq 1 ]] || { die "service project final cardinality mismatch: $count"; return 1; }
+  project_id=$(sed '/^[[:space:]]*$/d' <<<"$rows")
+  [[ $(openstack project show service -f value -c id) == "$project_id" ]] || die "service project ID mismatch"
   [[ $(openstack project show service -f value -c name) == service ]] || die "service project name mismatch"
   [[ $(openstack project show service -f value -c domain_id) == default ]] || die "service project domain mismatch"
   [[ $(openstack project show service -f value -c enabled) == True ]] || die "service project disabled"

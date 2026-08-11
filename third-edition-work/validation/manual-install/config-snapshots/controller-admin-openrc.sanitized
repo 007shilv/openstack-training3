@@ -1,29 +1,37 @@
 # Keystone administrator environment; no credential is stored in this file.
-_openstack_load_admin_env() {
-  local secret_file=/root/.openstack-lab-secrets secret_record line_count metadata
-  [[ -f $secret_file && ! -L $secret_file ]] || return 1
-  metadata=$(stat -c '%U:%G %a' "$secret_file") || return 1
-  [[ $metadata == 'root:root 600' ]] || return 1
-  line_count=$(wc -l <"$secret_file") || return 1
-  [[ $line_count -eq 1 ]] || return 1
-  IFS= read -r secret_record <"$secret_file" || return 1
-  case "$secret_record" in
-    OPENSTACK_DEPLOY_PASSWORD=?*) export OS_PASSWORD=${secret_record#OPENSTACK_DEPLOY_PASSWORD=} ;;
-    *) secret_record=; return 1 ;;
-  esac
-  secret_record=
-  export OS_PROJECT_DOMAIN_NAME=Default
-  export OS_USER_DOMAIN_NAME=Default
-  export OS_PROJECT_NAME=admin
-  export OS_USERNAME=admin
-  export OS_AUTH_URL=http://controller:5000/v3
-  export OS_IDENTITY_API_VERSION=3
-  export OS_IMAGE_API_VERSION=2
-  export OS_REGION_NAME=RegionOne
+_openstack_load_runtime_secret() {
+  local output_name=$1 path=${2:-/root/.openstack-lab-secrets} metadata secret_value readlink_rc
+  local -a lines=()
+  [[ -e $path ]] || return 1
+  [[ -f $path ]] || return 1
+  [[ ! -L $path ]] || return 1
+  if readlink -- "$path" >/dev/null 2>&1; then
+    return 1
+  else
+    readlink_rc=$?
+    [[ $readlink_rc -eq 1 ]] || return 1
+  fi
+  metadata=$(stat -c '%U:%G %a %h' -- "$path") || return 1
+  [[ $metadata == 'root:root 600 1' ]] || return 1
+  mapfile -t lines <"$path" || return 1
+  [[ ${lines[0]+present} == present ]] || return 1
+  [[ ${lines[1]+present} != present ]] || return 1
+  [[ ${lines[0]} =~ ^OPENSTACK_DEPLOY_PASSWORD=(.+)$ ]] || return 1
+  secret_value=${BASH_REMATCH[1]}
+  printf -v "$output_name" '%s' "$secret_value"
 }
-if ! _openstack_load_admin_env; then
+if ! _openstack_load_runtime_secret OS_PASSWORD /root/.openstack-lab-secrets; then
   unset OS_PASSWORD
-  unset -f _openstack_load_admin_env
+  unset -f _openstack_load_runtime_secret
   return 1 2>/dev/null || exit 1
 fi
-unset -f _openstack_load_admin_env
+unset -f _openstack_load_runtime_secret
+export OS_PASSWORD
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_NAME=admin
+export OS_USERNAME=admin
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+export OS_REGION_NAME=RegionOne
