@@ -1,0 +1,246 @@
+# Lab Task 4C - SP3 systemd dependency closure for Nova compute
+
+Timestamp (Asia/Shanghai): 2026-08-11T20:07:29+08:00
+Base checkpoint: 66fb5d558f1b22b44af06ab97a009bf48568f12b
+Controller: 192.168.234.151 (reviewed controller known_hosts; RejectPolicy)
+Compute: 192.168.234.150 (reviewed compute known_hosts; RejectPolicy)
+Credentials: runtime-only; not recorded
+
+## Outcome and boundary
+
+DONE. The promoted offline repository now contains 1082 RPMs and closes the
+compute virtualization transaction without changing the original ZIP. This
+task ran only repository construction, read-only audits, and a compute
+`--assumeno` transaction. It did not install QEMU, libvirt, nova-compute, or
+any other package; did not start or restart a service; did not reboot a node;
+did not create `/etc/nova/compute_id`; and did not write either data disk.
+
+Task 5E remains PAUSED / INCOMPLETE after its controller control-plane stages
+and before compute package installation. This Task 4C record is not permission
+to start Neutron or any later component.
+
+Before and after Task 4C, controller Nova API, scheduler, conductor, and noVNC
+were active and enabled, with one listener on 8774 and 6080. Compute had no
+installed `qemu`, `libvirt`, `openstack-nova-compute`, or `qemu-kvm`
+capability, and no compute identity file.
+
+## Immutable input and selected payload
+
+The original `openstack_repo.zip` remains 726582890 bytes with SHA256
+ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978
+and its original 1079-RPM inventory. It was not opened for write, repacked, or
+replaced. Before Task 4C the promoted controller repository had 1081 RPMs and
+repomd SHA256
+e5cecca736e5eee2477211225397d1f65d55ae03772ed5224f99634a50a5a3dc.
+
+Official repository query:
+
+- Repository ID: update
+- Base URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/update/x86_64/
+- Advertised candidates: 255-57, 255-58, and 255-59
+- Selected exact NEVRA: systemd-cryptsetup-0:255-58.oe2403sp3.x86_64
+- Source RPM: systemd-255-58.oe2403sp3.src.rpm
+- Source URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/update/x86_64/Packages/systemd-cryptsetup-255-58.oe2403sp3.x86_64.rpm
+- Size: 86077 bytes
+- SHA256: 1ea8923f04e7047d238983c383efa1385a95b650183398860aff628760a6bdb9
+
+The 255-58 build was selected because the reviewed local repository already
+contains `systemd-container-255-58`, `systemd-255-58`, `systemd-libs-255-58`,
+and `systemd-udev-255-58`, while installed
+`systemd-cryptsetup-255-50` pins installed systemd at 255-50. The selected RPM
+is the one exact matching-family payload; 255-57 and 255-59 were rejected.
+
+## Trust chain and isolated signature verification
+
+- Trusted key path: /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler
+- Owning package: openEuler-gpg-keys-0:1.0-5.4.oe2403sp3.x86_64
+- `rpm -V` package and `rpm -Vf` key file: RC 0, no differences
+- Key file: root:root, regular non-symlink, mode 0644
+- Configured update key URL: http://repo.openeuler.org/openEuler-24.03-LTS-SP3/OS/x86_64/RPM-GPG-KEY-openEuler
+- Verified HTTPS key URL: https://repo.openeuler.org/openEuler-24.03-LTS-SP3/OS/x86_64/RPM-GPG-KEY-openEuler
+- System and HTTPS key SHA256:
+  006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1
+- Full primary fingerprint: 8AA16BF9F2CA5244010DCA963B477C60B675600B
+- Signing subkey fingerprint: 812E1BDCB68F9B756AA48CEF007FB747FB37BC6F
+- RPM header issuer long ID: 3B477C60B675600B, equal to the final 16
+  hexadecimal characters of the full primary fingerprint
+- Isolated rpmdb result: Header V4 RSA/SHA256 Signature OK; Header SHA256 and
+  SHA1 digests OK; Payload SHA256 digest OK; MD5 digest OK
+
+GPG used only the task-owned private homedir. The verified key was imported
+only into the task-owned isolated rpmdb; no system keyring or RPM database was
+modified.
+
+## Exclusive staging, candidate, and promotion
+
+Nonce: c372320df5809ad165f116ea376dfbfd
+
+- Exclusive stage:
+  /opt/.openstack_repo.task4c-c372320df5809ad165f116ea376dfbfd
+- Stage marker SHA256:
+  73063432379989c96d68358dd39579f3622849f354fa18903177aa1b07a9b6a1
+- Candidate source before promotion:
+  /opt/.openstack_repo.task4c-c372320df5809ad165f116ea376dfbfd/candidate
+- Exclusive rollback parent:
+  /opt/.openstack_repo.rollback-task4c-c372320df5809ad165f116ea376dfbfd
+- Rollback repository child:
+  /opt/.openstack_repo.rollback-task4c-c372320df5809ad165f116ea376dfbfd/repo
+- Promotion target: /opt/openstack_repo
+
+`/opt` was a root-owned 0755 real directory. The stage and rollback parents
+were each created exclusively as root-owned 0700 real directories with an
+exclusive root-only 0600 JSON ownership marker. The current 1081-RPM
+repository was copied into the candidate, and only the verified manifest RPM
+was added. Existing RPM hashes matched 1081/1081. The two earlier overlay
+hashes remained byte-identical.
+
+`createrepo_c-1.0.1` and its `drpm` runtime library were privately extracted
+from the reviewed repository; neither was installed. Candidate metadata parsed
+with all configured repositories disabled. Candidate RPM and DNF available
+counts were both 1082, and the exact selected NEVRA resolved once.
+
+Atomic promotion renames:
+
+1. `/opt/openstack_repo` ->
+   `/opt/.openstack_repo.rollback-task4c-c372320df5809ad165f116ea376dfbfd/repo`
+2. `/opt/.openstack_repo.task4c-c372320df5809ad165f116ea376dfbfd/candidate`
+   -> `/opt/openstack_repo`
+
+If rename 2 failed, the prepared reverse was rollback `repo` -> target. For a
+post-promotion failure, the prepared reverse was target -> task-owned
+`failed-candidate-after-promotion`, then rollback `repo` -> target.
+
+Final promoted state:
+
+- RPM count: 1082
+- Existing RPM hashes preserved: 1081/1081
+- Added filename set: exactly the selected systemd-cryptsetup RPM
+- repodata/repomd.xml SHA256:
+  9456447940d5ef5c9e70c8471ecb9360b4e4af662e839c089144eeae0b0e77fe
+- Controller file-DNF available count: 1082
+- Controller FTP repomd and new-RPM hashes: exact
+- Compute FTP/DNF available count: 1082; exact new NEVRA and hashes visible
+
+## Transparent stops and recoveries
+
+1. The configured update key points to the OS tree. The first HTTPS request
+   used an update-tree key path and returned 404 before any RPM download or
+   repository change. The exact marker and the child set of three empty private
+   directories were validated, then the operation resumed with the HTTPS form
+   of the configured OS key path.
+2. The first private `createrepo_c` run stopped before promotion because
+   `libdrpm.so.0` had not yet been privately extracted. The target remained the
+   exact 1081-RPM repository and no rollback path existed. The `drpm` library
+   from the same reviewed repository was extracted into the task tool tree;
+   metadata generation then passed.
+3. The first promoted candidate used the root umask for regenerated repodata,
+   making the repodata directory/files 0700/0600. Local validation passed, but
+   the required FTP read failed. The guarded reverse renames immediately moved
+   the candidate into the marker-owned stage and restored the exact 1081-RPM
+   rollback repository. Repodata permissions were corrected to the reviewed
+   public 0755/0644 pattern; the same candidate was revalidated and promoted.
+   File-DNF, FTP, and compute validation then passed. No service was restarted.
+4. Two dependency-description assertions initially assumed a direct
+   relationship and stopped before the DNF transaction. Read-only repoqueries
+   established the actual indirect package chain recorded below. A first plan
+   then resolved but its evidence parser treated the two-token size column as
+   one token and produced zero machine rows; the raw plan showed no unsafe
+   action. The parser was corrected and the same `--assumeno` plan produced
+   complete 403-row evidence. None of these stops installed a package.
+
+## Complete compute transaction proof
+
+Corrected roots:
+
+    qemu libvirt openstack-nova-compute
+
+Exact command contract: `dnf --color=never --assumeno`, weak dependencies
+disabled, every configured repository disabled, only `openstack-local`
+enabled. The complete stdout/stderr and all machine-readable rows are preserved
+without truncation in `systemd-dependency-transaction-compute.txt`.
+
+Resolution summary:
+
+- qemu-kvm capability provider:
+  qemu-11:8.2.0-73.oe2403sp3.x86_64 from openstack-local
+- Install rows: 398
+- Upgrade rows: 5
+- Total machine-readable rows: 403
+- Repository: openstack-local for 403/403 rows
+- Removing/Erasing/Obsoleting/Replacing/Downgrading: 0/0/0/0/0
+- Result: Dependencies resolved; operation aborted by `--assumeno` (RC 1)
+- Installed packages: 0
+
+Explicit upgrades:
+
+- gnutls-3.8.2-14.oe2403sp3.x86_64
+- systemd-255-58.oe2403sp3.x86_64
+- systemd-cryptsetup-255-58.oe2403sp3.x86_64
+- systemd-libs-255-58.oe2403sp3.x86_64
+- systemd-udev-255-58.oe2403sp3.x86_64
+
+Exact dependency chains:
+
+- libvirt 9.10.0-27 -> libvirt-daemon-driver-qemu 9.10.0-27 ->
+  systemd-container -> systemd(x86-64) = 255-58
+- systemd-cryptsetup 255-58 -> systemd = 255-58
+- libvirt-client 9.10.0-27 -> gnutls-utils
+- libvirt-daemon-driver-qemu -> swtpm-tools -> gnutls-utils
+- gnutls-utils 3.8.2-14 -> gnutls-dane 3.8.2-14 and
+  gnutls(x86-64) = 3.8.2-14
+- gnutls-dane 3.8.2-14 -> gnutls(x86-64) = 3.8.2-14
+
+Thus the gnutls upgrade is a recorded dependency of the resolved local
+transaction, not an unrelated opportunistic update.
+
+## No-change and disk evidence
+
+- Compute RPM baseline SHA256 before/after:
+  19239a6e3eb92f89d4bac8ebb478f52ce1a4032b5ba6f731f43268117da04e3d
+- Latest DNF history ID before/after: 2 / 2
+- Boot ID: unchanged
+- libvirt/nova-compute service state: unchanged; neither service started
+- Installed systemd/systemd-cryptsetup remained 255-50
+- qemu, libvirt, openstack-nova-compute, and qemu-kvm capability remained absent
+- `/etc/nova/compute_id` remained absent
+
+Compute disks before and after were byte-for-byte identical in the captured
+`lsblk -b -J` evidence. `/dev/sdb` and `/dev/sdc` are each 53687091200-byte
+whole disks with no child, filesystem, UUID, mount, or read-only `blkid`
+signature. `/dev/sda2` remained the ext4 root with UUID
+95bccd1c-608a-4db8-9d02-c46916b91f6f; `/dev/sda3` remained swap with UUID
+5f3840af-7562-425d-bad2-01b3135ae355. No disk write command ran.
+
+## Cleanup and final state
+
+Before cleanup, the controller stage exact top-level child set was marker,
+baseline and candidate name/hash records, candidate/promoted DNF caches,
+downloads, FTP check, private GPG/rpmdb/tool directories. The rollback exact
+child set was marker plus the verified 1081-RPM old repository. The compute
+plan exact child set was marker plus before/after RPM and disk baselines, DNF
+and FTP caches, dependency records, raw/machine plans, upgrade names, and the
+complete transaction artifact.
+
+Cleanup revalidated each exact parent, nonce, root ownership, mode, non-link
+identity, marker content, exact child set, promoted 1082-RPM identity, rollback
+1081-RPM identity, 403-row plan, local-only rows, and no-change baselines.
+Only these exact task objects were recursively removed:
+
+- /root/.task4c-plan-c372320df5809ad165f116ea376dfbfd
+- /opt/.openstack_repo.task4c-c372320df5809ad165f116ea376dfbfd
+- /opt/.openstack_repo.rollback-task4c-c372320df5809ad165f116ea376dfbfd
+
+Exact post-cleanup absence passed. `/opt` again contains only
+`openstack_repo`. Final audits then proved controller Nova healthy, the final
+repository visible as 1082 packages on both nodes, compute packages/identity
+still absent, and data disks unchanged.
+
+## Local cache and packaging contract
+
+The ignored cache
+`third-edition-work/environment-cache/repository-overlay/` contains exactly
+the three manifest RPMs. Manifest-to-cache filenames, sizes, and hashes passed
+3/3 with no unmanifested RPM. The tracked deterministic contract is
+`third-edition-work/config/repository-overlay-manifest.json`; no RPM or ZIP is
+tracked. A fresh Git checkout must receive all three cache payloads before the
+final environment repository is rebuilt.

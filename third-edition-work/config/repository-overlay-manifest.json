@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "overlay_id": "lab-task-4b-selinux-policy-dependency-closure",
+  "overlay_id": "lab-offline-dependency-closure",
   "base_repository": {
     "original_rpm_count": 1079,
     "original_zip_sha256": "ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978",
@@ -49,10 +49,33 @@
       "source_rpm": "mysql-selinux-1.0.10-1.oe2403sp3.src.rpm",
       "source_url": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/Packages/mysql-selinux-1.0.10-1.oe2403sp3.noarch.rpm",
       "version": "1.0.10"
+    },
+    {
+      "arch": "x86_64",
+      "epoch": 0,
+      "filename": "systemd-cryptsetup-255-58.oe2403sp3.x86_64.rpm",
+      "name": "systemd-cryptsetup",
+      "nevra": "systemd-cryptsetup-0:255-58.oe2403sp3.x86_64",
+      "release": "58.oe2403sp3",
+      "rpm_signature": {
+        "full_fingerprint": "8AA16BF9F2CA5244010DCA963B477C60B675600B",
+        "issuer_long_key_id": "3B477C60B675600B",
+        "key_id": "b675600b",
+        "result": "Header V4 RSA/SHA256 Signature OK; payload SHA256 digest OK"
+      },
+      "sha256": "1ea8923f04e7047d238983c383efa1385a95b650183398860aff628760a6bdb9",
+      "size_bytes": 86077,
+      "source_repository_baseurl": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/update/x86_64/",
+      "source_repository_id": "update",
+      "source_rpm": "systemd-255-58.oe2403sp3.src.rpm",
+      "source_url": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/update/x86_64/Packages/systemd-cryptsetup-255-58.oe2403sp3.x86_64.rpm",
+      "version": "255"
     }
   ],
   "repository_relative_directory": "openstack_repo/Packages",
   "signing_key": {
+    "additional_configured_gpgkey_url": "http://repo.openeuler.org/openEuler-24.03-LTS-SP3/OS/x86_64/RPM-GPG-KEY-openEuler",
+    "additional_https_source_url": "https://repo.openeuler.org/openEuler-24.03-LTS-SP3/OS/x86_64/RPM-GPG-KEY-openEuler",
     "configured_gpgkey_url": "http://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/RPM-GPG-KEY-openEuler",
     "full_fingerprint": "8AA16BF9F2CA5244010DCA963B477C60B675600B",
     "https_source_sha256": "006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1",

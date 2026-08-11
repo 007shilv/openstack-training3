@@ -132,3 +132,44 @@ payloads; the original ZIP must remain unchanged.
   dependency-closure-transaction-compute.txt.
 - Actual swap/rollback/cleanup paths and the contemporaneous-versus-post-hoc
   evidence boundary are recorded in dependency-closure.txt and the Task 4B report.
+
+## Lab Task 4C addendum - compute systemd dependency closure
+
+Timestamp (Asia/Shanghai): 2026-08-11T20:07:29+08:00
+
+This addendum extends only the promoted teaching repository. The immutable
+`openstack_repo.zip` remains 726582890 bytes, SHA256
+ddae4b9bd63b20e5ebb052e52d86afb8a98f6edfeefde799f8ccf966aae65978,
+and still contains the original 1079 RPMs.
+
+One exact official openEuler 24.03 LTS SP3 `update` RPM was added:
+
+- systemd-cryptsetup-255-58.oe2403sp3.x86_64.rpm
+  SHA256 1ea8923f04e7047d238983c383efa1385a95b650183398860aff628760a6bdb9
+  Source RPM systemd-255-58.oe2403sp3.src.rpm
+
+The RPM-owned, `rpm -V`-clean openEuler trust file and its official HTTPS
+response were byte-identical. Full fingerprint
+8AA16BF9F2CA5244010DCA963B477C60B675600B matched the RPM header issuer, and
+an isolated rpmdb accepted the RSA/SHA256 header signature and payload digest.
+
+Post-promotion repository:
+
+- RPM count: 1082 (1079 immutable ZIP + 3 manifest overlays)
+- repodata/repomd.xml SHA256:
+  9456447940d5ef5c9e70c8471ecb9360b4e4af662e839c089144eeae0b0e77fe
+- Existing promoted RPM hashes preserved: 1081/1081
+- Controller file DNF, controller FTP, and compute FTP: PASS, 1082 packages
+- Compute corrected roots: qemu, libvirt, openstack-nova-compute
+- Complete plan: 398 installs + 5 upgrades = 403 rows, all openstack-local
+- Upgrades: gnutls 3.8.2-14 and systemd, systemd-cryptsetup,
+  systemd-libs, systemd-udev 255-58; exact dependency chains recorded
+- Removing/Erasing/Obsoleting/Replacing/Downgrading: 0/0/0/0/0
+- `--assumeno` expected abort; RPM history/baseline, boot, services, and disks
+  unchanged; installed packages: 0
+- Marker-owned stage, rollback, and compute-plan cleanup: PASS; exact paths absent
+
+Complete provenance, swap/deviation/cleanup, dependency, two-node, and disk
+evidence is in `systemd-dependency-closure.txt`. The unabridged 403-row plan is
+in `systemd-dependency-transaction-compute.txt`. Task 5E remains paused before
+compute package installation.

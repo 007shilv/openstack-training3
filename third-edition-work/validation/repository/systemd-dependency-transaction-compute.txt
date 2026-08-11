@@ -1,0 +1,1396 @@
+# Lab Task 4C complete isolated DNF transaction - compute
+Host role: compute
+Repository baseurl: ftp://192.168.234.151/openstack_repo
+Exact command: dnf --color=never --assumeno --setopt=install_weak_deps=False --disablerepo='*' --enablerepo=openstack-local install qemu libvirt openstack-nova-compute
+Exit code: 1 (expected user abort after resolution)
+Repository available packages: 1082
+qemu-kvm provider: qemu-11:8.2.0-73.oe2403sp3.x86_64|openstack-local
+Parsed install rows: 398
+Parsed upgrade rows: 5
+Parsed total rows: 403
+Removing=0 Erasing=0 Obsoleting=0 Replacing=0 Downgrading=0
+RPM baseline SHA256 before/after: 19239a6e3eb92f89d4bac8ebb478f52ce1a4032b5ba6f731f43268117da04e3d / 19239a6e3eb92f89d4bac8ebb478f52ce1a4032b5ba6f731f43268117da04e3d
+DNF history latest ID before/after: 2 / 2
+Boot ID unchanged: yes
+Packages installed: 0
+Services started: 0
+Reboot: no
+
+## Exact dependency relationships
+libvirt meta package requires:
+libvirt-client = 9.10.0-27.oe2403sp3
+libvirt-daemon = 9.10.0-27.oe2403sp3
+libvirt-daemon-config-network = 9.10.0-27.oe2403sp3
+libvirt-daemon-config-nwfilter = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-interface = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-network = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-nodedev = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-nwfilter = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-qemu = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-secret = 9.10.0-27.oe2403sp3
+libvirt-daemon-driver-storage = 9.10.0-27.oe2403sp3
+libvirt-libs = 9.10.0-27.oe2403sp3
+
+libvirt qemu driver requires:
+/bin/sh
+/usr/bin/qemu-img
+bzip2
+gzip
+ld-linux-x86-64.so.2()(64bit)
+ld-linux-x86-64.so.2(GLIBC_2.3)(64bit)
+libc.so.6(GLIBC_2.38)(64bit)
+libgcc_s.so.1()(64bit)
+libgcc_s.so.1(GCC_3.0)(64bit)
+libgcc_s.so.1(GCC_3.3.1)(64bit)
+libgio-2.0.so.0()(64bit)
+libglib-2.0.so.0()(64bit)
+libgnutls.so.30()(64bit)
+libgnutls.so.30(GNUTLS_3_4)(64bit)
+libgobject-2.0.so.0()(64bit)
+libselinux.so.1()(64bit)
+libselinux.so.1(LIBSELINUX_1.0)(64bit)
+libtirpc.so.3()(64bit)
+libtirpc.so.3(TIRPC_0.3.0)(64bit)
+libvirt-daemon-common = 9.10.0-27.oe2403sp3
+libvirt-daemon-log = 9.10.0-27.oe2403sp3
+libvirt-libs = 9.10.0-27.oe2403sp3
+libvirt-lxc.so.0()(64bit)
+libvirt-lxc.so.0(LIBVIRT_LXC_1.0.2)(64bit)
+libvirt-qemu.so.0()(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.10.0)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.8.3)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.9.4)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_1.2.3)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_8.2.0)(64bit)
+libvirt.so.0()(64bit)
+libvirt.so.0(LIBVIRT_0.0.3)(64bit)
+libvirt.so.0(LIBVIRT_0.0.5)(64bit)
+libvirt.so.0(LIBVIRT_0.1.0)(64bit)
+libvirt.so.0(LIBVIRT_0.1.1)(64bit)
+libvirt.so.0(LIBVIRT_0.1.4)(64bit)
+libvirt.so.0(LIBVIRT_0.1.5)(64bit)
+libvirt.so.0(LIBVIRT_0.1.9)(64bit)
+libvirt.so.0(LIBVIRT_0.10.0)(64bit)
+libvirt.so.0(LIBVIRT_0.10.2)(64bit)
+libvirt.so.0(LIBVIRT_0.2.0)(64bit)
+libvirt.so.0(LIBVIRT_0.2.1)(64bit)
+libvirt.so.0(LIBVIRT_0.2.3)(64bit)
+libvirt.so.0(LIBVIRT_0.3.0)(64bit)
+libvirt.so.0(LIBVIRT_0.3.2)(64bit)
+libvirt.so.0(LIBVIRT_0.3.3)(64bit)
+libvirt.so.0(LIBVIRT_0.4.0)(64bit)
+libvirt.so.0(LIBVIRT_0.4.1)(64bit)
+libvirt.so.0(LIBVIRT_0.4.2)(64bit)
+libvirt.so.0(LIBVIRT_0.4.5)(64bit)
+libvirt.so.0(LIBVIRT_0.5.0)(64bit)
+libvirt.so.0(LIBVIRT_0.6.1)(64bit)
+libvirt.so.0(LIBVIRT_0.6.3)(64bit)
+libvirt.so.0(LIBVIRT_0.6.4)(64bit)
+libvirt.so.0(LIBVIRT_0.7.0)(64bit)
+libvirt.so.0(LIBVIRT_0.7.1)(64bit)
+libvirt.so.0(LIBVIRT_0.7.2)(64bit)
+libvirt.so.0(LIBVIRT_0.7.3)(64bit)
+libvirt.so.0(LIBVIRT_0.7.5)(64bit)
+libvirt.so.0(LIBVIRT_0.7.7)(64bit)
+libvirt.so.0(LIBVIRT_0.8.0)(64bit)
+libvirt.so.0(LIBVIRT_0.8.1)(64bit)
+libvirt.so.0(LIBVIRT_0.8.2)(64bit)
+libvirt.so.0(LIBVIRT_0.8.5)(64bit)
+libvirt.so.0(LIBVIRT_0.8.6)(64bit)
+libvirt.so.0(LIBVIRT_0.8.8)(64bit)
+libvirt.so.0(LIBVIRT_0.9.0)(64bit)
+libvirt.so.0(LIBVIRT_0.9.10)(64bit)
+libvirt.so.0(LIBVIRT_0.9.11)(64bit)
+libvirt.so.0(LIBVIRT_0.9.13)(64bit)
+libvirt.so.0(LIBVIRT_0.9.2)(64bit)
+libvirt.so.0(LIBVIRT_0.9.3)(64bit)
+libvirt.so.0(LIBVIRT_0.9.4)(64bit)
+libvirt.so.0(LIBVIRT_0.9.5)(64bit)
+libvirt.so.0(LIBVIRT_0.9.7)(64bit)
+libvirt.so.0(LIBVIRT_0.9.8)(64bit)
+libvirt.so.0(LIBVIRT_0.9.9)(64bit)
+libvirt.so.0(LIBVIRT_1.0.0)(64bit)
+libvirt.so.0(LIBVIRT_1.0.1)(64bit)
+libvirt.so.0(LIBVIRT_1.0.2)(64bit)
+libvirt.so.0(LIBVIRT_1.0.3)(64bit)
+libvirt.so.0(LIBVIRT_1.0.5)(64bit)
+libvirt.so.0(LIBVIRT_1.0.6)(64bit)
+libvirt.so.0(LIBVIRT_1.1.1)(64bit)
+libvirt.so.0(LIBVIRT_1.1.3)(64bit)
+libvirt.so.0(LIBVIRT_1.2.1)(64bit)
+libvirt.so.0(LIBVIRT_1.2.11)(64bit)
+libvirt.so.0(LIBVIRT_1.2.12)(64bit)
+libvirt.so.0(LIBVIRT_1.2.14)(64bit)
+libvirt.so.0(LIBVIRT_1.2.15)(64bit)
+libvirt.so.0(LIBVIRT_1.2.16)(64bit)
+libvirt.so.0(LIBVIRT_1.2.19)(64bit)
+libvirt.so.0(LIBVIRT_1.2.3)(64bit)
+libvirt.so.0(LIBVIRT_1.2.5)(64bit)
+libvirt.so.0(LIBVIRT_1.2.6)(64bit)
+libvirt.so.0(LIBVIRT_1.2.7)(64bit)
+libvirt.so.0(LIBVIRT_1.2.8)(64bit)
+libvirt.so.0(LIBVIRT_1.2.9)(64bit)
+libvirt.so.0(LIBVIRT_1.3.3)(64bit)
+libvirt.so.0(LIBVIRT_2.0.0)(64bit)
+libvirt.so.0(LIBVIRT_2.2.0)(64bit)
+libvirt.so.0(LIBVIRT_3.0.0)(64bit)
+libvirt.so.0(LIBVIRT_3.1.0)(64bit)
+libvirt.so.0(LIBVIRT_3.4.0)(64bit)
+libvirt.so.0(LIBVIRT_3.7.0)(64bit)
+libvirt.so.0(LIBVIRT_3.9.0)(64bit)
+libvirt.so.0(LIBVIRT_4.1.0)(64bit)
+libvirt.so.0(LIBVIRT_4.10.0)(64bit)
+libvirt.so.0(LIBVIRT_4.4.0)(64bit)
+libvirt.so.0(LIBVIRT_4.5.0)(64bit)
+libvirt.so.0(LIBVIRT_5.10.0)(64bit)
+libvirt.so.0(LIBVIRT_5.2.0)(64bit)
+libvirt.so.0(LIBVIRT_5.5.0)(64bit)
+libvirt.so.0(LIBVIRT_5.6.0)(64bit)
+libvirt.so.0(LIBVIRT_5.7.0)(64bit)
+libvirt.so.0(LIBVIRT_5.8.0)(64bit)
+libvirt.so.0(LIBVIRT_6.0.0)(64bit)
+libvirt.so.0(LIBVIRT_6.10.0)(64bit)
+libvirt.so.0(LIBVIRT_6.2.0)(64bit)
+libvirt.so.0(LIBVIRT_7.1.0)(64bit)
+libvirt.so.0(LIBVIRT_7.2.0)(64bit)
+libvirt.so.0(LIBVIRT_7.3.0)(64bit)
+libvirt.so.0(LIBVIRT_7.7.0)(64bit)
+libvirt.so.0(LIBVIRT_7.8.0)(64bit)
+libvirt.so.0(LIBVIRT_8.0.0)(64bit)
+libvirt.so.0(LIBVIRT_8.4.0)(64bit)
+libvirt.so.0(LIBVIRT_8.5.0)(64bit)
+libvirt.so.0(LIBVIRT_9.0.0)(64bit)
+libvirt.so.0(LIBVIRT_9.7.0)(64bit)
+libvirt.so.0(LIBVIRT_PRIVATE_9.10.0)(64bit)
+libxml2.so.2()(64bit)
+libxml2.so.2(LIBXML2_2.4.30)(64bit)
+lzop
+numad
+rtld(GNU_HASH)
+swtpm-tools
+systemd-container
+xz
+
+systemd-container requires:
+ld-linux-x86-64.so.2()(64bit)
+ld-linux-x86-64.so.2(GLIBC_2.3)(64bit)
+libc.so.6(GLIBC_2.38)(64bit)
+libcap.so.2()(64bit)
+libsystemd-shared-255.so()(64bit)
+libsystemd-shared-255.so(SD_SHARED)(64bit)
+rtld(GNU_HASH)
+systemd(x86-64) = 255-58.oe2403sp3
+
+systemd-cryptsetup requires:
+libc.so.6(GLIBC_2.38)(64bit)
+libcryptsetup.so.12()(64bit)
+libcryptsetup.so.12(CRYPTSETUP_2.0)(64bit)
+libcryptsetup.so.12(CRYPTSETUP_2.4)(64bit)
+libsystemd-shared-255.so()(64bit)
+libsystemd-shared-255.so(SD_SHARED)(64bit)
+rtld(GNU_HASH)
+systemd = 255-58.oe2403sp3
+
+libvirt-client requires:
+/bin/sh
+gnutls-utils
+libc.so.6(GLIBC_2.34)(64bit)
+libgcc_s.so.1()(64bit)
+libgcc_s.so.1(GCC_3.0)(64bit)
+libgcc_s.so.1(GCC_3.3.1)(64bit)
+libglib-2.0.so.0()(64bit)
+libgnutls.so.30()(64bit)
+libgnutls.so.30(GNUTLS_3_4)(64bit)
+libreadline.so.8()(64bit)
+libvirt-libs = 9.10.0-27.oe2403sp3
+libvirt-lxc.so.0()(64bit)
+libvirt-lxc.so.0(LIBVIRT_LXC_1.0.2)(64bit)
+libvirt-lxc.so.0(LIBVIRT_LXC_1.0.4)(64bit)
+libvirt-lxc.so.0(LIBVIRT_LXC_2.0.0)(64bit)
+libvirt-qemu.so.0()(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.10.0)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.8.3)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_0.9.4)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_1.2.3)(64bit)
+libvirt-qemu.so.0(LIBVIRT_QEMU_8.2.0)(64bit)
+libvirt.so.0()(64bit)
+libvirt.so.0(LIBVIRT_0.0.3)(64bit)
+libvirt.so.0(LIBVIRT_0.1.0)(64bit)
+libvirt.so.0(LIBVIRT_0.1.1)(64bit)
+libvirt.so.0(LIBVIRT_0.1.4)(64bit)
+libvirt.so.0(LIBVIRT_0.1.5)(64bit)
+libvirt.so.0(LIBVIRT_0.1.9)(64bit)
+libvirt.so.0(LIBVIRT_0.10.0)(64bit)
+libvirt.so.0(LIBVIRT_0.10.2)(64bit)
+libvirt.so.0(LIBVIRT_0.2.0)(64bit)
+libvirt.so.0(LIBVIRT_0.2.1)(64bit)
+libvirt.so.0(LIBVIRT_0.2.3)(64bit)
+libvirt.so.0(LIBVIRT_0.3.0)(64bit)
+libvirt.so.0(LIBVIRT_0.3.2)(64bit)
+libvirt.so.0(LIBVIRT_0.3.3)(64bit)
+libvirt.so.0(LIBVIRT_0.4.0)(64bit)
+libvirt.so.0(LIBVIRT_0.4.1)(64bit)
+libvirt.so.0(LIBVIRT_0.4.5)(64bit)
+libvirt.so.0(LIBVIRT_0.5.0)(64bit)
+libvirt.so.0(LIBVIRT_0.6.1)(64bit)
+libvirt.so.0(LIBVIRT_0.6.3)(64bit)
+libvirt.so.0(LIBVIRT_0.6.4)(64bit)
+libvirt.so.0(LIBVIRT_0.7.0)(64bit)
+libvirt.so.0(LIBVIRT_0.7.1)(64bit)
+libvirt.so.0(LIBVIRT_0.7.2)(64bit)
+libvirt.so.0(LIBVIRT_0.7.3)(64bit)
+libvirt.so.0(LIBVIRT_0.7.5)(64bit)
+libvirt.so.0(LIBVIRT_0.7.7)(64bit)
+libvirt.so.0(LIBVIRT_0.8.0)(64bit)
+libvirt.so.0(LIBVIRT_0.8.1)(64bit)
+libvirt.so.0(LIBVIRT_0.8.2)(64bit)
+libvirt.so.0(LIBVIRT_0.8.5)(64bit)
+libvirt.so.0(LIBVIRT_0.8.6)(64bit)
+libvirt.so.0(LIBVIRT_0.8.8)(64bit)
+libvirt.so.0(LIBVIRT_0.9.0)(64bit)
+libvirt.so.0(LIBVIRT_0.9.10)(64bit)
+libvirt.so.0(LIBVIRT_0.9.11)(64bit)
+libvirt.so.0(LIBVIRT_0.9.13)(64bit)
+libvirt.so.0(LIBVIRT_0.9.2)(64bit)
+libvirt.so.0(LIBVIRT_0.9.3)(64bit)
+libvirt.so.0(LIBVIRT_0.9.4)(64bit)
+libvirt.so.0(LIBVIRT_0.9.5)(64bit)
+libvirt.so.0(LIBVIRT_0.9.7)(64bit)
+libvirt.so.0(LIBVIRT_0.9.8)(64bit)
+libvirt.so.0(LIBVIRT_0.9.9)(64bit)
+libvirt.so.0(LIBVIRT_1.0.0)(64bit)
+libvirt.so.0(LIBVIRT_1.0.1)(64bit)
+libvirt.so.0(LIBVIRT_1.0.2)(64bit)
+libvirt.so.0(LIBVIRT_1.0.3)(64bit)
+libvirt.so.0(LIBVIRT_1.0.5)(64bit)
+libvirt.so.0(LIBVIRT_1.1.0)(64bit)
+libvirt.so.0(LIBVIRT_1.1.1)(64bit)
+libvirt.so.0(LIBVIRT_1.1.3)(64bit)
+libvirt.so.0(LIBVIRT_1.2.1)(64bit)
+libvirt.so.0(LIBVIRT_1.2.11)(64bit)
+libvirt.so.0(LIBVIRT_1.2.12)(64bit)
+libvirt.so.0(LIBVIRT_1.2.14)(64bit)
+libvirt.so.0(LIBVIRT_1.2.15)(64bit)
+libvirt.so.0(LIBVIRT_1.2.16)(64bit)
+libvirt.so.0(LIBVIRT_1.2.17)(64bit)
+libvirt.so.0(LIBVIRT_1.2.19)(64bit)
+libvirt.so.0(LIBVIRT_1.2.3)(64bit)
+libvirt.so.0(LIBVIRT_1.2.5)(64bit)
+libvirt.so.0(LIBVIRT_1.2.6)(64bit)
+libvirt.so.0(LIBVIRT_1.2.7)(64bit)
+libvirt.so.0(LIBVIRT_1.2.8)(64bit)
+libvirt.so.0(LIBVIRT_1.2.9)(64bit)
+libvirt.so.0(LIBVIRT_1.3.3)(64bit)
+libvirt.so.0(LIBVIRT_2.0.0)(64bit)
+libvirt.so.0(LIBVIRT_2.2.0)(64bit)
+libvirt.so.0(LIBVIRT_3.0.0)(64bit)
+libvirt.so.0(LIBVIRT_3.1.0)(64bit)
+libvirt.so.0(LIBVIRT_3.4.0)(64bit)
+libvirt.so.0(LIBVIRT_3.7.0)(64bit)
+libvirt.so.0(LIBVIRT_3.9.0)(64bit)
+libvirt.so.0(LIBVIRT_4.10.0)(64bit)
+libvirt.so.0(LIBVIRT_4.4.0)(64bit)
+libvirt.so.0(LIBVIRT_4.5.0)(64bit)
+libvirt.so.0(LIBVIRT_5.10.0)(64bit)
+libvirt.so.0(LIBVIRT_5.2.0)(64bit)
+libvirt.so.0(LIBVIRT_5.5.0)(64bit)
+libvirt.so.0(LIBVIRT_5.6.0)(64bit)
+libvirt.so.0(LIBVIRT_5.7.0)(64bit)
+libvirt.so.0(LIBVIRT_6.0.0)(64bit)
+libvirt.so.0(LIBVIRT_6.10.0)(64bit)
+libvirt.so.0(LIBVIRT_6.2.0)(64bit)
+libvirt.so.0(LIBVIRT_7.1.0)(64bit)
+libvirt.so.0(LIBVIRT_7.2.0)(64bit)
+libvirt.so.0(LIBVIRT_7.3.0)(64bit)
+libvirt.so.0(LIBVIRT_7.7.0)(64bit)
+libvirt.so.0(LIBVIRT_7.8.0)(64bit)
+libvirt.so.0(LIBVIRT_8.0.0)(64bit)
+libvirt.so.0(LIBVIRT_8.5.0)(64bit)
+libvirt.so.0(LIBVIRT_9.0.0)(64bit)
+libvirt.so.0(LIBVIRT_9.7.0)(64bit)
+libvirt.so.0(LIBVIRT_PRIVATE_9.10.0)(64bit)
+libxml2.so.2()(64bit)
+libxml2.so.2(LIBXML2_2.4.30)(64bit)
+rtld(GNU_HASH)
+
+gnutls-dane requires:
+gnutls(x86-64) = 3.8.2-14.oe2403sp3
+libc.so.6(GLIBC_2.34)(64bit)
+libgmp.so.10()(64bit)
+libgnutls.so.30()(64bit)
+libgnutls.so.30(GNUTLS_3_4)(64bit)
+libgnutls.so.30(GNUTLS_PRIVATE_3_4)(64bit)
+libhogweed.so.6()(64bit)
+libidn2.so.0()(64bit)
+libnettle.so.8()(64bit)
+libp11-kit.so.0()(64bit)
+libtasn1.so.6()(64bit)
+libunbound.so.8()(64bit)
+libunistring.so.5()(64bit)
+libz.so.1()(64bit)
+rtld(GNU_HASH)
+
+swtpm-tools requires:
+/usr/bin/env
+bash
+gnutls-utils
+libc.so.6(GLIBC_2.34)(64bit)
+libcrypto.so.3()(64bit)
+libcrypto.so.3(OPENSSL_3.0.0)(64bit)
+libgio-2.0.so.0()(64bit)
+libglib-2.0.so.0()(64bit)
+libgnutls.so.30()(64bit)
+libgnutls.so.30(GNUTLS_3_4)(64bit)
+libgobject-2.0.so.0()(64bit)
+libjson-glib-1.0.so.0()(64bit)
+libjson-glib-1.0.so.0(libjson-glib-1.0.so.0)(64bit)
+libtasn1.so.6()(64bit)
+libtasn1.so.6(LIBTASN1_0_3)(64bit)
+libtpms.so.0()(64bit)
+rtld(GNU_HASH)
+swtpm = 0.8.0-3.oe2403sp3
+trousers >= 0.3.9
+
+gnutls-utils requires:
+gnutls(x86-64) = 3.8.2-14.oe2403sp3
+gnutls-dane(x86-64) = 3.8.2-14.oe2403sp3
+libc.so.6(GLIBC_2.38)(64bit)
+libgmp.so.10()(64bit)
+libgnutls-dane.so.0()(64bit)
+libgnutls-dane.so.0(DANE_0_0)(64bit)
+libgnutls.so.30()(64bit)
+libgnutls.so.30(GNUTLS_3_4)(64bit)
+libgnutls.so.30(GNUTLS_3_6_0)(64bit)
+libgnutls.so.30(GNUTLS_3_6_12)(64bit)
+libgnutls.so.30(GNUTLS_3_6_13)(64bit)
+libgnutls.so.30(GNUTLS_3_6_14)(64bit)
+libgnutls.so.30(GNUTLS_3_6_3)(64bit)
+libgnutls.so.30(GNUTLS_3_6_4)(64bit)
+libgnutls.so.30(GNUTLS_3_6_5)(64bit)
+libgnutls.so.30(GNUTLS_3_6_6)(64bit)
+libgnutls.so.30(GNUTLS_3_6_8)(64bit)
+libgnutls.so.30(GNUTLS_3_6_9)(64bit)
+libgnutls.so.30(GNUTLS_3_7_0)(64bit)
+libgnutls.so.30(GNUTLS_3_7_3)(64bit)
+libgnutls.so.30(GNUTLS_3_7_4)(64bit)
+libgnutls.so.30(GNUTLS_PRIVATE_3_4)(64bit)
+libhogweed.so.6()(64bit)
+libidn2.so.0()(64bit)
+libm.so.6()(64bit)
+libm.so.6(GLIBC_2.2.5)(64bit)
+libnettle.so.8()(64bit)
+libp11-kit.so.0()(64bit)
+libtasn1.so.6()(64bit)
+libtasn1.so.6(LIBTASN1_0_3)(64bit)
+libunbound.so.8()(64bit)
+libunistring.so.5()(64bit)
+libz.so.1()(64bit)
+rtld(GNU_HASH)
+
+## Complete stdout/stderr
+Last metadata expiration check: 0:00:01 ago on Tue Aug 11 20:03:51 2026.
+Dependencies resolved.
+======================================================================================================
+ Package                                      Arch    Version                   Repository        Size
+======================================================================================================
+Installing:
+ libvirt                                      x86_64  9.10.0-27.oe2403sp3       openstack-local  4.4 k
+ openstack-nova-compute                       noarch  27.3.0-1.oe2403sp2        openstack-local  9.3 k
+ qemu                                         x86_64  11:8.2.0-73.oe2403sp3     openstack-local  6.8 M
+Upgrading:
+ gnutls                                       x86_64  3.8.2-14.oe2403sp3        openstack-local  1.0 M
+ systemd                                      x86_64  255-58.oe2403sp3          openstack-local  3.7 M
+ systemd-cryptsetup                           x86_64  255-58.oe2403sp3          openstack-local   84 k
+ systemd-libs                                 x86_64  255-58.oe2403sp3          openstack-local  558 k
+ systemd-udev                                 x86_64  255-58.oe2403sp3          openstack-local  1.4 M
+Installing dependencies:
+ Lmod                                         x86_64  8.7.32-1.oe2403sp3        openstack-local  251 k
+ abseil-cpp                                   x86_64  20230802.1-6.oe2403sp3    openstack-local  508 k
+ afflib                                       x86_64  3.7.20-2.oe2403sp3        openstack-local  210 k
+ augeas                                       x86_64  1.14.1-2.oe2403sp3        openstack-local  389 k
+ binutils                                     x86_64  2.41-28.oe2403sp3         openstack-local  5.7 M
+ btrfs-progs                                  x86_64  6.6.3-19.oe2403sp3        openstack-local  864 k
+ checkpolicy                                  x86_64  3.5-3.oe2403sp3           openstack-local  295 k
+ debootstrap                                  noarch  1.0.134-1.oe2403sp3       openstack-local   47 k
+ device-mapper-event                          x86_64  8:1.02.195-23.oe2403sp3   openstack-local   43 k
+ dnsmasq                                      x86_64  2.90-9.oe2403sp3          openstack-local  255 k
+ dosfstools                                   x86_64  4.2-4.oe2403sp3           openstack-local  131 k
+ dpdk                                         x86_64  23.11-39.oe2403sp3        openstack-local  6.6 M
+ dpkg                                         x86_64  1.21.22-3.oe2403sp3       openstack-local  1.2 M
+ dtc                                          x86_64  1.7.2-3.oe2403sp3         openstack-local  105 k
+ ebtables                                     x86_64  2.0.11-13.oe2403sp3       openstack-local   80 k
+ emacs-filesystem                             noarch  1:29.1-8.oe2403sp3        openstack-local  3.5 k
+ fmt                                          x86_64  8.1.1-1.oe2403sp3         openstack-local  103 k
+ gdisk                                        x86_64  1.0.9-4.oe2403sp3         openstack-local  187 k
+ genisoimage                                  x86_64  1.1.11-51.oe2403sp3       openstack-local  266 k
+ gfs2-utils                                   x86_64  3.5.1-2.oe2403sp3         openstack-local  259 k
+ git-core                                     x86_64  2.43.0-11.oe2403sp3       openstack-local   10 M
+ glib-networking                              x86_64  2.78.0-2.oe2403sp3        openstack-local  172 k
+ glusterfs-cli                                x86_64  11.1-10.oe2403sp3         openstack-local  174 k
+ glusterfs-client-xlators                     x86_64  11.1-10.oe2403sp3         openstack-local  753 k
+ gnutls-dane                                  x86_64  3.8.2-14.oe2403sp3        openstack-local   32 k
+ gnutls-utils                                 x86_64  3.8.2-14.oe2403sp3        openstack-local  292 k
+ gperftools-libs                              x86_64  2.15-4.oe2403sp3          openstack-local  257 k
+ grpc                                         x86_64  1.60.0-5.oe2403sp3        openstack-local  6.2 M
+ gsettings-desktop-schemas                    x86_64  45.0-1.oe2403sp3          openstack-local  743 k
+ gssproxy                                     x86_64  0.9.2-5.oe2403sp3         openstack-local   95 k
+ hexedit                                      x86_64  1.6-2.oe2403sp3           openstack-local   33 k
+ hfsplus-tools                                x86_64  540.1.linux3-18.oe2403sp3 openstack-local  145 k
+ hivex                                        x86_64  1.3.23-2.oe2403sp3        openstack-local   76 k
+ intel-qpl                                    x86_64  1.7.0-1.oe2403sp3         openstack-local  258 k
+ ipmitool                                     x86_64  1.8.18-24.oe2403sp3       openstack-local  378 k
+ jfsutils                                     x86_64  1.1.15-18.oe2403sp3       openstack-local  227 k
+ jsoncpp                                      x86_64  1.9.5-5.oe2403sp3         openstack-local   91 k
+ keyutils                                     x86_64  1.6.3-9.oe2403sp3         openstack-local   52 k
+ krb5                                         x86_64  1.21.2-20.oe2403sp3       openstack-local   79 k
+ libaio                                       x86_64  0.3.113-10.oe2403sp3      openstack-local   19 k
+ libconfig                                    x86_64  1.7.3-5.oe2403sp3         openstack-local   64 k
+ libdb                                        x86_64  5.3.28-42.oe2403sp3       openstack-local  3.5 M
+ libdrm                                       x86_64  2.4.119-2.oe2403sp3       openstack-local  141 k
+ libewf                                       x86_64  20140608-16.oe2403sp3     openstack-local  510 k
+ libgfapi0                                    x86_64  11.1-10.oe2403sp3         openstack-local   87 k
+ libgfrpc0                                    x86_64  11.1-10.oe2403sp3         openstack-local   46 k
+ libgfxdr0                                    x86_64  11.1-10.oe2403sp3         openstack-local   21 k
+ libglusterfs0                                x86_64  11.1-10.oe2403sp3         openstack-local  270 k
+ libguestfs                                   x86_64  1:1.49.5-7.oe2403sp3      openstack-local   16 M
+ libibverbs                                   x86_64  50.0-44.oe2403sp3         openstack-local  458 k
+ libiscsi                                     x86_64  1.19.0-12.oe2403sp3       openstack-local   83 k
+ libmd                                        x86_64  1.1.0-5.oe2403sp3         openstack-local   42 k
+ libosinfo                                    x86_64  1.11.0-4.oe2403sp3        openstack-local  253 k
+ libpciaccess                                 x86_64  0.17-2.oe2403sp3          openstack-local   22 k
+ libpq                                        x86_64  15.18-1.oe2403sp3         openstack-local  202 k
+ libproxy                                     x86_64  0.5.3-3.oe2403sp3         openstack-local   42 k
+ librados2                                    x86_64  2:18.2.2-11.oe2403sp3     openstack-local  3.5 M
+ librbd1                                      x86_64  2:18.2.2-11.oe2403sp3     openstack-local  3.2 M
+ librdmacm                                    x86_64  50.0-44.oe2403sp3         openstack-local   66 k
+ libslirp                                     x86_64  4.7.0-2.oe2403sp3         openstack-local   69 k
+ libsodium                                    x86_64  1.0.19-2.oe2403sp3        openstack-local  164 k
+ libsoup                                      x86_64  2.74.3-16.oe2403sp3       openstack-local  338 k
+ libsoup3                                     x86_64  3.4.5-14.oe2403sp3        openstack-local  312 k
+ libssh2                                      x86_64  1.11.0-6.oe2403sp3        openstack-local  213 k
+ libtpms                                      x86_64  0.9.5-5.oe2403sp3         openstack-local  335 k
+ libunwind                                    x86_64  2:1.7.2-4.oe2403sp3       openstack-local   55 k
+ liburing                                     x86_64  2.4-1.oe2403sp3           openstack-local   30 k
+ libusal                                      x86_64  1.1.11-51.oe2403sp3       openstack-local   64 k
+ libvirt-client                               x86_64  9.10.0-27.oe2403sp3       openstack-local  408 k
+ libvirt-daemon                               x86_64  9.10.0-27.oe2403sp3       openstack-local  183 k
+ libvirt-daemon-common                        x86_64  9.10.0-27.oe2403sp3       openstack-local  110 k
+ libvirt-daemon-config-network                x86_64  9.10.0-27.oe2403sp3       openstack-local  6.9 k
+ libvirt-daemon-config-nwfilter               x86_64  9.10.0-27.oe2403sp3       openstack-local   13 k
+ libvirt-daemon-driver-interface              x86_64  9.10.0-27.oe2403sp3       openstack-local  187 k
+ libvirt-daemon-driver-network                x86_64  9.10.0-27.oe2403sp3       openstack-local  224 k
+ libvirt-daemon-driver-nodedev                x86_64  9.10.0-27.oe2403sp3       openstack-local  207 k
+ libvirt-daemon-driver-nwfilter               x86_64  9.10.0-27.oe2403sp3       openstack-local  221 k
+ libvirt-daemon-driver-qemu                   x86_64  9.10.0-27.oe2403sp3       openstack-local  951 k
+ libvirt-daemon-driver-secret                 x86_64  9.10.0-27.oe2403sp3       openstack-local  184 k
+ libvirt-daemon-driver-storage                x86_64  9.10.0-27.oe2403sp3       openstack-local  4.3 k
+ libvirt-daemon-driver-storage-core           x86_64  9.10.0-27.oe2403sp3       openstack-local  236 k
+ libvirt-daemon-driver-storage-disk           x86_64  9.10.0-27.oe2403sp3       openstack-local   17 k
+ libvirt-daemon-driver-storage-gluster        x86_64  9.10.0-27.oe2403sp3       openstack-local   18 k
+ libvirt-daemon-driver-storage-iscsi          x86_64  9.10.0-27.oe2403sp3       openstack-local   14 k
+ libvirt-daemon-driver-storage-iscsi-direct   x86_64  9.10.0-27.oe2403sp3       openstack-local   16 k
+ libvirt-daemon-driver-storage-logical        x86_64  9.10.0-27.oe2403sp3       openstack-local   18 k
+ libvirt-daemon-driver-storage-mpath          x86_64  9.10.0-27.oe2403sp3       openstack-local   12 k
+ libvirt-daemon-driver-storage-rbd            x86_64  9.10.0-27.oe2403sp3       openstack-local   22 k
+ libvirt-daemon-driver-storage-scsi           x86_64  9.10.0-27.oe2403sp3       openstack-local   14 k
+ libvirt-daemon-kvm                           x86_64  9.10.0-27.oe2403sp3       openstack-local  4.1 k
+ libvirt-daemon-lock                          x86_64  9.10.0-27.oe2403sp3       openstack-local   42 k
+ libvirt-daemon-log                           x86_64  9.10.0-27.oe2403sp3       openstack-local   46 k
+ libvirt-daemon-plugin-lockd                  x86_64  9.10.0-27.oe2403sp3       openstack-local   18 k
+ libvirt-daemon-proxy                         x86_64  9.10.0-27.oe2403sp3       openstack-local  181 k
+ libvirt-libs                                 x86_64  9.10.0-27.oe2403sp3       openstack-local  5.0 M
+ libxslt                                      x86_64  1.1.39-7.oe2403sp3        openstack-local  176 k
+ lsof                                         x86_64  4.99.3-3.oe2403sp3        openstack-local   92 k
+ lttng-ust                                    x86_64  2.13.7-1.oe2403sp3        openstack-local  245 k
+ lua-filesystem                               x86_64  1.8.0-1.oe2403sp3         openstack-local   15 k
+ lua-json                                     noarch  1.3.4-2.oe2403sp3         openstack-local   22 k
+ lua-lpeg                                     x86_64  1.0.2-3.oe2403sp3         openstack-local   63 k
+ lua-posix                                    x86_64  36.1-1.oe2403sp3          openstack-local   99 k
+ lua-term                                     x86_64  0.07-2.oe2403sp3          openstack-local   12 k
+ lvm2                                         x86_64  8:2.03.21-23.oe2403sp3    openstack-local  1.8 M
+ lzop                                         x86_64  1.04-3.oe2403sp3          openstack-local   45 k
+ mdadm                                        x86_64  4.2-21.oe2403sp3          openstack-local  342 k
+ mesa-libgbm                                  x86_64  24.0.3-5.oe2403sp3        openstack-local   31 k
+ mtools                                       x86_64  4.0.43-2.oe2403sp3        openstack-local  119 k
+ multipath-tools                              x86_64  0.9.5-16.oe2403sp3        openstack-local  327 k
+ nfs-utils                                    x86_64  2:2.6.3-4.oe2403sp3       openstack-local  311 k
+ nilfs-utils                                  x86_64  2.2.9-1.oe2403sp3         openstack-local  112 k
+ ntfs-3g                                      x86_64  2:2022.10.3-3.oe2403sp3   openstack-local  541 k
+ numad                                        x86_64  0.5-33.oe2403sp3          openstack-local   30 k
+ open-iscsi                                   x86_64  2.1.5-15.oe2403sp3        openstack-local  299 k
+ open-isns                                    x86_64  0.101-6.oe2403sp3         openstack-local  131 k
+ openstack-nova-common                        noarch  27.3.0-1.oe2403sp2        openstack-local  242 k
+ openvswitch                                  x86_64  3.2.1-1.oe2403sp2         openstack-local  1.6 M
+ openvswitch-dpdk                             x86_64  3.2.1-1.oe2403sp2         openstack-local  1.3 M
+ osinfo-db                                    x86_64  20230518-3.oe2403sp3      openstack-local  276 k
+ osinfo-db-tools                              x86_64  1.10.0-1.oe2403sp3        openstack-local   49 k
+ perl-Sys-Virt                                x86_64  4.7.0-3.oe2403sp3         openstack-local  161 k
+ policycoreutils-python-utils                 noarch  3.5-4.oe2403sp3           openstack-local   22 k
+ protobuf                                     x86_64  25.1-10.oe2403sp2         openstack-local  1.0 M
+ protobuf-compiler                            x86_64  25.1-10.oe2403sp2         openstack-local  1.2 M
+ python-oslo-vmware-lang                      noarch  4.1.1-1.oe2403sp2         openstack-local  9.7 k
+ python-pycadf-common                         noarch  3.1.1-2.oe2403sp2         openstack-local   11 k
+ python-sphinx-locale                         noarch  1:4.5.0-1.oe2403sp2       openstack-local  335 k
+ python3-Automat                              noarch  22.10.0-2.oe2403sp3       openstack-local   75 k
+ python3-IPy                                  noarch  1.01-2.oe2403sp3          openstack-local   44 k
+ python3-PyMySQL                              noarch  1.0.2-1.oe2403sp2         openstack-local  107 k
+ python3-SQLAlchemy-Utils                     noarch  0.38.3-1.oe2403sp2        openstack-local  196 k
+ python3-alembic                              noarch  1.8.1-1.oe2403sp2         openstack-local  448 k
+ python3-amqp                                 noarch  5.0.9-1.oe2403sp2         openstack-local  103 k
+ python3-appdirs                              noarch  1.4.4-4.oe2403sp3         openstack-local   22 k
+ python3-asn1crypto                           noarch  1.5.1-1.oe2403sp3         openstack-local  236 k
+ python3-async-timeout                        noarch  4.0.3-1.oe2403sp3         openstack-local   15 k
+ python3-attrs                                noarch  22.1.0-1.oe2403sp2        openstack-local  114 k
+ python3-audit                                x86_64  1:3.1.2-13.oe2403sp3      openstack-local   76 k
+ python3-automaton                            noarch  3.1.0-1.oe2403sp2         openstack-local   46 k
+ python3-autopage                             noarch  0.5.0-1.oe2403sp2         openstack-local   73 k
+ python3-babel                                noarch  2.10.3-1.oe2403sp2        openstack-local  6.9 M
+ python3-barbicanclient                       noarch  5.5.0-1.oe2403sp2         openstack-local  177 k
+ python3-bcrypt                               x86_64  3.2.0-2.oe2403sp2         openstack-local   36 k
+ python3-betamax                              noarch  0.8.1-2.oe2403sp3         openstack-local   79 k
+ python3-binary-memcached                     noarch  0.31.1-1.oe2403sp3        openstack-local   44 k
+ python3-blinker                              noarch  1.6.2-1.oe2403sp3         openstack-local   34 k
+ python3-boto                                 noarch  2.49.0-5.oe2403sp3        openstack-local  2.1 M
+ python3-bson                                 x86_64  3.11.3-1.oe2403sp2        openstack-local  129 k
+ python3-cachetools                           noarch  5.3.2-1.oe2403sp3         openstack-local   32 k
+ python3-castellan                            noarch  4.1.0-1.oe2403sp2         openstack-local  165 k
+ python3-cffi                                 x86_64  1.15.1-1.oe2403sp2        openstack-local  299 k
+ python3-chardet                              noarch  5.2.0-1.oe2403sp3         openstack-local  281 k
+ python3-charset-normalizer                   noarch  2.1.1-1.oe2403sp2         openstack-local   92 k
+ python3-cinderclient                         noarch  9.3.0-1.oe2403sp2         openstack-local  497 k
+ python3-cliff                                noarch  4.2.0-1.oe2403sp2         openstack-local  158 k
+ python3-cmd2                                 noarch  2.4.2-1.oe2403sp2         openstack-local  299 k
+ python3-constantly                           noarch  15.1.0-6.oe2403sp3        openstack-local   20 k
+ python3-coverage                             x86_64  6.5.0-1.oe2403sp2         openstack-local  349 k
+ python3-cryptography                         x86_64  38.0.2-2.oe2403sp2        openstack-local  984 k
+ python3-cursive                              noarch  0.2.2-3.oe2403sp2         openstack-local   63 k
+ python3-dataclasses                          noarch  0.8-2.oe2403sp3           openstack-local   33 k
+ python3-debtcollector                        noarch  2.5.0-1.oe2403sp3         openstack-local   45 k
+ python3-dns                                  noarch  2.2.0-2.oe2403sp2         openstack-local  470 k
+ python3-docutils                             noarch  0.17.1-3.oe2403sp2        openstack-local  1.0 M
+ python3-dogpile-cache                        noarch  1.1.8-1.oe2403sp2         openstack-local  108 k
+ python3-dulwich                              x86_64  0.20.46-1.oe2403sp2       openstack-local  996 k
+ python3-ecdsa                                noarch  0.18.0-3.oe2403sp3        openstack-local  150 k
+ python3-etcd3                                noarch  0.12.0-1.oe2403sp3        openstack-local   95 k
+ python3-etcd3gw                              noarch  2.1.0-1.oe2403sp2         openstack-local   48 k
+ python3-eventlet                             noarch  0.33.1-1.oe2403sp2        openstack-local  480 k
+ python3-extras                               noarch  1.0.0-8.oe2403sp3         openstack-local   20 k
+ python3-fasteners                            noarch  0.18-1.oe2403sp2          openstack-local   44 k
+ python3-fixtures                             noarch  4.0.1-1.oe2403sp2         openstack-local  119 k
+ python3-flake8                               noarch  3.9.2-2.oe2403sp2         openstack-local  157 k
+ python3-future                               noarch  0.18.2-1.oe2403sp2        openstack-local  1.0 M
+ python3-futurist                             noarch  2.4.1-1.oe2403sp2         openstack-local   78 k
+ python3-glanceclient                         noarch  4.3.0-1.oe2403sp2         openstack-local  406 k
+ python3-greenlet                             x86_64  1.1.3-1.oe2403sp2         openstack-local  118 k
+ python3-grpcio                               x86_64  1.60.0-5.oe2403sp3        openstack-local  2.8 M
+ python3-gssapi                               x86_64  1.8.1-1.oe2403sp2         openstack-local  507 k
+ python3-hyperlink                            noarch  21.0.0-1.oe2403sp3        openstack-local  141 k
+ python3-idna                                 noarch  3.4-2.oe2403sp2           openstack-local   92 k
+ python3-imagesize                            noarch  1.3.0-1.oe2403sp2         openstack-local   19 k
+ python3-importlib-metadata                   noarch  5.0.0-2.oe2403sp2         openstack-local   52 k
+ python3-incremental                          noarch  22.10.0-1.oe2403sp3       openstack-local   40 k
+ python3-iniconfig                            noarch  1.1.1-2.oe2403sp2         openstack-local   15 k
+ python3-inotify                              noarch  0.9.6-19.oe2403sp3        openstack-local   62 k
+ python3-invoke                               noarch  2.2.0-1.oe2403sp3         openstack-local  326 k
+ python3-iso8601                              noarch  1.1.0-1.oe2403sp3         openstack-local   24 k
+ python3-jinja2                               noarch  3.1.2-2.oe2403sp2         openstack-local  324 k
+ python3-jmespath                             noarch  0.10.0-2.oe2403sp2        openstack-local   56 k
+ python3-jsonpatch                            noarch  1.32-1.oe2403sp2          openstack-local   30 k
+ python3-jsonpointer                          noarch  2.3-1.oe2403sp2           openstack-local   18 k
+ python3-jsonschema                           noarch  4.16.0-1.oe2403sp2        openstack-local  187 k
+ python3-jwt                                  noarch  2.5.0-1.oe2403sp2         openstack-local   56 k
+ python3-kazoo                                noarch  2.8.0-1.oe2403sp2         openstack-local  345 k
+ python3-kerberos                             x86_64  1.3.1-2.oe2403sp3         openstack-local   22 k
+ python3-keystoneauth1                        noarch  5.1.2-1.oe2403sp2         openstack-local  562 k
+ python3-keystoneclient                       noarch  5.1.0-1.oe2403sp2         openstack-local  685 k
+ python3-keystonemiddleware                   noarch  10.2.0-1.oe2403sp2        openstack-local  232 k
+ python3-kombu                                noarch  5.2.4-1.oe2403sp2         openstack-local  429 k
+ python3-ldap                                 x86_64  3.4.3-1.oe2403sp2         openstack-local  224 k
+ python3-libguestfs                           x86_64  1:1.49.5-7.oe2403sp3      openstack-local  213 k
+ python3-libselinux                           x86_64  3.5-7.oe2403sp3           openstack-local  175 k
+ python3-libsemanage                          x86_64  3.5-7.oe2403sp3           openstack-local   71 k
+ python3-libvirt                              x86_64  9.10.0-2.oe2403sp3        openstack-local  251 k
+ python3-linecache2                           noarch  1.0.0-20.oe2403sp3        openstack-local   17 k
+ python3-lxml                                 x86_64  4.9.1-3.oe2403sp2         openstack-local  1.2 M
+ python3-mako                                 noarch  1.2.4-2.oe2403sp3         openstack-local  193 k
+ python3-markupsafe                           x86_64  2.1.1-1.oe2403sp2         openstack-local   25 k
+ python3-mccabe                               noarch  0.6.1-11.oe2403sp2        openstack-local   21 k
+ python3-memcached                            noarch  1.59-3.oe2403sp3          openstack-local   45 k
+ python3-microversion-parse                   noarch  1.0.1-2.oe2403sp2         openstack-local   32 k
+ python3-mimeparse                            noarch  1.6.0-9.oe2403sp3         openstack-local   15 k
+ python3-mistune                              noarch  2.0.4-2.oe2403sp3         openstack-local   72 k
+ python3-mock                                 noarch  4.0.3-2.oe2403sp2         openstack-local   75 k
+ python3-msgpack                              x86_64  1.0.4-1.oe2403sp2         openstack-local   85 k
+ python3-munch                                noarch  2.5.0-2.oe2403sp2         openstack-local   24 k
+ python3-mypy                                 x86_64  0.982-1.oe2403sp2         openstack-local  3.4 M
+ python3-mypy-extensions                      noarch  0.4.3-2.oe2403sp2         openstack-local   13 k
+ python3-netaddr                              noarch  0.8.0-4.oe2403sp2         openstack-local  1.8 M
+ python3-netifaces                            x86_64  0.11.0-1.oe2403sp3        openstack-local   18 k
+ python3-networkx                             noarch  2.8.7-1.oe2403sp2         openstack-local  3.3 M
+ python3-neutronclient                        noarch  9.0.0-1.oe2403sp2         openstack-local  782 k
+ python3-nova                                 noarch  27.3.0-1.oe2403sp2        openstack-local  4.1 M
+ python3-novaclient                           noarch  18.7.0-1.oe2403sp2        openstack-local  654 k
+ python3-oauthlib                             noarch  3.2.1-1.oe2403sp2         openstack-local  231 k
+ python3-openstacksdk                         noarch  1.0.1-1.oe2403sp2         openstack-local  2.6 M
+ python3-openvswitch                          x86_64  3.2.1-1.oe2403sp2         openstack-local  405 k
+ python3-os-brick                             noarch  6.2.3-1.oe2403sp2         openstack-local  599 k
+ python3-os-client-config                     noarch  2.1.0-2.oe2403sp2         openstack-local   72 k
+ python3-os-resource-classes                  noarch  1.1.0-1.oe2403sp2         openstack-local   16 k
+ python3-os-service-types                     noarch  1.7.0-2.oe2403sp2         openstack-local   38 k
+ python3-os-testr                             noarch  3.0.0-1.oe2403sp2         openstack-local   56 k
+ python3-os-traits                            noarch  2.10.0-1.oe2403sp2        openstack-local   57 k
+ python3-os-vif                               noarch  3.1.1-1.oe2403sp2         openstack-local  217 k
+ python3-os-win                               noarch  5.9.0-1.oe2403sp2         openstack-local  600 k
+ python3-osc-lib                              noarch  2.7.0-1.oe2403sp2         openstack-local  176 k
+ python3-oslo-cache                           noarch  3.3.1-2.oe2403sp2         openstack-local  112 k
+ python3-oslo-concurrency                     noarch  5.1.1-1.oe2403sp2         openstack-local   90 k
+ python3-oslo-config                          noarch  9.1.1-1.oe2403sp2         openstack-local  298 k
+ python3-oslo-context                         noarch  5.1.1-1.oe2403sp2         openstack-local   41 k
+ python3-oslo-db                              noarch  12.3.2-1.oe2403sp2        openstack-local  372 k
+ python3-oslo-i18n                            noarch  6.0.0-1.oe2403sp2         openstack-local   70 k
+ python3-oslo-limit                           noarch  2.1.0-1.oe2403sp2         openstack-local   40 k
+ python3-oslo-log                             noarch  5.2.0-1.oe2403sp2         openstack-local  140 k
+ python3-oslo-messaging                       noarch  14.2.4-1.oe2403sp2        openstack-local  516 k
+ python3-oslo-metrics                         noarch  0.6.0-1.oe2403sp2         openstack-local   27 k
+ python3-oslo-middleware                      noarch  5.1.1-1.oe2403sp2         openstack-local  112 k
+ python3-oslo-policy                          noarch  4.1.1-1.oe2403sp2         openstack-local  183 k
+ python3-oslo-privsep                         noarch  3.1.0-1.oe2403sp2         openstack-local   75 k
+ python3-oslo-reports                         noarch  3.0.0-1.oe2403sp2         openstack-local   88 k
+ python3-oslo-rootwrap                        noarch  7.0.1-1.oe2403sp2         openstack-local   79 k
+ python3-oslo-serialization                   noarch  5.1.1-1.oe2403sp2         openstack-local   51 k
+ python3-oslo-service                         noarch  3.1.1-1.oe2403sp2         openstack-local  151 k
+ python3-oslo-upgradecheck                    noarch  2.1.1-1.oe2403sp2         openstack-local   26 k
+ python3-oslo-utils                           noarch  6.1.0-1.oe2403sp2         openstack-local  197 k
+ python3-oslo-versionedobjects                noarch  3.1.0-1.oe2403sp2         openstack-local  197 k
+ python3-oslo-vmware                          noarch  4.1.1-1.oe2403sp2         openstack-local  261 k
+ python3-oslotest                             noarch  4.5.0-1.oe2403sp2         openstack-local   54 k
+ python3-ovsdbapp                             noarch  2.2.1-1.oe2403sp2         openstack-local  305 k
+ python3-packaging                            noarch  24.2-1.oe2403sp3          openstack-local  141 k
+ python3-paramiko                             noarch  2.11.0-1.oe2403sp2        openstack-local  379 k
+ python3-paste                                noarch  3.5.2-1.oe2403sp2         openstack-local  907 k
+ python3-paste-deploy                         noarch  2.1.1-1.oe2403sp2         openstack-local   46 k
+ python3-pbr                                  noarch  5.11.1-1.oe2403sp2        openstack-local  104 k
+ python3-pluggy                               noarch  1.4.0-1.oe2403sp3         openstack-local   51 k
+ python3-ply                                  noarch  3.11-4.oe2403sp3          openstack-local  118 k
+ python3-policycoreutils                      noarch  3.5-4.oe2403sp3           openstack-local  2.2 M
+ python3-prettytable                          noarch  2.4.0-2.oe2403sp2         openstack-local   59 k
+ python3-prometheus-client                    noarch  0.14.1-1.oe2403sp2        openstack-local  133 k
+ python3-protobuf                             noarch  25.1-10.oe2403sp2         openstack-local  324 k
+ python3-psutil                               x86_64  5.9.2-1.oe2403sp2         openstack-local  571 k
+ python3-psycopg2                             x86_64  2.9.4-1.oe2403sp2         openstack-local  196 k
+ python3-pure-sasl                            noarch  0.6.2-1.oe2403sp2         openstack-local   30 k
+ python3-pyOpenSSL                            noarch  22.1.0-1.oe2403sp2        openstack-local  122 k
+ python3-pyasn1                               noarch  0.4.8-4.oe2403sp2         openstack-local  183 k
+ python3-pyasn1-modules                       noarch  0.2.8-1.oe2403sp2         openstack-local  296 k
+ python3-pycadf                               noarch  3.1.1-2.oe2403sp2         openstack-local   65 k
+ python3-pycodestyle                          noarch  2.7.0-1.oe2403sp2         openstack-local   85 k
+ python3-pycparser                            noarch  2.21-2.oe2403sp3          openstack-local  144 k
+ python3-pycryptodome                         x86_64  3.20.0-2.oe2403sp3        openstack-local  1.2 M
+ python3-pydot                                noarch  1.4.2-1.oe2403sp3         openstack-local   57 k
+ python3-pyflakes                             noarch  2.3.1-2.oe2403sp2         openstack-local  176 k
+ python3-pygments                             noarch  2.13.0-1.oe2403sp2        openstack-local  2.0 M
+ python3-pylons-sphinx-themes                 noarch  1.0.13-2.oe2403sp3        openstack-local  144 k
+ python3-pymemcache                           noarch  3.5.2-1.oe2403sp2         openstack-local  141 k
+ python3-pymongo                              x86_64  3.11.3-1.oe2403sp2        openstack-local  528 k
+ python3-pynacl                               x86_64  1.5.0-1.oe2403sp3         openstack-local  127 k
+ python3-pyngus                               noarch  2.3.1-1.oe2403sp3         openstack-local   57 k
+ python3-pyperclip                            noarch  1.8.2-2.oe2403sp3         openstack-local   27 k
+ python3-pyroute2                             noarch  0.7.3-2.oe2403sp2         openstack-local  377 k
+ python3-pyrsistent                           x86_64  0.18.1-2.oe2403sp2        openstack-local  126 k
+ python3-pysocks                              noarch  1.7.1-2.oe2403sp3         openstack-local   38 k
+ python3-pyspnego                             noarch  0.9.1-1.oe2403sp3         openstack-local  282 k
+ python3-pytest                               noarch  7.2.0-1.oe2403sp2         openstack-local  789 k
+ python3-pytest-cov                           noarch  4.1.0-2.oe2403sp3         openstack-local   50 k
+ python3-pytest-mock                          noarch  3.11.1-1.oe2403sp3        openstack-local   29 k
+ python3-pytz                                 noarch  2023.3-1.oe2403sp3        openstack-local   54 k
+ python3-pyyaml                               x86_64  6.0-1.oe2403sp2           openstack-local  209 k
+ python3-qpid-proton                          x86_64  0.38.0-1.oe2403sp3        openstack-local  483 k
+ python3-redis                                noarch  5.2.0-2.oe2403sp3         openstack-local  552 k
+ python3-reno                                 noarch  3.5.0-1.oe2403sp3         openstack-local  142 k
+ python3-repoze-lru                           noarch  0.7-3.oe2403sp3           openstack-local   36 k
+ python3-requests                             noarch  2.28.1-1.oe2403sp2        openstack-local  132 k
+ python3-requests-kerberos                    noarch  0.14.0-1.oe2403sp3        openstack-local   25 k
+ python3-requestsexceptions                   noarch  1.4.0-2.oe2403sp3         openstack-local   11 k
+ python3-retrying                             noarch  1.3.3-2.oe2403sp2         openstack-local   17 k
+ python3-rfc3986                              noarch  1.5.0-2.oe2403sp2         openstack-local   61 k
+ python3-routes                               noarch  2.5.1-3.oe2403sp3         openstack-local   80 k
+ python3-rsa                                  noarch  4.8-1.oe2403sp2           openstack-local   70 k
+ python3-ruamel-yaml                          noarch  0.17.21-1.oe2403sp2       openstack-local  274 k
+ python3-setools                              x86_64  4.4.3-1.oe2403sp3         openstack-local  657 k
+ python3-setuptools_scm                       noarch  7.1.0-1.oe2403sp3         openstack-local  100 k
+ python3-simplejson                           x86_64  3.17.6-1.oe2403sp2        openstack-local  142 k
+ python3-snowballstemmer                      noarch  2.2.0-3.oe2403sp3         openstack-local  242 k
+ python3-sortedcontainers                     noarch  2.4.0-3.oe2403sp3         openstack-local   61 k
+ python3-sphinx                               noarch  1:4.5.0-1.oe2403sp2       openstack-local  2.5 M
+ python3-sphinx-theme-alabaster               noarch  0.7.12-3.oe2403sp2        openstack-local   24 k
+ python3-sphinx_rtd_theme                     noarch  1.0.0-1.oe2403sp2         openstack-local  2.5 M
+ python3-sphinxcontrib-applehelp              noarch  1.0.2-1.oe2403sp2         openstack-local   35 k
+ python3-sphinxcontrib-devhelp                noarch  1.0.2-1.oe2403sp2         openstack-local   29 k
+ python3-sphinxcontrib-htmlhelp               noarch  2.0.0-2.oe2403sp2         openstack-local   45 k
+ python3-sphinxcontrib-jsmath                 noarch  1.0.1-1.oe2403sp3         openstack-local   16 k
+ python3-sphinxcontrib-qthelp                 noarch  1.0.3-3.oe2403sp2         openstack-local   35 k
+ python3-sphinxcontrib-serializinghtml        noarch  1.1.5-2.oe2403sp3         openstack-local   34 k
+ python3-sphinxcontrib-svg2pdfconverter       noarch  1.2.0-1.oe2403sp2         openstack-local   17 k
+ python3-sphinxcontrib-websupport             noarch  1.2.4-3.oe2403sp3         openstack-local   73 k
+ python3-sqlalchemy                           x86_64  1.4.41-1.oe2403sp2        openstack-local  3.3 M
+ python3-sqlalchemy-migrate                   noarch  0.13.0-4.oe2403sp3        openstack-local  256 k
+ python3-sqlparse                             noarch  0.4.3-1.oe2403sp2         openstack-local  101 k
+ python3-statsd                               noarch  3.3.0-1.oe2403sp2         openstack-local   42 k
+ python3-stestr                               noarch  3.2.1-1.oe2403sp2         openstack-local  225 k
+ python3-stevedore                            noarch  5.0.0-1.oe2403sp2         openstack-local   83 k
+ python3-subunit                              noarch  1.4.0-2.oe2403sp2         openstack-local  112 k
+ python3-suds2                                noarch  1.1.1-2.oe2403sp2         openstack-local  272 k
+ python3-sysv-ipc                             x86_64  1.1.0-2.oe2403sp3         openstack-local   24 k
+ python3-taskflow                             noarch  5.1.0-1.oe2403sp2         openstack-local  928 k
+ python3-tempita                              noarch  0.5.2-2.oe2403sp3         openstack-local   45 k
+ python3-tenacity                             noarch  6.3.1-5.oe2403sp2         openstack-local   50 k
+ python3-testrepository                       noarch  0.0.20-1.oe2403sp3        openstack-local  220 k
+ python3-testresources                        noarch  2.0.1-2.oe2403sp3         openstack-local   68 k
+ python3-testscenarios                        noarch  0.5.0-15.oe2403sp3        openstack-local   40 k
+ python3-testtools                            noarch  2.5.0-2.oe2403sp2         openstack-local  456 k
+ python3-toml                                 noarch  0.10.2-2.oe2403sp3        openstack-local   50 k
+ python3-tooz                                 noarch  3.2.0-1.oe2403sp2         openstack-local  187 k
+ python3-traceback2                           noarch  1.4.0-20.oe2403sp3        openstack-local   25 k
+ python3-twisted                              x86_64  22.10.0-5.oe2403sp3       openstack-local  7.3 M
+ python3-typing-extensions                    noarch  4.12.2-2.oe2403sp3        openstack-local   85 k
+ python3-uhashring                            noarch  2.1-1.oe2403sp3           openstack-local   26 k
+ python3-unittest2                            noarch  1.1.0-19.oe2403sp3        openstack-local  249 k
+ python3-urllib3                              noarch  1.26.12-6.oe2403sp2       openstack-local  246 k
+ python3-vine                                 noarch  5.0.0-1.oe2403sp3         openstack-local   25 k
+ python3-voluptuous                           noarch  0.12.2-1.oe2403sp2        openstack-local   69 k
+ python3-warlock                              noarch  2.0.1-1.oe2403sp2         openstack-local   18 k
+ python3-wcwidth                              noarch  0.2.5-2.oe2403sp2         openstack-local   41 k
+ python3-webob                                noarch  1.8.7-3.oe2403sp3         openstack-local  297 k
+ python3-whoosh                               noarch  2.7.4-15.oe2403sp3        openstack-local  1.3 M
+ python3-wrapt                                x86_64  1.14.1-1.oe2403sp2        openstack-local   60 k
+ python3-yappi                                x86_64  1.6.0-1.oe2403sp3         openstack-local   58 k
+ python3-zake                                 noarch  0.2.2-1.oe2403sp3         openstack-local   55 k
+ python3-zipp                                 noarch  3.8.1-1.oe2403sp2         openstack-local   18 k
+ python3-zope-interface                       x86_64  6.1-1.oe2403sp3           openstack-local  426 k
+ qatlib                                       x86_64  24.02.0-1.oe2403sp3       openstack-local  202 k
+ qatzip-libs                                  x86_64  1.2.0-1.oe2403sp3         openstack-local   40 k
+ qemu-block-curl                              x86_64  11:8.2.0-73.oe2403sp3     openstack-local   88 k
+ qemu-block-iscsi                             x86_64  11:8.2.0-73.oe2403sp3     openstack-local   95 k
+ qemu-block-rbd                               x86_64  11:8.2.0-73.oe2403sp3     openstack-local   91 k
+ qemu-block-ssh                               x86_64  11:8.2.0-73.oe2403sp3     openstack-local   91 k
+ qemu-hw-usb-host                             x86_64  11:8.2.0-73.oe2403sp3     openstack-local   97 k
+ qemu-img                                     x86_64  11:8.2.0-73.oe2403sp3     openstack-local  3.2 M
+ qpid-proton-c-cpp                            x86_64  0.38.0-1.oe2403sp3        openstack-local  388 k
+ quota                                        x86_64  1:4.06-10.oe2403sp3       openstack-local  225 k
+ re2                                          x86_64  20240201-1.oe2403sp3      openstack-local  178 k
+ reiserfs-utils                               x86_64  3.6.27-5.oe2403sp3        openstack-local  259 k
+ rpcbind                                      x86_64  1.2.6-8.oe2403sp3         openstack-local   44 k
+ rsync                                        x86_64  3.2.7-8.oe2403sp3         openstack-local  309 k
+ scrub                                        x86_64  2.6.1-4.oe2403sp3         openstack-local   43 k
+ sleuthkit                                    x86_64  4.12.1-3.oe2403sp3        openstack-local  572 k
+ strace                                       x86_64  6.6-3.oe2403sp3           openstack-local  1.4 M
+ supermin                                     x86_64  5.3.3-8.oe2403sp3         openstack-local  489 k
+ swtpm                                        x86_64  0.8.0-3.oe2403sp3         openstack-local   37 k
+ swtpm-libs                                   x86_64  0.8.0-3.oe2403sp3         openstack-local   43 k
+ swtpm-tools                                  x86_64  0.8.0-3.oe2403sp3         openstack-local   93 k
+ syslinux                                     x86_64  6.04-17.oe2403sp3         openstack-local  534 k
+ syslinux-extlinux                            x86_64  6.04-17.oe2403sp3         openstack-local  129 k
+ syslinux-extlinux-nonlinux                   noarch  6.04-17.oe2403sp3         openstack-local  375 k
+ syslinux-nonlinux                            noarch  6.04-17.oe2403sp3         openstack-local  520 k
+ systemd-container                            x86_64  255-58.oe2403sp3          openstack-local  234 k
+ tar                                          x86_64  2:1.35-3.oe2403sp3        openstack-local  758 k
+ thin-provisioning-tools                      x86_64  0.9.0-5.oe2403sp3         openstack-local  426 k
+ thrift                                       x86_64  0.14.0-7.oe2403sp3        openstack-local  1.6 M
+ virglrenderer                                x86_64  0.8.2-3.oe2403sp3         openstack-local  183 k
+ yajl                                         x86_64  2.1.0-21.oe2403sp3        openstack-local   31 k
+ zerofree                                     x86_64  1.1.1-5.oe2403sp3         openstack-local   18 k
+
+Transaction Summary
+======================================================================================================
+Install  398 Packages
+Upgrade    5 Packages
+
+Total download size: 201 M
+Operation aborted.
+
+## Complete machine-readable transaction
+1|install-root|name=libvirt|nevra=libvirt-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=4.4 k
+2|install-root|name=openstack-nova-compute|nevra=openstack-nova-compute-27.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=9.3 k
+3|install-root|name=qemu|nevra=qemu-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=6.8 M
+4|upgrade|name=gnutls|nevra=gnutls-3.8.2-14.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.0 M
+5|upgrade|name=systemd|nevra=systemd-255-58.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=3.7 M
+6|upgrade|name=systemd-cryptsetup|nevra=systemd-cryptsetup-255-58.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=84 k
+7|upgrade|name=systemd-libs|nevra=systemd-libs-255-58.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=558 k
+8|upgrade|name=systemd-udev|nevra=systemd-udev-255-58.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.4 M
+9|install-dependency|name=Lmod|nevra=Lmod-8.7.32-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=251 k
+10|install-dependency|name=abseil-cpp|nevra=abseil-cpp-20230802.1-6.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=508 k
+11|install-dependency|name=afflib|nevra=afflib-3.7.20-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=210 k
+12|install-dependency|name=augeas|nevra=augeas-1.14.1-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=389 k
+13|install-dependency|name=binutils|nevra=binutils-2.41-28.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=5.7 M
+14|install-dependency|name=btrfs-progs|nevra=btrfs-progs-6.6.3-19.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=864 k
+15|install-dependency|name=checkpolicy|nevra=checkpolicy-3.5-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=295 k
+16|install-dependency|name=debootstrap|nevra=debootstrap-1.0.134-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=47 k
+17|install-dependency|name=device-mapper-event|nevra=device-mapper-event-8:1.02.195-23.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=43 k
+18|install-dependency|name=dnsmasq|nevra=dnsmasq-2.90-9.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=255 k
+19|install-dependency|name=dosfstools|nevra=dosfstools-4.2-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=131 k
+20|install-dependency|name=dpdk|nevra=dpdk-23.11-39.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=6.6 M
+21|install-dependency|name=dpkg|nevra=dpkg-1.21.22-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.2 M
+22|install-dependency|name=dtc|nevra=dtc-1.7.2-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=105 k
+23|install-dependency|name=ebtables|nevra=ebtables-2.0.11-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=80 k
+24|install-dependency|name=emacs-filesystem|nevra=emacs-filesystem-1:29.1-8.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=3.5 k
+25|install-dependency|name=fmt|nevra=fmt-8.1.1-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=103 k
+26|install-dependency|name=gdisk|nevra=gdisk-1.0.9-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=187 k
+27|install-dependency|name=genisoimage|nevra=genisoimage-1.1.11-51.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=266 k
+28|install-dependency|name=gfs2-utils|nevra=gfs2-utils-3.5.1-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=259 k
+29|install-dependency|name=git-core|nevra=git-core-2.43.0-11.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=10 M
+30|install-dependency|name=glib-networking|nevra=glib-networking-2.78.0-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=172 k
+31|install-dependency|name=glusterfs-cli|nevra=glusterfs-cli-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=174 k
+32|install-dependency|name=glusterfs-client-xlators|nevra=glusterfs-client-xlators-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=753 k
+33|install-dependency|name=gnutls-dane|nevra=gnutls-dane-3.8.2-14.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=32 k
+34|install-dependency|name=gnutls-utils|nevra=gnutls-utils-3.8.2-14.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=292 k
+35|install-dependency|name=gperftools-libs|nevra=gperftools-libs-2.15-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=257 k
+36|install-dependency|name=grpc|nevra=grpc-1.60.0-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=6.2 M
+37|install-dependency|name=gsettings-desktop-schemas|nevra=gsettings-desktop-schemas-45.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=743 k
+38|install-dependency|name=gssproxy|nevra=gssproxy-0.9.2-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=95 k
+39|install-dependency|name=hexedit|nevra=hexedit-1.6-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=33 k
+40|install-dependency|name=hfsplus-tools|nevra=hfsplus-tools-540.1.linux3-18.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=145 k
+41|install-dependency|name=hivex|nevra=hivex-1.3.23-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=76 k
+42|install-dependency|name=intel-qpl|nevra=intel-qpl-1.7.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=258 k
+43|install-dependency|name=ipmitool|nevra=ipmitool-1.8.18-24.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=378 k
+44|install-dependency|name=jfsutils|nevra=jfsutils-1.1.15-18.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=227 k
+45|install-dependency|name=jsoncpp|nevra=jsoncpp-1.9.5-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=91 k
+46|install-dependency|name=keyutils|nevra=keyutils-1.6.3-9.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=52 k
+47|install-dependency|name=krb5|nevra=krb5-1.21.2-20.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=79 k
+48|install-dependency|name=libaio|nevra=libaio-0.3.113-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=19 k
+49|install-dependency|name=libconfig|nevra=libconfig-1.7.3-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=64 k
+50|install-dependency|name=libdb|nevra=libdb-5.3.28-42.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=3.5 M
+51|install-dependency|name=libdrm|nevra=libdrm-2.4.119-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=141 k
+52|install-dependency|name=libewf|nevra=libewf-20140608-16.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=510 k
+53|install-dependency|name=libgfapi0|nevra=libgfapi0-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=87 k
+54|install-dependency|name=libgfrpc0|nevra=libgfrpc0-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=46 k
+55|install-dependency|name=libgfxdr0|nevra=libgfxdr0-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=21 k
+56|install-dependency|name=libglusterfs0|nevra=libglusterfs0-11.1-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=270 k
+57|install-dependency|name=libguestfs|nevra=libguestfs-1:1.49.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=16 M
+58|install-dependency|name=libibverbs|nevra=libibverbs-50.0-44.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=458 k
+59|install-dependency|name=libiscsi|nevra=libiscsi-1.19.0-12.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=83 k
+60|install-dependency|name=libmd|nevra=libmd-1.1.0-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=42 k
+61|install-dependency|name=libosinfo|nevra=libosinfo-1.11.0-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=253 k
+62|install-dependency|name=libpciaccess|nevra=libpciaccess-0.17-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=22 k
+63|install-dependency|name=libpq|nevra=libpq-15.18-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=202 k
+64|install-dependency|name=libproxy|nevra=libproxy-0.5.3-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=42 k
+65|install-dependency|name=librados2|nevra=librados2-2:18.2.2-11.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=3.5 M
+66|install-dependency|name=librbd1|nevra=librbd1-2:18.2.2-11.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=3.2 M
+67|install-dependency|name=librdmacm|nevra=librdmacm-50.0-44.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=66 k
+68|install-dependency|name=libslirp|nevra=libslirp-4.7.0-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=69 k
+69|install-dependency|name=libsodium|nevra=libsodium-1.0.19-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=164 k
+70|install-dependency|name=libsoup|nevra=libsoup-2.74.3-16.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=338 k
+71|install-dependency|name=libsoup3|nevra=libsoup3-3.4.5-14.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=312 k
+72|install-dependency|name=libssh2|nevra=libssh2-1.11.0-6.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=213 k
+73|install-dependency|name=libtpms|nevra=libtpms-0.9.5-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=335 k
+74|install-dependency|name=libunwind|nevra=libunwind-2:1.7.2-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=55 k
+75|install-dependency|name=liburing|nevra=liburing-2.4-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=30 k
+76|install-dependency|name=libusal|nevra=libusal-1.1.11-51.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=64 k
+77|install-dependency|name=libvirt-client|nevra=libvirt-client-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=408 k
+78|install-dependency|name=libvirt-daemon|nevra=libvirt-daemon-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=183 k
+79|install-dependency|name=libvirt-daemon-common|nevra=libvirt-daemon-common-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=110 k
+80|install-dependency|name=libvirt-daemon-config-network|nevra=libvirt-daemon-config-network-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=6.9 k
+81|install-dependency|name=libvirt-daemon-config-nwfilter|nevra=libvirt-daemon-config-nwfilter-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=13 k
+82|install-dependency|name=libvirt-daemon-driver-interface|nevra=libvirt-daemon-driver-interface-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=187 k
+83|install-dependency|name=libvirt-daemon-driver-network|nevra=libvirt-daemon-driver-network-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=224 k
+84|install-dependency|name=libvirt-daemon-driver-nodedev|nevra=libvirt-daemon-driver-nodedev-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=207 k
+85|install-dependency|name=libvirt-daemon-driver-nwfilter|nevra=libvirt-daemon-driver-nwfilter-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=221 k
+86|install-dependency|name=libvirt-daemon-driver-qemu|nevra=libvirt-daemon-driver-qemu-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=951 k
+87|install-dependency|name=libvirt-daemon-driver-secret|nevra=libvirt-daemon-driver-secret-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=184 k
+88|install-dependency|name=libvirt-daemon-driver-storage|nevra=libvirt-daemon-driver-storage-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=4.3 k
+89|install-dependency|name=libvirt-daemon-driver-storage-core|nevra=libvirt-daemon-driver-storage-core-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=236 k
+90|install-dependency|name=libvirt-daemon-driver-storage-disk|nevra=libvirt-daemon-driver-storage-disk-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=17 k
+91|install-dependency|name=libvirt-daemon-driver-storage-gluster|nevra=libvirt-daemon-driver-storage-gluster-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+92|install-dependency|name=libvirt-daemon-driver-storage-iscsi|nevra=libvirt-daemon-driver-storage-iscsi-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=14 k
+93|install-dependency|name=libvirt-daemon-driver-storage-iscsi-direct|nevra=libvirt-daemon-driver-storage-iscsi-direct-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=16 k
+94|install-dependency|name=libvirt-daemon-driver-storage-logical|nevra=libvirt-daemon-driver-storage-logical-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+95|install-dependency|name=libvirt-daemon-driver-storage-mpath|nevra=libvirt-daemon-driver-storage-mpath-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=12 k
+96|install-dependency|name=libvirt-daemon-driver-storage-rbd|nevra=libvirt-daemon-driver-storage-rbd-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=22 k
+97|install-dependency|name=libvirt-daemon-driver-storage-scsi|nevra=libvirt-daemon-driver-storage-scsi-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=14 k
+98|install-dependency|name=libvirt-daemon-kvm|nevra=libvirt-daemon-kvm-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=4.1 k
+99|install-dependency|name=libvirt-daemon-lock|nevra=libvirt-daemon-lock-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=42 k
+100|install-dependency|name=libvirt-daemon-log|nevra=libvirt-daemon-log-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=46 k
+101|install-dependency|name=libvirt-daemon-plugin-lockd|nevra=libvirt-daemon-plugin-lockd-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+102|install-dependency|name=libvirt-daemon-proxy|nevra=libvirt-daemon-proxy-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=181 k
+103|install-dependency|name=libvirt-libs|nevra=libvirt-libs-9.10.0-27.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=5.0 M
+104|install-dependency|name=libxslt|nevra=libxslt-1.1.39-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=176 k
+105|install-dependency|name=lsof|nevra=lsof-4.99.3-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=92 k
+106|install-dependency|name=lttng-ust|nevra=lttng-ust-2.13.7-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=245 k
+107|install-dependency|name=lua-filesystem|nevra=lua-filesystem-1.8.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=15 k
+108|install-dependency|name=lua-json|nevra=lua-json-1.3.4-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+109|install-dependency|name=lua-lpeg|nevra=lua-lpeg-1.0.2-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=63 k
+110|install-dependency|name=lua-posix|nevra=lua-posix-36.1-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=99 k
+111|install-dependency|name=lua-term|nevra=lua-term-0.07-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=12 k
+112|install-dependency|name=lvm2|nevra=lvm2-8:2.03.21-23.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.8 M
+113|install-dependency|name=lzop|nevra=lzop-1.04-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=45 k
+114|install-dependency|name=mdadm|nevra=mdadm-4.2-21.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=342 k
+115|install-dependency|name=mesa-libgbm|nevra=mesa-libgbm-24.0.3-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=31 k
+116|install-dependency|name=mtools|nevra=mtools-4.0.43-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=119 k
+117|install-dependency|name=multipath-tools|nevra=multipath-tools-0.9.5-16.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=327 k
+118|install-dependency|name=nfs-utils|nevra=nfs-utils-2:2.6.3-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=311 k
+119|install-dependency|name=nilfs-utils|nevra=nilfs-utils-2.2.9-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=112 k
+120|install-dependency|name=ntfs-3g|nevra=ntfs-3g-2:2022.10.3-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=541 k
+121|install-dependency|name=numad|nevra=numad-0.5-33.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=30 k
+122|install-dependency|name=open-iscsi|nevra=open-iscsi-2.1.5-15.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=299 k
+123|install-dependency|name=open-isns|nevra=open-isns-0.101-6.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=131 k
+124|install-dependency|name=openstack-nova-common|nevra=openstack-nova-common-27.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=242 k
+125|install-dependency|name=openvswitch|nevra=openvswitch-3.2.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.6 M
+126|install-dependency|name=openvswitch-dpdk|nevra=openvswitch-dpdk-3.2.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.3 M
+127|install-dependency|name=osinfo-db|nevra=osinfo-db-20230518-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=276 k
+128|install-dependency|name=osinfo-db-tools|nevra=osinfo-db-tools-1.10.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=49 k
+129|install-dependency|name=perl-Sys-Virt|nevra=perl-Sys-Virt-4.7.0-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=161 k
+130|install-dependency|name=policycoreutils-python-utils|nevra=policycoreutils-python-utils-3.5-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+131|install-dependency|name=protobuf|nevra=protobuf-25.1-10.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.0 M
+132|install-dependency|name=protobuf-compiler|nevra=protobuf-compiler-25.1-10.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.2 M
+133|install-dependency|name=python-oslo-vmware-lang|nevra=python-oslo-vmware-lang-4.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=9.7 k
+134|install-dependency|name=python-pycadf-common|nevra=python-pycadf-common-3.1.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=11 k
+135|install-dependency|name=python-sphinx-locale|nevra=python-sphinx-locale-1:4.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=335 k
+136|install-dependency|name=python3-Automat|nevra=python3-Automat-22.10.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=75 k
+137|install-dependency|name=python3-IPy|nevra=python3-IPy-1.01-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=44 k
+138|install-dependency|name=python3-PyMySQL|nevra=python3-PyMySQL-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=107 k
+139|install-dependency|name=python3-SQLAlchemy-Utils|nevra=python3-SQLAlchemy-Utils-0.38.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=196 k
+140|install-dependency|name=python3-alembic|nevra=python3-alembic-1.8.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=448 k
+141|install-dependency|name=python3-amqp|nevra=python3-amqp-5.0.9-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=103 k
+142|install-dependency|name=python3-appdirs|nevra=python3-appdirs-1.4.4-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+143|install-dependency|name=python3-asn1crypto|nevra=python3-asn1crypto-1.5.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=236 k
+144|install-dependency|name=python3-async-timeout|nevra=python3-async-timeout-4.0.3-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=15 k
+145|install-dependency|name=python3-attrs|nevra=python3-attrs-22.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=114 k
+146|install-dependency|name=python3-audit|nevra=python3-audit-1:3.1.2-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=76 k
+147|install-dependency|name=python3-automaton|nevra=python3-automaton-3.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=46 k
+148|install-dependency|name=python3-autopage|nevra=python3-autopage-0.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=73 k
+149|install-dependency|name=python3-babel|nevra=python3-babel-2.10.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=6.9 M
+150|install-dependency|name=python3-barbicanclient|nevra=python3-barbicanclient-5.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=177 k
+151|install-dependency|name=python3-bcrypt|nevra=python3-bcrypt-3.2.0-2.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=36 k
+152|install-dependency|name=python3-betamax|nevra=python3-betamax-0.8.1-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=79 k
+153|install-dependency|name=python3-binary-memcached|nevra=python3-binary-memcached-0.31.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=44 k
+154|install-dependency|name=python3-blinker|nevra=python3-blinker-1.6.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=34 k
+155|install-dependency|name=python3-boto|nevra=python3-boto-2.49.0-5.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=2.1 M
+156|install-dependency|name=python3-bson|nevra=python3-bson-3.11.3-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=129 k
+157|install-dependency|name=python3-cachetools|nevra=python3-cachetools-5.3.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=32 k
+158|install-dependency|name=python3-castellan|nevra=python3-castellan-4.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=165 k
+159|install-dependency|name=python3-cffi|nevra=python3-cffi-1.15.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=299 k
+160|install-dependency|name=python3-chardet|nevra=python3-chardet-5.2.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=281 k
+161|install-dependency|name=python3-charset-normalizer|nevra=python3-charset-normalizer-2.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=92 k
+162|install-dependency|name=python3-cinderclient|nevra=python3-cinderclient-9.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=497 k
+163|install-dependency|name=python3-cliff|nevra=python3-cliff-4.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=158 k
+164|install-dependency|name=python3-cmd2|nevra=python3-cmd2-2.4.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=299 k
+165|install-dependency|name=python3-constantly|nevra=python3-constantly-15.1.0-6.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=20 k
+166|install-dependency|name=python3-coverage|nevra=python3-coverage-6.5.0-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=349 k
+167|install-dependency|name=python3-cryptography|nevra=python3-cryptography-38.0.2-2.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=984 k
+168|install-dependency|name=python3-cursive|nevra=python3-cursive-0.2.2-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=63 k
+169|install-dependency|name=python3-dataclasses|nevra=python3-dataclasses-0.8-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=33 k
+170|install-dependency|name=python3-debtcollector|nevra=python3-debtcollector-2.5.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=45 k
+171|install-dependency|name=python3-dns|nevra=python3-dns-2.2.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=470 k
+172|install-dependency|name=python3-docutils|nevra=python3-docutils-0.17.1-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.0 M
+173|install-dependency|name=python3-dogpile-cache|nevra=python3-dogpile-cache-1.1.8-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=108 k
+174|install-dependency|name=python3-dulwich|nevra=python3-dulwich-0.20.46-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=996 k
+175|install-dependency|name=python3-ecdsa|nevra=python3-ecdsa-0.18.0-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=150 k
+176|install-dependency|name=python3-etcd3|nevra=python3-etcd3-0.12.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=95 k
+177|install-dependency|name=python3-etcd3gw|nevra=python3-etcd3gw-2.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=48 k
+178|install-dependency|name=python3-eventlet|nevra=python3-eventlet-0.33.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=480 k
+179|install-dependency|name=python3-extras|nevra=python3-extras-1.0.0-8.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=20 k
+180|install-dependency|name=python3-fasteners|nevra=python3-fasteners-0.18-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=44 k
+181|install-dependency|name=python3-fixtures|nevra=python3-fixtures-4.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=119 k
+182|install-dependency|name=python3-flake8|nevra=python3-flake8-3.9.2-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=157 k
+183|install-dependency|name=python3-future|nevra=python3-future-0.18.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.0 M
+184|install-dependency|name=python3-futurist|nevra=python3-futurist-2.4.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=78 k
+185|install-dependency|name=python3-glanceclient|nevra=python3-glanceclient-4.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=406 k
+186|install-dependency|name=python3-greenlet|nevra=python3-greenlet-1.1.3-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=118 k
+187|install-dependency|name=python3-grpcio|nevra=python3-grpcio-1.60.0-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=2.8 M
+188|install-dependency|name=python3-gssapi|nevra=python3-gssapi-1.8.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=507 k
+189|install-dependency|name=python3-hyperlink|nevra=python3-hyperlink-21.0.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=141 k
+190|install-dependency|name=python3-idna|nevra=python3-idna-3.4-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=92 k
+191|install-dependency|name=python3-imagesize|nevra=python3-imagesize-1.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=19 k
+192|install-dependency|name=python3-importlib-metadata|nevra=python3-importlib-metadata-5.0.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=52 k
+193|install-dependency|name=python3-incremental|nevra=python3-incremental-22.10.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=40 k
+194|install-dependency|name=python3-iniconfig|nevra=python3-iniconfig-1.1.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=15 k
+195|install-dependency|name=python3-inotify|nevra=python3-inotify-0.9.6-19.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=62 k
+196|install-dependency|name=python3-invoke|nevra=python3-invoke-2.2.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=326 k
+197|install-dependency|name=python3-iso8601|nevra=python3-iso8601-1.1.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=24 k
+198|install-dependency|name=python3-jinja2|nevra=python3-jinja2-3.1.2-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=324 k
+199|install-dependency|name=python3-jmespath|nevra=python3-jmespath-0.10.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=56 k
+200|install-dependency|name=python3-jsonpatch|nevra=python3-jsonpatch-1.32-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=30 k
+201|install-dependency|name=python3-jsonpointer|nevra=python3-jsonpointer-2.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=18 k
+202|install-dependency|name=python3-jsonschema|nevra=python3-jsonschema-4.16.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=187 k
+203|install-dependency|name=python3-jwt|nevra=python3-jwt-2.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=56 k
+204|install-dependency|name=python3-kazoo|nevra=python3-kazoo-2.8.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=345 k
+205|install-dependency|name=python3-kerberos|nevra=python3-kerberos-1.3.1-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=22 k
+206|install-dependency|name=python3-keystoneauth1|nevra=python3-keystoneauth1-5.1.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=562 k
+207|install-dependency|name=python3-keystoneclient|nevra=python3-keystoneclient-5.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=685 k
+208|install-dependency|name=python3-keystonemiddleware|nevra=python3-keystonemiddleware-10.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=232 k
+209|install-dependency|name=python3-kombu|nevra=python3-kombu-5.2.4-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=429 k
+210|install-dependency|name=python3-ldap|nevra=python3-ldap-3.4.3-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=224 k
+211|install-dependency|name=python3-libguestfs|nevra=python3-libguestfs-1:1.49.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=213 k
+212|install-dependency|name=python3-libselinux|nevra=python3-libselinux-3.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=175 k
+213|install-dependency|name=python3-libsemanage|nevra=python3-libsemanage-3.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=71 k
+214|install-dependency|name=python3-libvirt|nevra=python3-libvirt-9.10.0-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=251 k
+215|install-dependency|name=python3-linecache2|nevra=python3-linecache2-1.0.0-20.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=17 k
+216|install-dependency|name=python3-lxml|nevra=python3-lxml-4.9.1-3.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.2 M
+217|install-dependency|name=python3-mako|nevra=python3-mako-1.2.4-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=193 k
+218|install-dependency|name=python3-markupsafe|nevra=python3-markupsafe-2.1.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=25 k
+219|install-dependency|name=python3-mccabe|nevra=python3-mccabe-0.6.1-11.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=21 k
+220|install-dependency|name=python3-memcached|nevra=python3-memcached-1.59-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=45 k
+221|install-dependency|name=python3-microversion-parse|nevra=python3-microversion-parse-1.0.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=32 k
+222|install-dependency|name=python3-mimeparse|nevra=python3-mimeparse-1.6.0-9.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=15 k
+223|install-dependency|name=python3-mistune|nevra=python3-mistune-2.0.4-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=72 k
+224|install-dependency|name=python3-mock|nevra=python3-mock-4.0.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=75 k
+225|install-dependency|name=python3-msgpack|nevra=python3-msgpack-1.0.4-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=85 k
+226|install-dependency|name=python3-munch|nevra=python3-munch-2.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=24 k
+227|install-dependency|name=python3-mypy|nevra=python3-mypy-0.982-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=3.4 M
+228|install-dependency|name=python3-mypy-extensions|nevra=python3-mypy-extensions-0.4.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=13 k
+229|install-dependency|name=python3-netaddr|nevra=python3-netaddr-0.8.0-4.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.8 M
+230|install-dependency|name=python3-netifaces|nevra=python3-netifaces-0.11.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+231|install-dependency|name=python3-networkx|nevra=python3-networkx-2.8.7-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=3.3 M
+232|install-dependency|name=python3-neutronclient|nevra=python3-neutronclient-9.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=782 k
+233|install-dependency|name=python3-nova|nevra=python3-nova-27.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=4.1 M
+234|install-dependency|name=python3-novaclient|nevra=python3-novaclient-18.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=654 k
+235|install-dependency|name=python3-oauthlib|nevra=python3-oauthlib-3.2.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=231 k
+236|install-dependency|name=python3-openstacksdk|nevra=python3-openstacksdk-1.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.6 M
+237|install-dependency|name=python3-openvswitch|nevra=python3-openvswitch-3.2.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=405 k
+238|install-dependency|name=python3-os-brick|nevra=python3-os-brick-6.2.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=599 k
+239|install-dependency|name=python3-os-client-config|nevra=python3-os-client-config-2.1.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=72 k
+240|install-dependency|name=python3-os-resource-classes|nevra=python3-os-resource-classes-1.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=16 k
+241|install-dependency|name=python3-os-service-types|nevra=python3-os-service-types-1.7.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=38 k
+242|install-dependency|name=python3-os-testr|nevra=python3-os-testr-3.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=56 k
+243|install-dependency|name=python3-os-traits|nevra=python3-os-traits-2.10.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=57 k
+244|install-dependency|name=python3-os-vif|nevra=python3-os-vif-3.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=217 k
+245|install-dependency|name=python3-os-win|nevra=python3-os-win-5.9.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=600 k
+246|install-dependency|name=python3-osc-lib|nevra=python3-osc-lib-2.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=176 k
+247|install-dependency|name=python3-oslo-cache|nevra=python3-oslo-cache-3.3.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=112 k
+248|install-dependency|name=python3-oslo-concurrency|nevra=python3-oslo-concurrency-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=90 k
+249|install-dependency|name=python3-oslo-config|nevra=python3-oslo-config-9.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=298 k
+250|install-dependency|name=python3-oslo-context|nevra=python3-oslo-context-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=41 k
+251|install-dependency|name=python3-oslo-db|nevra=python3-oslo-db-12.3.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=372 k
+252|install-dependency|name=python3-oslo-i18n|nevra=python3-oslo-i18n-6.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=70 k
+253|install-dependency|name=python3-oslo-limit|nevra=python3-oslo-limit-2.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=40 k
+254|install-dependency|name=python3-oslo-log|nevra=python3-oslo-log-5.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=140 k
+255|install-dependency|name=python3-oslo-messaging|nevra=python3-oslo-messaging-14.2.4-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=516 k
+256|install-dependency|name=python3-oslo-metrics|nevra=python3-oslo-metrics-0.6.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=27 k
+257|install-dependency|name=python3-oslo-middleware|nevra=python3-oslo-middleware-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=112 k
+258|install-dependency|name=python3-oslo-policy|nevra=python3-oslo-policy-4.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=183 k
+259|install-dependency|name=python3-oslo-privsep|nevra=python3-oslo-privsep-3.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=75 k
+260|install-dependency|name=python3-oslo-reports|nevra=python3-oslo-reports-3.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=88 k
+261|install-dependency|name=python3-oslo-rootwrap|nevra=python3-oslo-rootwrap-7.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=79 k
+262|install-dependency|name=python3-oslo-serialization|nevra=python3-oslo-serialization-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=51 k
+263|install-dependency|name=python3-oslo-service|nevra=python3-oslo-service-3.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=151 k
+264|install-dependency|name=python3-oslo-upgradecheck|nevra=python3-oslo-upgradecheck-2.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=26 k
+265|install-dependency|name=python3-oslo-utils|nevra=python3-oslo-utils-6.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=197 k
+266|install-dependency|name=python3-oslo-versionedobjects|nevra=python3-oslo-versionedobjects-3.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=197 k
+267|install-dependency|name=python3-oslo-vmware|nevra=python3-oslo-vmware-4.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=261 k
+268|install-dependency|name=python3-oslotest|nevra=python3-oslotest-4.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=54 k
+269|install-dependency|name=python3-ovsdbapp|nevra=python3-ovsdbapp-2.2.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=305 k
+270|install-dependency|name=python3-packaging|nevra=python3-packaging-24.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=141 k
+271|install-dependency|name=python3-paramiko|nevra=python3-paramiko-2.11.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=379 k
+272|install-dependency|name=python3-paste|nevra=python3-paste-3.5.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=907 k
+273|install-dependency|name=python3-paste-deploy|nevra=python3-paste-deploy-2.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=46 k
+274|install-dependency|name=python3-pbr|nevra=python3-pbr-5.11.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=104 k
+275|install-dependency|name=python3-pluggy|nevra=python3-pluggy-1.4.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=51 k
+276|install-dependency|name=python3-ply|nevra=python3-ply-3.11-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=118 k
+277|install-dependency|name=python3-policycoreutils|nevra=python3-policycoreutils-3.5-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=2.2 M
+278|install-dependency|name=python3-prettytable|nevra=python3-prettytable-2.4.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=59 k
+279|install-dependency|name=python3-prometheus-client|nevra=python3-prometheus-client-0.14.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=133 k
+280|install-dependency|name=python3-protobuf|nevra=python3-protobuf-25.1-10.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=324 k
+281|install-dependency|name=python3-psutil|nevra=python3-psutil-5.9.2-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=571 k
+282|install-dependency|name=python3-psycopg2|nevra=python3-psycopg2-2.9.4-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=196 k
+283|install-dependency|name=python3-pure-sasl|nevra=python3-pure-sasl-0.6.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=30 k
+284|install-dependency|name=python3-pyOpenSSL|nevra=python3-pyOpenSSL-22.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=122 k
+285|install-dependency|name=python3-pyasn1|nevra=python3-pyasn1-0.4.8-4.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=183 k
+286|install-dependency|name=python3-pyasn1-modules|nevra=python3-pyasn1-modules-0.2.8-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=296 k
+287|install-dependency|name=python3-pycadf|nevra=python3-pycadf-3.1.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=65 k
+288|install-dependency|name=python3-pycodestyle|nevra=python3-pycodestyle-2.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=85 k
+289|install-dependency|name=python3-pycparser|nevra=python3-pycparser-2.21-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=144 k
+290|install-dependency|name=python3-pycryptodome|nevra=python3-pycryptodome-3.20.0-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.2 M
+291|install-dependency|name=python3-pydot|nevra=python3-pydot-1.4.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=57 k
+292|install-dependency|name=python3-pyflakes|nevra=python3-pyflakes-2.3.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=176 k
+293|install-dependency|name=python3-pygments|nevra=python3-pygments-2.13.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.0 M
+294|install-dependency|name=python3-pylons-sphinx-themes|nevra=python3-pylons-sphinx-themes-1.0.13-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=144 k
+295|install-dependency|name=python3-pymemcache|nevra=python3-pymemcache-3.5.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=141 k
+296|install-dependency|name=python3-pymongo|nevra=python3-pymongo-3.11.3-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=528 k
+297|install-dependency|name=python3-pynacl|nevra=python3-pynacl-1.5.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=127 k
+298|install-dependency|name=python3-pyngus|nevra=python3-pyngus-2.3.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=57 k
+299|install-dependency|name=python3-pyperclip|nevra=python3-pyperclip-1.8.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=27 k
+300|install-dependency|name=python3-pyroute2|nevra=python3-pyroute2-0.7.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=377 k
+301|install-dependency|name=python3-pyrsistent|nevra=python3-pyrsistent-0.18.1-2.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=126 k
+302|install-dependency|name=python3-pysocks|nevra=python3-pysocks-1.7.1-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=38 k
+303|install-dependency|name=python3-pyspnego|nevra=python3-pyspnego-0.9.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=282 k
+304|install-dependency|name=python3-pytest|nevra=python3-pytest-7.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=789 k
+305|install-dependency|name=python3-pytest-cov|nevra=python3-pytest-cov-4.1.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=50 k
+306|install-dependency|name=python3-pytest-mock|nevra=python3-pytest-mock-3.11.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=29 k
+307|install-dependency|name=python3-pytz|nevra=python3-pytz-2023.3-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=54 k
+308|install-dependency|name=python3-pyyaml|nevra=python3-pyyaml-6.0-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=209 k
+309|install-dependency|name=python3-qpid-proton|nevra=python3-qpid-proton-0.38.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=483 k
+310|install-dependency|name=python3-redis|nevra=python3-redis-5.2.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=552 k
+311|install-dependency|name=python3-reno|nevra=python3-reno-3.5.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=142 k
+312|install-dependency|name=python3-repoze-lru|nevra=python3-repoze-lru-0.7-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=36 k
+313|install-dependency|name=python3-requests|nevra=python3-requests-2.28.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=132 k
+314|install-dependency|name=python3-requests-kerberos|nevra=python3-requests-kerberos-0.14.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=25 k
+315|install-dependency|name=python3-requestsexceptions|nevra=python3-requestsexceptions-1.4.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=11 k
+316|install-dependency|name=python3-retrying|nevra=python3-retrying-1.3.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=17 k
+317|install-dependency|name=python3-rfc3986|nevra=python3-rfc3986-1.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=61 k
+318|install-dependency|name=python3-routes|nevra=python3-routes-2.5.1-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=80 k
+319|install-dependency|name=python3-rsa|nevra=python3-rsa-4.8-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=70 k
+320|install-dependency|name=python3-ruamel-yaml|nevra=python3-ruamel-yaml-0.17.21-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=274 k
+321|install-dependency|name=python3-setools|nevra=python3-setools-4.4.3-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=657 k
+322|install-dependency|name=python3-setuptools_scm|nevra=python3-setuptools_scm-7.1.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=100 k
+323|install-dependency|name=python3-simplejson|nevra=python3-simplejson-3.17.6-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=142 k
+324|install-dependency|name=python3-snowballstemmer|nevra=python3-snowballstemmer-2.2.0-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=242 k
+325|install-dependency|name=python3-sortedcontainers|nevra=python3-sortedcontainers-2.4.0-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=61 k
+326|install-dependency|name=python3-sphinx|nevra=python3-sphinx-1:4.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.5 M
+327|install-dependency|name=python3-sphinx-theme-alabaster|nevra=python3-sphinx-theme-alabaster-0.7.12-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=24 k
+328|install-dependency|name=python3-sphinx_rtd_theme|nevra=python3-sphinx_rtd_theme-1.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.5 M
+329|install-dependency|name=python3-sphinxcontrib-applehelp|nevra=python3-sphinxcontrib-applehelp-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=35 k
+330|install-dependency|name=python3-sphinxcontrib-devhelp|nevra=python3-sphinxcontrib-devhelp-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=29 k
+331|install-dependency|name=python3-sphinxcontrib-htmlhelp|nevra=python3-sphinxcontrib-htmlhelp-2.0.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=45 k
+332|install-dependency|name=python3-sphinxcontrib-jsmath|nevra=python3-sphinxcontrib-jsmath-1.0.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=16 k
+333|install-dependency|name=python3-sphinxcontrib-qthelp|nevra=python3-sphinxcontrib-qthelp-1.0.3-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=35 k
+334|install-dependency|name=python3-sphinxcontrib-serializinghtml|nevra=python3-sphinxcontrib-serializinghtml-1.1.5-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=34 k
+335|install-dependency|name=python3-sphinxcontrib-svg2pdfconverter|nevra=python3-sphinxcontrib-svg2pdfconverter-1.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=17 k
+336|install-dependency|name=python3-sphinxcontrib-websupport|nevra=python3-sphinxcontrib-websupport-1.2.4-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=73 k
+337|install-dependency|name=python3-sqlalchemy|nevra=python3-sqlalchemy-1.4.41-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=3.3 M
+338|install-dependency|name=python3-sqlalchemy-migrate|nevra=python3-sqlalchemy-migrate-0.13.0-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=256 k
+339|install-dependency|name=python3-sqlparse|nevra=python3-sqlparse-0.4.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=101 k
+340|install-dependency|name=python3-statsd|nevra=python3-statsd-3.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=42 k
+341|install-dependency|name=python3-stestr|nevra=python3-stestr-3.2.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=225 k
+342|install-dependency|name=python3-stevedore|nevra=python3-stevedore-5.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=83 k
+343|install-dependency|name=python3-subunit|nevra=python3-subunit-1.4.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=112 k
+344|install-dependency|name=python3-suds2|nevra=python3-suds2-1.1.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=272 k
+345|install-dependency|name=python3-sysv-ipc|nevra=python3-sysv-ipc-1.1.0-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=24 k
+346|install-dependency|name=python3-taskflow|nevra=python3-taskflow-5.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=928 k
+347|install-dependency|name=python3-tempita|nevra=python3-tempita-0.5.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=45 k
+348|install-dependency|name=python3-tenacity|nevra=python3-tenacity-6.3.1-5.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=50 k
+349|install-dependency|name=python3-testrepository|nevra=python3-testrepository-0.0.20-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=220 k
+350|install-dependency|name=python3-testresources|nevra=python3-testresources-2.0.1-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=68 k
+351|install-dependency|name=python3-testscenarios|nevra=python3-testscenarios-0.5.0-15.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=40 k
+352|install-dependency|name=python3-testtools|nevra=python3-testtools-2.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=456 k
+353|install-dependency|name=python3-toml|nevra=python3-toml-0.10.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=50 k
+354|install-dependency|name=python3-tooz|nevra=python3-tooz-3.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=187 k
+355|install-dependency|name=python3-traceback2|nevra=python3-traceback2-1.4.0-20.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=25 k
+356|install-dependency|name=python3-twisted|nevra=python3-twisted-22.10.0-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=7.3 M
+357|install-dependency|name=python3-typing-extensions|nevra=python3-typing-extensions-4.12.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=85 k
+358|install-dependency|name=python3-uhashring|nevra=python3-uhashring-2.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=26 k
+359|install-dependency|name=python3-unittest2|nevra=python3-unittest2-1.1.0-19.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=249 k
+360|install-dependency|name=python3-urllib3|nevra=python3-urllib3-1.26.12-6.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=246 k
+361|install-dependency|name=python3-vine|nevra=python3-vine-5.0.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=25 k
+362|install-dependency|name=python3-voluptuous|nevra=python3-voluptuous-0.12.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=69 k
+363|install-dependency|name=python3-warlock|nevra=python3-warlock-2.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=18 k
+364|install-dependency|name=python3-wcwidth|nevra=python3-wcwidth-0.2.5-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=41 k
+365|install-dependency|name=python3-webob|nevra=python3-webob-1.8.7-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=297 k
+366|install-dependency|name=python3-whoosh|nevra=python3-whoosh-2.7.4-15.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=1.3 M
+367|install-dependency|name=python3-wrapt|nevra=python3-wrapt-1.14.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=60 k
+368|install-dependency|name=python3-yappi|nevra=python3-yappi-1.6.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=58 k
+369|install-dependency|name=python3-zake|nevra=python3-zake-0.2.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=55 k
+370|install-dependency|name=python3-zipp|nevra=python3-zipp-3.8.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=18 k
+371|install-dependency|name=python3-zope-interface|nevra=python3-zope-interface-6.1-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=426 k
+372|install-dependency|name=qatlib|nevra=qatlib-24.02.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=202 k
+373|install-dependency|name=qatzip-libs|nevra=qatzip-libs-1.2.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=40 k
+374|install-dependency|name=qemu-block-curl|nevra=qemu-block-curl-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=88 k
+375|install-dependency|name=qemu-block-iscsi|nevra=qemu-block-iscsi-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=95 k
+376|install-dependency|name=qemu-block-rbd|nevra=qemu-block-rbd-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=91 k
+377|install-dependency|name=qemu-block-ssh|nevra=qemu-block-ssh-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=91 k
+378|install-dependency|name=qemu-hw-usb-host|nevra=qemu-hw-usb-host-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=97 k
+379|install-dependency|name=qemu-img|nevra=qemu-img-11:8.2.0-73.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=3.2 M
+380|install-dependency|name=qpid-proton-c-cpp|nevra=qpid-proton-c-cpp-0.38.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=388 k
+381|install-dependency|name=quota|nevra=quota-1:4.06-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=225 k
+382|install-dependency|name=re2|nevra=re2-20240201-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=178 k
+383|install-dependency|name=reiserfs-utils|nevra=reiserfs-utils-3.6.27-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=259 k
+384|install-dependency|name=rpcbind|nevra=rpcbind-1.2.6-8.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=44 k
+385|install-dependency|name=rsync|nevra=rsync-3.2.7-8.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=309 k
+386|install-dependency|name=scrub|nevra=scrub-2.6.1-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=43 k
+387|install-dependency|name=sleuthkit|nevra=sleuthkit-4.12.1-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=572 k
+388|install-dependency|name=strace|nevra=strace-6.6-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.4 M
+389|install-dependency|name=supermin|nevra=supermin-5.3.3-8.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=489 k
+390|install-dependency|name=swtpm|nevra=swtpm-0.8.0-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=37 k
+391|install-dependency|name=swtpm-libs|nevra=swtpm-libs-0.8.0-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=43 k
+392|install-dependency|name=swtpm-tools|nevra=swtpm-tools-0.8.0-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=93 k
+393|install-dependency|name=syslinux|nevra=syslinux-6.04-17.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=534 k
+394|install-dependency|name=syslinux-extlinux|nevra=syslinux-extlinux-6.04-17.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=129 k
+395|install-dependency|name=syslinux-extlinux-nonlinux|nevra=syslinux-extlinux-nonlinux-6.04-17.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=375 k
+396|install-dependency|name=syslinux-nonlinux|nevra=syslinux-nonlinux-6.04-17.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=520 k
+397|install-dependency|name=systemd-container|nevra=systemd-container-255-58.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=234 k
+398|install-dependency|name=tar|nevra=tar-2:1.35-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=758 k
+399|install-dependency|name=thin-provisioning-tools|nevra=thin-provisioning-tools-0.9.0-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=426 k
+400|install-dependency|name=thrift|nevra=thrift-0.14.0-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.6 M
+401|install-dependency|name=virglrenderer|nevra=virglrenderer-0.8.2-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=183 k
+402|install-dependency|name=yajl|nevra=yajl-2.1.0-21.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=31 k
+403|install-dependency|name=zerofree|nevra=zerofree-1.1.1-5.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+
+## Explicit upgrade package names
+gnutls
+systemd
+systemd-cryptsetup
+systemd-libs
+systemd-udev
+
+## RPM baseline after roots
+package qemu is not installed
+package libvirt is not installed
+package openstack-nova-compute is not installed
+systemd-255-50.oe2403sp3.x86_64
+systemd-libs-255-50.oe2403sp3.x86_64
+systemd-udev-255-50.oe2403sp3.x86_64
+systemd-cryptsetup-255-50.oe2403sp3.x86_64
+
+## Disk baseline before/after
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "size": 214748364800,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null,
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "size": 2097152,
+               "type": "part",
+               "fstype": null,
+               "mountpoints": [
+                   null
+               ],
+               "uuid": null,
+               "parttype": "21686148-6449-6e6f-744e-656564454649",
+               "pkname": "sda"
+            },{
+               "name": "sda2",
+               "path": "/dev/sda2",
+               "size": 206158430208,
+               "type": "part",
+               "fstype": "ext4",
+               "mountpoints": [
+                   "/"
+               ],
+               "uuid": "95bccd1c-608a-4db8-9d02-c46916b91f6f",
+               "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+               "pkname": "sda"
+            },{
+               "name": "sda3",
+               "path": "/dev/sda3",
+               "size": 8585740288,
+               "type": "part",
+               "fstype": "swap",
+               "mountpoints": [
+                   "[SWAP]"
+               ],
+               "uuid": "5f3840af-7562-425d-bad2-01b3135ae355",
+               "parttype": "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
+               "pkname": "sda"
+            }
+         ]
+      },{
+         "name": "sdb",
+         "path": "/dev/sdb",
+         "size": 53687091200,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null
+      },{
+         "name": "sdc",
+         "path": "/dev/sdc",
+         "size": 53687091200,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null
+      }
+   ]
+}
+
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "size": 214748364800,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null,
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "size": 2097152,
+               "type": "part",
+               "fstype": null,
+               "mountpoints": [
+                   null
+               ],
+               "uuid": null,
+               "parttype": "21686148-6449-6e6f-744e-656564454649",
+               "pkname": "sda"
+            },{
+               "name": "sda2",
+               "path": "/dev/sda2",
+               "size": 206158430208,
+               "type": "part",
+               "fstype": "ext4",
+               "mountpoints": [
+                   "/"
+               ],
+               "uuid": "95bccd1c-608a-4db8-9d02-c46916b91f6f",
+               "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+               "pkname": "sda"
+            },{
+               "name": "sda3",
+               "path": "/dev/sda3",
+               "size": 8585740288,
+               "type": "part",
+               "fstype": "swap",
+               "mountpoints": [
+                   "[SWAP]"
+               ],
+               "uuid": "5f3840af-7562-425d-bad2-01b3135ae355",
+               "parttype": "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
+               "pkname": "sda"
+            }
+         ]
+      },{
+         "name": "sdb",
+         "path": "/dev/sdb",
+         "size": 53687091200,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null
+      },{
+         "name": "sdc",
+         "path": "/dev/sdc",
+         "size": 53687091200,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [
+             null
+         ],
+         "uuid": null,
+         "parttype": null,
+         "pkname": null
+      }
+   ]
+}
+
+## Audit result
+Dependencies resolved; --assumeno aborted; local repository only; RPM baseline/history/boot/disks unchanged; compute packages and compute_id absent.
