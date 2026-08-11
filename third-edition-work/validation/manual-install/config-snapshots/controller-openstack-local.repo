@@ -1,0 +1,5 @@
+[openstack-local]
+name=Validated local OpenStack repository
+baseurl=file:///opt/openstack_repo
+enabled=1
+gpgcheck=0

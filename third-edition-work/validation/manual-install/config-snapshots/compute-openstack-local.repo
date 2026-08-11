@@ -1,0 +1,5 @@
+[openstack-local]
+name=Validated controller FTP OpenStack repository
+baseurl=ftp://192.168.234.151/openstack_repo
+enabled=1
+gpgcheck=0

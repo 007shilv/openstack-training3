@@ -1,0 +1,15 @@
+[OpenStack_Antelope]
+name=OpenStack_Antelope
+baseurl=https://repo.openeuler.org/openEuler-24.03-LTS-SP2/EPOL/multi_version/OpenStack/Antelope/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.openeuler.org/openEuler-24.03-LTS-SP2/OS/$basearch/RPM-GPG-KEY-openEuler
+priority=1
+
+[OpenStack_Antelope_update]
+name=OpenStack_Antelope_update
+baseurl=https://repo.openeuler.org/openEuler-24.03-LTS-SP2/EPOL/update/multi_version/OpenStack/Antelope/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.openeuler.org/openEuler-24.03-LTS-SP2/OS/$basearch/RPM-GPG-KEY-openEuler
+priority=1
