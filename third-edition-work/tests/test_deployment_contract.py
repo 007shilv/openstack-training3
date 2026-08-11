@@ -1836,3 +1836,291 @@ def test_manual_keystone_admin_openrc_installer_is_exclusive_atomic_and_cleanup_
         )
     assert target.read_text(encoding="utf-8") == "preexisting\n"
     assert list(tmp_path.glob(".admin-openrc.task5b.*")) == []
+
+
+def test_manual_glance_session_preserves_required_order_and_stops_on_failure() -> None:
+    text = manual_shell_text("04-glance.md")
+    stages = (
+        "stage_starting_state",
+        "stage_package_transaction",
+        "stage_database_and_grants",
+        "stage_identity_objects",
+        "stage_configuration",
+        "stage_schema",
+        "stage_api",
+        "stage_image_lifecycle",
+        "stage_cross_slice_audit",
+    )
+    runner = shell_function_body(text, "run_glance_sequence")
+    assert runner is not None
+    calls = [line.strip() for line in active_lines(runner) if line.strip() in stages]
+    assert calls == list(stages)
+    failing_stage = "stage_schema"
+    mocks = "\n".join(
+        f"{stage}() {{ printf '%s\\n' {stage}; {'return 23' if stage == failing_stage else 'return 0'}; }}"
+        for stage in stages
+    )
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {shell_function_definition(text, "run_glance_sequence")}
+        {mocks}
+        run_glance_sequence
+        """
+    )
+    assert completed.returncode != 0
+    assert completed.stdout.splitlines() == list(stages[: stages.index(failing_stage) + 1])
+
+
+def test_manual_glance_dual_node_gate_is_strict_and_short_circuits() -> None:
+    markdown = manual_markdown("04-glance.md")
+    assert all(token in markdown for token in (
+        "192.168.234.151", "192.168.234.150", "known_hosts.controller",
+        "known_hosts.compute", "paramiko.RejectPolicy()", "ens34", "openstack-local",
+        "/dev/sdb", "/dev/sdc", "lsblk -s -nrpo NAME", "wipefs --no-act", "blkid -p",
+    ))
+    source = next(
+        block for block in markdown_fenced_blocks("04-glance.md", "python")
+        if "def run_dual_node_starting_gate" in block
+    )
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "run_dual_node_starting_gate"
+    ]
+    namespace: dict[str, object] = {"connect_strict": lambda *_args: None, "run_checked": lambda *_args: None}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), "glance-dual-node-gate", "exec"), namespace)
+    calls: list[str] = []
+
+    class FakeClient:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def close(self) -> None:
+            calls.append(f"close:{self.name}")
+
+    def connector(name: str, _password: str) -> FakeClient:
+        calls.append(f"connect:{name}")
+        return FakeClient(name)
+
+    def fail_controller(client: FakeClient, _script: str) -> None:
+        calls.append(f"run:{client.name}")
+        raise RuntimeError("controller gate failed")
+
+    with pytest.raises(RuntimeError, match="controller gate failed"):
+        namespace["run_dual_node_starting_gate"](
+            "memory-only", connector=connector, runner=fail_controller,
+            controller_gate="controller", compute_gate="compute",
+        )
+    assert calls == ["connect:controller", "run:controller", "close:controller"]
+
+
+def test_manual_glance_package_preflight_executes_repo_only_failure_branches(tmp_path: Path) -> None:
+    text = manual_shell_text("04-glance.md")
+    active = "\n".join(active_lines(text))
+    assert "--disablerepo='*'" in active and "--enablerepo='openstack-local'" in active
+    assert "--setopt=install_weak_deps=False" in active
+    assert not any(flag in active for flag in ("--allowerasing", "--nodeps", "--skip-broken"))
+    definitions = manual_function_definitions(text, ("validate_glance_preflight",))
+
+    def validate(candidates: str, transaction: str) -> int:
+        candidate_file = tmp_path / "candidates.txt"
+        transaction_file = tmp_path / "transaction.txt"
+        candidate_file.write_text(candidates, encoding="utf-8")
+        transaction_file.write_text(transaction, encoding="utf-8")
+        completed = run_git_bash(
+            f"""
+            set -Eeuo pipefail
+            {definitions}
+            validate_glance_preflight {shlex.quote(str(candidate_file))} {shlex.quote(str(transaction_file))}
+            """
+        )
+        return completed.returncode
+
+    good_candidates = "openstack-glance|openstack-local\npython3-glance|openstack-local\n"
+    good_transaction = "openstack-glance noarch 26 local openstack-local 1 M\nInstall 1 Package\nOperation aborted.\n"
+    assert validate(good_candidates, good_transaction) == 0
+    assert validate(good_candidates.replace("python3-glance|openstack-local", "python3-glance|external"), good_transaction) != 0
+    assert validate(good_candidates, good_transaction.replace("Install 1 Package", "Install 2 Packages")) != 0
+    assert validate(good_candidates, good_transaction + "Removing: unsafe\n") != 0
+
+
+def test_manual_glance_database_grants_are_parameterized_and_secret_safe() -> None:
+    text = manual_shell_text("04-glance.md")
+    python_bodies = [
+        body for _opener, _delimiter, body in shell_sections(text)[1]
+        if "CREATE DATABASE IF NOT EXISTS glance" in body
+    ]
+    assert len(python_bodies) == 1
+    tree = ast.parse(python_bodies[0])
+    constants = {
+        node.value for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    assert "CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s" in constants
+    assert "ALTER USER %s@%s IDENTIFIED BY %s" in constants
+    assert "GRANT ALL PRIVILEGES ON glance.* TO %s@%s" in constants
+    assert '("glance", host, password)' in python_bodies[0]
+    assert '("glance", host)' in python_bodies[0]
+    assert "authentication_string" not in text
+
+
+@pytest.mark.parametrize(
+    ("record", "metadata", "expected"),
+    (
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 600 1", True),
+        ("OPENSTACK_DEPLOY_PASSWORD=\n", "root:root 600 1", False),
+        ("MALFORMED=memory-only\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=one\nEXTRA=two\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 644 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 600 2", False),
+    ),
+)
+def test_manual_glance_runtime_secret_loader_executes_fail_closed_branches(
+    tmp_path: Path, record: str, metadata: str, expected: bool
+) -> None:
+    text = manual_shell_text("04-glance.md")
+    definition = shell_function_definition(text, "load_runtime_secret")
+    secret = tmp_path / "runtime-secret"
+    secret.write_text(record, encoding="utf-8", newline="\n")
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {definition}
+        stat() {{ printf '%s\n' {shlex.quote(metadata)}; }}
+        set +e
+        load_runtime_secret loaded {shlex.quote(str(secret))}
+        rc=$?
+        set -e
+        [[ $rc -eq 0 ]] && [[ $loaded == memory-only ]]
+        """
+    )
+    assert (completed.returncode == 0) is expected
+
+
+def test_manual_glance_identity_classifier_handles_zero_one_duplicate_error_and_mutations() -> None:
+    source = next(
+        block for block in markdown_fenced_blocks("04-glance.md", "python")
+        if "def decide_exact_state" in block and "def validate_glance_identity" in block
+    )
+    namespace: dict[str, object] = {}
+    exec(compile(source, "glance-identity-classifier", "exec"), namespace)
+    decide = namespace["decide_exact_state"]
+    assert decide(True, [], "user") == "CREATE"
+    assert decide(True, [{"id": "one"}], "user") == "VALIDATE"
+    with pytest.raises(RuntimeError, match="duplicate"):
+        decide(True, [{"id": "one"}, {"id": "two"}], "user")
+    with pytest.raises(RuntimeError, match="probe failed"):
+        decide(False, [], "user")
+
+    evidence = {
+        "user": {"id": "user", "name": "glance", "domain_id": "default", "enabled": True},
+        "service": {"id": "service", "name": "glance", "type": "image", "enabled": True},
+        "admin_role_id": "admin-role",
+        "service_project_id": "service-project",
+        "assignments": [{
+            "role": "admin-role", "user": "user", "project": "service-project",
+            "group": "", "domain": "", "system": "", "inherited": False,
+        }],
+        "endpoints": [
+            {"interface": interface, "region": "RegionOne", "service_id": "service", "url": "http://controller:9292"}
+            for interface in ("public", "internal", "admin")
+        ],
+    }
+    namespace["validate_glance_identity"](evidence)
+    for mutation in ("disabled-user", "wrong-role", "duplicate-endpoint", "wrong-url"):
+        broken = json.loads(json.dumps(evidence))
+        if mutation == "disabled-user":
+            broken["user"]["enabled"] = False
+        elif mutation == "wrong-role":
+            broken["assignments"][0]["role"] = "member"
+        elif mutation == "duplicate-endpoint":
+            broken["endpoints"].append(dict(broken["endpoints"][0]))
+        else:
+            broken["endpoints"][0]["url"] = "http://wrong:9292"
+        with pytest.raises(ValueError):
+            namespace["validate_glance_identity"](broken)
+
+
+def test_manual_glance_atomic_config_and_sanitized_snapshot_are_exact(tmp_path: Path) -> None:
+    source = next(
+        block for block in markdown_fenced_blocks("04-glance.md", "python")
+        if "def write_glance_config" in block
+    )
+    tree = ast.parse(source)
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert {"O_EXCL", "fchmod", "fchown", "fsync", "replace", "lstat"} <= attributes
+    assert 'getattr(ops, "O_NOFOLLOW", 0)' in source
+    namespace: dict[str, object] = {}
+    exec(compile(source, "glance-config-writer", "exec"), namespace)
+
+    class OpsProxy:
+        def __getattr__(self, name: str) -> object:
+            if name == "fchown":
+                return lambda *_args: None
+            if name == "replace":
+                return lambda *_args: (_ for _ in ()).throw(OSError("replace failure"))
+            return getattr(os, name)
+
+    target = tmp_path / "glance-api.conf"
+    target.write_text("[DEFAULT]\n", encoding="utf-8")
+    with pytest.raises(OSError, match="replace failure"):
+        namespace["write_glance_config"](target, "memory-only", 0, ops=OpsProxy())
+    assert target.read_text(encoding="utf-8") == "[DEFAULT]\n"
+    assert list(tmp_path.glob(".glance-api.conf.task5c.*")) == []
+
+    markdown = manual_markdown("04-glance.md")
+    second_load = markdown.index('load_runtime_secret OPENSTACK_DEPLOY_PASSWORD || die "secret load before validation failed"')
+    unset_function = markdown.index("unset -f load_runtime_secret", second_load)
+    assert second_load < unset_function
+    snapshot = (MANUAL_INSTALL_DIR / "config-snapshots" / "controller-glance-api.conf").read_text(encoding="utf-8")
+    assert "<DB_PASSWORD>" in snapshot and "<SERVICE_PASSWORD>" in snapshot
+    assert 'quote(runtime_password, safe="")' in snapshot
+    assert "enabled_backends = file:file" in snapshot
+    assert "filesystem_store_datadir = /var/lib/glance/images/" in snapshot
+
+
+def test_manual_glance_schema_api_and_later_boundaries_are_fail_closed() -> None:
+    text = manual_shell_text("04-glance.md")
+    active = "\n".join(active_lines(text))
+    assert "su -s /bin/sh -c 'glance-manage db_sync' glance" in active
+    assert "COUNT(DISTINCT TABLE_NAME)" in active
+    assert "alembic_version" in active and "image_locations" in active and "task_info" in active
+    assert "systemctl enable --now openstack-glance-api" in active
+    assert "sport = :9292" in active and "wc -l" in active
+    assert "openstack token issue -f value -c expires >/dev/null" in active
+    assert "openstack image list -f json" in active
+    markdown = manual_markdown("04-glance.md")
+    assert all(package in markdown for package in (
+        "openstack-placement-api", "openstack-nova-common", "openstack-neutron-common",
+        "openstack-cinder-common", "openstack-swift-common", "python3-horizon",
+    ))
+    assert markdown.index("glance-manage db_sync") < markdown.index("systemctl enable --now openstack-glance-api")
+
+
+def test_manual_glance_image_lifecycle_exact_ownership_and_cleanup() -> None:
+    source = next(
+        block for block in markdown_fenced_blocks("04-glance.md", "python")
+        if "def classify_task_image" in block
+    )
+    namespace: dict[str, object] = {}
+    exec(compile(source, "glance-task-image-classifier", "exec"), namespace)
+    classify = namespace["classify_task_image"]
+    assert classify([], "task", "owner", "artifact") == "ABSENT"
+    good = {"id": "image-id", "name": "task", "properties": {"task_owner": "owner", "task_artifact": "artifact"}}
+    assert classify([good], "task", "owner", "artifact") == "image-id"
+    with pytest.raises(RuntimeError, match="ambiguous"):
+        classify([good, dict(good, id="other")], "task", "owner", "artifact")
+    wrong = json.loads(json.dumps(good))
+    wrong["properties"]["task_owner"] = "someone-else"
+    with pytest.raises(RuntimeError, match="not exactly task-owned"):
+        classify([wrong], "task", "owner", "artifact")
+
+    active = "\n".join(active_lines(manual_shell_text("04-glance.md")))
+    assert "task5c-synthetic-validation-v1" in active
+    assert "task_owner=\"$task_owner\"" in active and "task_artifact=\"$task_artifact\"" in active
+    assert "--disk-format raw" in active and "--container-format bare" in active and "--private" in active
+    assert "sha256sum" in active and "cmp -s -- \"$payload\" \"$download\"" in active
+    assert "openstack image delete \"$image_id\"" in active
+    assert "rm -f -- \"$payload\" \"$download\"" in active and "rmdir -- \"$workdir\"" in active
+    assert "openstack image delete --" not in active
