@@ -7,11 +7,13 @@ import json
 import os
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import tempfile
 import textwrap
 import types
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -3307,3 +3309,170 @@ def test_manual_nova_has_one_guarded_entry_and_final_two_node_audit() -> None:
         "exactly one `compute` host mapping", "FINAL_NOVA_AUDIT=PASS",
         "Neutron and later", "no task temporary files",
     ))
+
+
+def test_manual_nova_exact_grant_validator_rejects_host_scope_and_extra_privileges() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "validate_nova_grant_evidence")
+    account = {
+        "global": [["USAGE", "NO"]],
+        "schema": [
+            [database, privilege, "NO"]
+            for database in sorted(namespace["EXPECTED_NOVA_DATABASES"])
+            for privilege in sorted(namespace["EXPECTED_SCHEMA_PRIVILEGES"])
+        ],
+        "table": [], "column": [], "routine": [],
+    }
+    good = {
+        "hosts": ["%", "127.0.0.1", "localhost"],
+        "accounts": {
+            host: json.loads(json.dumps(account))
+            for host in ("%", "127.0.0.1", "localhost")
+        },
+        "proxy": [], "roles": [],
+    }
+    namespace["validate_nova_grant_evidence"](good)
+    mutations: list[dict] = []
+    extra_host = json.loads(json.dumps(good)); extra_host["hosts"].append("controller"); mutations.append(extra_host)
+    wrong_scope = json.loads(json.dumps(good)); wrong_scope["accounts"]["localhost"]["schema"].append(["neutron", "SELECT", "NO"]); mutations.append(wrong_scope)
+    extra_global = json.loads(json.dumps(good)); extra_global["accounts"]["%"]["global"].append(["SUPER", "NO"]); mutations.append(extra_global)
+    extra_table = json.loads(json.dumps(good)); extra_table["accounts"]["127.0.0.1"]["table"].append(["nova", "instances", "SELECT"]); mutations.append(extra_table)
+    extra_proxy = json.loads(json.dumps(good)); extra_proxy["proxy"].append(["nova", "root"]); mutations.append(extra_proxy)
+    for mutation in mutations:
+        with pytest.raises(ValueError):
+            namespace["validate_nova_grant_evidence"](mutation)
+
+
+class _FakeNovaIdentity:
+    def __init__(self, scenario: str) -> None:
+        self.scenario = scenario
+        self.user = scenario == "exact"
+        self.assignment = scenario == "exact"
+        self.service = scenario == "exact"
+        self.interfaces = ["public", "internal", "admin"] if scenario == "exact" else []
+        if scenario == "partial-endpoints":
+            self.user = self.assignment = self.service = True
+            self.interfaces = ["public"]
+        self.mutations: list[list[str]] = []
+
+    def query(self, args: list[str]) -> object:
+        key = tuple(args[:2])
+        if key == ("project", "list"): return [{"ID": "project-id", "Name": "service"}]
+        if key == ("role", "list"): return [{"ID": "role-id", "Name": "admin"}]
+        if key == ("user", "list"):
+            if self.scenario == "duplicate-user": return [{"ID": "u1", "Name": "nova"}, {"ID": "u2", "Name": "nova"}]
+            return [{"ID": "user-id", "Name": "nova"}] if self.user else []
+        if key == ("user", "show"):
+            return {"id": "user-id", "name": "nova", "domain_id": "default", "enabled": True}
+        if key == ("role", "assignment"):
+            return [{"Role": "role-id", "User": "user-id", "Project": "project-id", "Group": "", "Domain": "", "System": "", "Inherited": False}] if self.assignment else []
+        if key == ("service", "list"):
+            return [{"ID": "service-id", "Name": "nova", "Type": "compute"}] if self.service else []
+        if key == ("service", "show"):
+            return {"id": "service-id", "name": "nova", "type": "compute", "enabled": True}
+        if key == ("endpoint", "list"):
+            return [{"ID": f"endpoint-{name}", "Interface": name} for name in self.interfaces]
+        if key == ("endpoint", "show"):
+            interface = args[2].removeprefix("endpoint-")
+            return {"id": args[2], "interface": interface, "region": "RegionOne", "service_id": "service-id", "url": "http://controller:8774/v2.1", "enabled": True}
+        raise AssertionError(f"unexpected Nova identity query: {args}")
+
+    def mutate(self, args: list[str]) -> None:
+        self.mutations.append(args)
+        key = tuple(args[:2])
+        if key == ("user", "create"): self.user = True
+        elif key == ("role", "add"): self.assignment = True
+        elif key == ("service", "create"): self.service = True
+        elif key == ("endpoint", "create"): self.interfaces.append(args[-2])
+        else: raise AssertionError(f"unexpected Nova identity mutation: {args}")
+
+
+def test_manual_nova_identity_stages_create_requery_and_fail_closed() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "ensure_nova_identity_objects")
+    exact = _FakeNovaIdentity("exact")
+    result = namespace["ensure_nova_identity_objects"]("memory-only", exact.query, exact.mutate)
+    assert result["user"]["name"] == "nova" and len(result["endpoints"]) == 3
+    assert exact.mutations == []
+
+    zero = _FakeNovaIdentity("zero")
+    result = namespace["ensure_nova_identity_objects"]("memory-only", zero.query, zero.mutate)
+    assert len(result["endpoints"]) == 3
+    assert [args[:2] for args in zero.mutations] == [
+        ["user", "create"], ["role", "add"], ["service", "create"],
+        ["endpoint", "create"], ["endpoint", "create"], ["endpoint", "create"],
+    ]
+
+    for scenario in ("duplicate-user", "partial-endpoints"):
+        fake = _FakeNovaIdentity(scenario)
+        with pytest.raises(ValueError):
+            namespace["ensure_nova_identity_objects"]("memory-only", fake.query, fake.mutate)
+        assert fake.mutations == []
+
+
+@pytest.mark.parametrize(
+    ("document", "function_name"),
+    (("06-nova-controller.md", "write_nova_config"), ("07-nova-compute.md", "write_compute_nova_config")),
+)
+def test_manual_nova_atomic_config_failure_preserves_package_default(
+    document: str, function_name: str, tmp_path: Path
+) -> None:
+    namespace = _nova_python_function_namespace(document, function_name)
+    class Ops:
+        def __getattr__(self, name: str) -> object:
+            if name in {"fchown", "fchmod"}: return lambda *_args: None
+            if name == "replace": return lambda *_args: (_ for _ in ()).throw(OSError("replace failed"))
+            return getattr(os, name)
+    target = tmp_path / "nova.conf"; target.write_text("package-default\n", encoding="utf-8")
+    with pytest.raises(OSError, match="replace failed"):
+        namespace[function_name](target, "p@ss:/word", 0, 0, ops=Ops(), nonce="failure")
+    assert target.read_text(encoding="utf-8") == "package-default\n"
+    assert not list(tmp_path.glob(".nova.conf.task5e.*"))
+
+
+def test_manual_nova_compute_id_creation_rerun_and_failure_cleanup(tmp_path: Path) -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "ensure_compute_id")
+    account = types.SimpleNamespace(pw_uid=0, pw_gid=0)
+    fixed = uuid.UUID("11111111-1111-4111-8111-111111111111")
+
+    class Ops:
+        O_WRONLY = os.O_WRONLY; O_CREAT = os.O_CREAT; O_EXCL = os.O_EXCL
+        O_RDONLY = os.O_RDONLY; O_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+        O_DIRECTORY = getattr(os, "O_DIRECTORY", 0)
+        def __init__(self, fail_write: bool = False) -> None: self.fail_write = fail_write
+        def __getattr__(self, name: str) -> object: return getattr(os, name)
+        def fchown(self, *_args: object) -> None: return None
+        def fchmod(self, *_args: object) -> None: return None
+        def _meta(self, value: os.stat_result) -> object:
+            return types.SimpleNamespace(st_mode=stat.S_IFREG | 0o644, st_uid=0, st_gid=0, st_nlink=1, st_dev=value.st_dev, st_ino=value.st_ino)
+        def fstat(self, fd: int) -> object: return self._meta(os.fstat(fd))
+        def lstat(self, path: Path) -> object: return self._meta(os.lstat(path))
+        def open(self, path: str, flags: int, mode: int = 0o777) -> int:
+            if Path(path).is_dir(): return -999
+            return os.open(path, flags, mode)
+        def fsync(self, fd: int) -> None:
+            if fd != -999: os.fsync(fd)
+        def close(self, fd: int) -> None:
+            if fd != -999: os.close(fd)
+        def write(self, fd: int, payload: bytes) -> int:
+            if self.fail_write: raise OSError("injected write failure")
+            return os.write(fd, payload)
+
+    target = tmp_path / "compute_id"; ops = Ops()
+    state, value = namespace["ensure_compute_id"](target, account=account, ops=ops, value_factory=lambda: fixed)
+    assert state == "created" and value == fixed
+    state, repeated = namespace["ensure_compute_id"](target, account=account, ops=ops, value_factory=lambda: uuid.uuid4())
+    assert state == "existing-stable" and repeated == fixed
+
+    failed = tmp_path / "failed_compute_id"
+    with pytest.raises(OSError, match="injected write failure"):
+        namespace["ensure_compute_id"](failed, account=account, ops=Ops(fail_write=True), value_factory=lambda: fixed)
+    assert not failed.exists()
+
+
+def test_manual_nova_cell_mapping_commands_are_idempotent_and_url_safe() -> None:
+    bash = manual_shell_text("06-nova-controller.md")
+    assert "cell0_count" in bash and "cell1_count" in bash
+    assert "[[ $cell0_count == 0 || $cell0_count == 1 ]]" in bash
+    assert "[[ $cell1_count == 0 || $cell1_count == 1 ]]" in bash
+    assert "if [[ $cell0_count == 0 ]]; then nova-manage cell_v2 map_cell0; fi" in bash
+    assert "if [[ $cell1_count == 0 ]]; then nova-manage cell_v2 create_cell --name=cell1; fi" in bash
+    assert "list_cells --verbose" not in bash and "create_cell --name=cell1 --verbose" not in bash

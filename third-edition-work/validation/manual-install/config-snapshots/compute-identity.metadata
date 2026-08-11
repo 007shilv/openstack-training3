@@ -1,0 +1,8 @@
+path=/etc/nova/compute_id
+type=regular-non-symlink
+owner=nova:nova
+mode=0644
+links=1
+value=<COMPUTE_ID>
+validation=canonical-nonzero-uuid
+rerun=existing-stable-never-rotate
