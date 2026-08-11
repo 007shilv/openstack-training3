@@ -333,7 +333,7 @@ load_runtime_secret() {
 
 ### 创建数据库和参数化授权
 
-`%` 必须作为数据库参数传入，不能放进 PyMySQL 的格式字符串。只查询数据库名和 `User/Host`，绝不查询或记录 `authentication_string`、口令摘要或真实口令。
+`%` 必须作为数据库参数传入，不能放进 PyMySQL 的格式字符串。验证过程查询数据库名、`User/Host` 及不含凭据的授权元数据，但绝不查询或记录 `authentication_string`、password hash、认证字符串、真实口令或其他凭据内容。
 
 ```bash
 load_runtime_secret OPENSTACK_DEPLOY_PASSWORD || die "runtime secret failed closed"
