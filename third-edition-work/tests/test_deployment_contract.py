@@ -3125,3 +3125,185 @@ def test_manual_placement_keeps_one_authoritative_api_validator() -> None:
     assert "payload['versions'][0]['id']" not in bash
     assert "provider_status=$(curl" not in bash
     assert "run_placement_api_validation(curl_placement_request)" in markdown
+
+
+def _nova_python_function_namespace(document: str, required_name: str) -> dict[str, object]:
+    candidates = markdown_fenced_blocks(document, "python")
+    candidates.extend(
+        body for _opener, _delimiter, body in shell_sections(manual_shell_text(document))[1]
+    )
+    source = next(block for block in candidates if f"def {required_name}" in block)
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.AnnAssign, ast.FunctionDef, ast.ClassDef))
+    ]
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), f"nova-{required_name}", "exec"), namespace)
+    return namespace
+
+
+def test_manual_nova_documents_preserve_the_mandatory_cross_node_order() -> None:
+    controller = manual_markdown("06-nova-controller.md")
+    compute = manual_markdown("07-nova-compute.md")
+    controller_markers = (
+        "双节点单一起始门", "Nova 控制节点软件包", "三个数据库与最小授权",
+        "Nova 身份对象", "控制节点原子配置", "API 数据库、cell0 与 cell1",
+        "控制平面服务与 API", "重新执行计算节点写前门",
+    )
+    compute_markers = (
+        "计算节点本地源软件包", "计算节点原子配置", "稳定 compute_id",
+        "libvirt 先于 nova-compute", "主机发现", "最终双节点审计",
+    )
+    assert [controller.index(x) for x in controller_markers] == sorted(controller.index(x) for x in controller_markers)
+    assert [compute.index(x) for x in compute_markers] == sorted(compute.index(x) for x in compute_markers)
+
+
+def test_manual_nova_guard_uses_strict_host_trust_and_blocks_partial_state() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "run_after_both_nova_gates")
+    assert all(token in manual_markdown("06-nova-controller.md") for token in (
+        "paramiko.RejectPolicy()", "known_hosts.controller", "known_hosts.compute",
+        "partial Nova package state", "nova_api", "nova_cell0", "resource_providers",
+        "ens34", "/dev/sdb", "/dev/sdc", "wipefs --no-act", "blkid -p",
+    ))
+    calls: list[str] = []
+    class Client:
+        def __init__(self, name: str) -> None: self.name = name
+        def close(self) -> None: calls.append(f"close:{self.name}")
+    def connector(name: str, _password: str) -> Client:
+        calls.append(f"connect:{name}"); return Client(name)
+    for failing in ("controller", "compute"):
+        calls.clear()
+        def runner(client: Client, _script: str, failing: str = failing) -> None:
+            calls.append(f"run:{client.name}")
+            if client.name == failing: raise RuntimeError(f"{failing} failed")
+        with pytest.raises(RuntimeError, match=f"{failing} failed"):
+            namespace["run_after_both_nova_gates"](
+                "memory-only", lambda: calls.append("MUTATION"), connector=connector, runner=runner
+            )
+        assert "MUTATION" not in calls
+
+
+@pytest.mark.parametrize("document", ("06-nova-controller.md", "07-nova-compute.md"))
+def test_manual_nova_transactions_are_local_only_and_reject_unsafe_actions(document: str) -> None:
+    text = manual_shell_text(document)
+    active = "\n".join(active_lines(text))
+    assert "--disablerepo='*'" in active and "--enablerepo='openstack-local'" in active
+    assert "--setopt=install_weak_deps=False" in active
+    assert not any(flag in active for flag in ("--allowerasing", "--nodeps", "--skip-broken"))
+    assert all(action in text for action in ("Removing", "Erasing", "Obsoleting", "Replacing", "Downgrading"))
+    assert "dnf history info" in text and "EXACT_" in text and "NEVRAS" in text
+
+
+@pytest.mark.parametrize(
+    ("record", "metadata", "expected"),
+    (
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 600 1", True),
+        ("OPENSTACK_DEPLOY_PASSWORD=\n", "root:root 600 1", False),
+        ("OTHER=memory-only\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=one\nEXTRA=two\n", "root:root 600 1", False),
+        ("OPENSTACK_DEPLOY_PASSWORD=memory-only\n", "root:root 644 1", False),
+    ),
+)
+def test_manual_nova_secret_loader_fails_closed(
+    tmp_path: Path, record: str, metadata: str, expected: bool
+) -> None:
+    definition = shell_function_definition(manual_shell_text("06-nova-controller.md"), "load_runtime_secret")
+    secret = tmp_path / "secret"; secret.write_text(record, encoding="utf-8", newline="\n")
+    completed = run_git_bash(
+        f"set -Eeuo pipefail\n{definition}\nstat(){{ printf '%s\\n' {shlex.quote(metadata)}; }}\n"
+        f"set +e; load_runtime_secret loaded {shlex.quote(str(secret))}; rc=$?; set -e\n"
+        "[[ $rc -eq 0 && $loaded == memory-only ]]\n"
+    )
+    assert (completed.returncode == 0) is expected
+
+
+def test_manual_nova_database_code_is_parameterized_and_exactly_three_scopes() -> None:
+    text = manual_shell_text("06-nova-controller.md")
+    body = next(body for _opener, _delimiter, body in shell_sections(text)[1] if "CREATE DATABASE IF NOT EXISTS" in body and "nova_cell0" in body)
+    constants = {
+        node.value for node in ast.walk(ast.parse(body))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    assert "CREATE DATABASE IF NOT EXISTS `{}`" in constants
+    assert "CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s" in constants
+    assert "GRANT ALL PRIVILEGES ON `{}`.* TO %s@%s" in constants
+    assert all(name in body for name in ("nova_api", "nova", "nova_cell0"))
+    assert "authentication_string" not in text
+
+
+def test_manual_nova_identity_and_endpoint_stages_are_explicit_and_exact() -> None:
+    text = manual_markdown("06-nova-controller.md")
+    assert all(token in text for token in (
+        "def ensure_nova_identity_objects", "enabled Default-domain `nova`", "global-admin",
+        "name=`nova`、type=`compute`", "http://controller:8774/v2.1",
+        "public", "internal", "admin", "create/requery/immediate validation",
+    ))
+    assert "|| true" not in manual_shell_text("06-nova-controller.md")
+
+
+def test_manual_nova_atomic_configs_and_snapshots_are_sanitized() -> None:
+    controller = _nova_python_function_namespace("06-nova-controller.md", "write_nova_config")
+    compute = _nova_python_function_namespace("07-nova-compute.md", "write_compute_nova_config")
+    assert callable(controller["write_nova_config"])
+    assert callable(compute["write_compute_nova_config"])
+    snapshots = MANUAL_INSTALL_DIR / "config-snapshots"
+    for name in ("controller-nova.conf", "compute-nova.conf"):
+        payload = (snapshots / name).read_text(encoding="utf-8")
+        assert "<SERVICE_PASSWORD>" in payload and "<URL_ENCODED_DB_PASSWORD>" in payload
+        assert "guosai" not in payload and "rabbit://openstack:@" not in payload
+    identity = (snapshots / "compute-identity.metadata").read_text(encoding="utf-8")
+    assert "<COMPUTE_ID>" in identity
+    assert not re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", identity, re.I)
+
+
+def test_manual_nova_cell_state_machine_and_upgrade_gate_precede_services() -> None:
+    markdown = manual_markdown("06-nova-controller.md")
+    active = "\n".join(active_lines(manual_shell_text("06-nova-controller.md")))
+    for token in (
+        "nova-manage api_db sync", "nova-manage cell_v2 map_cell0",
+        "nova-manage cell_v2 create_cell --name=cell1", "nova-manage db sync",
+        "nova-status upgrade check",
+    ):
+        assert token in markdown
+    assert markdown.index("nova-manage api_db sync") < markdown.index("systemctl enable --now openstack-nova-api")
+    assert "--verbose" not in active
+
+
+def test_manual_nova_compute_identity_is_exclusive_stable_and_no_follow() -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "ensure_compute_id")
+    source = next(block for block in markdown_fenced_blocks("07-nova-compute.md", "python") if "def ensure_compute_id" in block)
+    assert all(token in source for token in ("O_CREAT", "O_EXCL", "O_NOFOLLOW", "lstat", "S_ISREG", "uuid.UUID"))
+    assert "never rotate" in manual_markdown("07-nova-compute.md")
+    assert callable(namespace["ensure_compute_id"])
+
+
+def test_manual_nova_service_host_discovery_and_inventory_order() -> None:
+    controller = manual_markdown("06-nova-controller.md")
+    compute = manual_markdown("07-nova-compute.md")
+    assert controller.index("openstack-nova-api") < controller.index("openstack-nova-scheduler")
+    assert compute.index("systemctl enable --now libvirtd") < compute.index("systemctl enable --now openstack-nova-compute")
+    assert compute.index("openstack-nova-compute") < compute.index("nova-manage cell_v2 discover_hosts")
+    for token in ("--by-service", "scheduler", "conductor", "compute", "hypervisor", "resource_providers", "VCPU", "MEMORY_MB", "DISK_GB"):
+        assert token in compute
+
+
+def test_manual_nova_future_boundaries_and_disk_guards_are_explicit() -> None:
+    combined = manual_markdown("06-nova-controller.md") + manual_markdown("07-nova-compute.md")
+    for token in (
+        "openstack-neutron-common", "openstack-cinder-common", "openstack-swift-common",
+        "python3-horizon", "/dev/sdb", "/dev/sdc", "53687091200",
+        "lsblk -s -nrpo NAME", "wipefs --no-act", "blkid -p",
+        "不创建实例", "不创建网络", "不创建规格", "不上传镜像",
+    ):
+        assert token in combined
+
+
+def test_manual_nova_has_one_guarded_entry_and_final_two_node_audit() -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "run_nova_final_audits")
+    assert all(name in namespace for name in ("FINAL_CONTROLLER_AUDIT", "FINAL_COMPUTE_AUDIT", "run_nova_final_audits"))
+    markdown = manual_markdown("07-nova-compute.md")
+    assert all(token in markdown for token in (
+        "exactly one `compute` host mapping", "FINAL_NOVA_AUDIT=PASS",
+        "Neutron and later", "no task temporary files",
+    ))
