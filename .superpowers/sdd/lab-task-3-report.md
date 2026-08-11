@@ -16,8 +16,10 @@
 
 ## Remote parser checkpoint
 
-Remote `bash -n -s` parsing on controller `192.168.234.151` is deliberately not attempted until a pre-verified `known_hosts` entry or fingerprint is supplied.  The local known-hosts store has no entry for that address and the controlled documentation explicitly forbids treating `ssh-keyscan` output as identity verification.  No credential was written to this report, source code, command examples, or logs (`<REDACTED>`).
+Remote parsing completed on controller `192.168.234.151`: all 17 scripts passed `bash -n -s`.  Each script was sent only through standard input to a separate remote syntax-parser process; none was saved, sourced, or executed.  The target reported `openEuler release 24.03 (LTS-SP3)`.
+
+Before authentication, the controller VMX MAC address was matched to the Windows VMnet8 neighbour entry, and two unauthenticated handshakes returned the same ED25519 host key, fingerprint `SHA256:pDvchiPMwmZkhINk+30i1SZR7OjrZseDGUw4mKfLlVE`.  The reviewed `known_hosts` entry was loaded with Paramiko `RejectPolicy`.  The detailed, credential-free evidence is in `third-edition-work/validation/static/bash-syntax-openeuler.txt`; no credential was written to this report, source code, command examples, or logs (`<REDACTED>`).
 
 ## Risk
 
-The only outstanding risk is the unverified controller host key, which blocks the required remote read-only parser checkpoint.  No deployment command, storage operation, VM change, service change, or source-archive mutation was performed.
+The remote syntax checkpoint validates parsing only; it cannot establish runtime package availability or deployment correctness.  No deployment command, storage operation, VM change, service change, or source-archive mutation was performed.

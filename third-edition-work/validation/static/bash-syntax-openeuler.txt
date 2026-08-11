@@ -1,0 +1,26 @@
+Lab Task 3 — openEuler remote Bash syntax checkpoint
+
+Target: controller role, 192.168.234.151
+Platform: openEuler release 24.03 (LTS-SP3)
+Host identity verification: the controller VMX ethernet0.generatedAddress (00:0c:29:0c:98:b6) matches the Windows VMnet8 neighbour entry for 192.168.234.151 (00-0c-29-0c-98-b6). Two unauthenticated SSH handshakes returned the same ED25519 host key, verified as SHA256:pDvchiPMwmZkhINk+30i1SZR7OjrZseDGUw4mKfLlVE. Connection used the reviewed strict known_hosts entry with Paramiko RejectPolicy.
+Command semantics: each listed local script was sent as standard input to a distinct remote `bash -n -s` process. The remote command parsed shell syntax only; it did not save, source, or execute the script. No password, public-key base64 material, or deployment command appears in this record.
+
+PASS 01-controller-network.sh
+PASS 02-compute-network.sh
+PASS 03-controller-base.sh
+PASS 04-compute-base.sh
+PASS 05-controller-services.sh
+PASS 06-controller-keystone.sh
+PASS 07-controller-glance.sh
+PASS 08-controller-placement.sh
+PASS 09-controller-nova.sh
+PASS 10-compute-nova.sh
+PASS 11-controller-neutron.sh
+PASS 12-compute-neutron.sh
+PASS 13-controller-cinder.sh
+PASS 14-compute-cinder.sh
+PASS 15-controller-swift.sh
+PASS 16-compute-swift.sh
+PASS 17-controller-horizon.sh
+
+Result: 17/17 PASS.
