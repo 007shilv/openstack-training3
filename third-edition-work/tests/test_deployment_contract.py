@@ -201,13 +201,43 @@ def role_identity_violations(script_name: str, text: str) -> list[str]:
                 tree = ast.parse(body)
             except SyntaxError:
                 continue
+            python_constants: dict[str, str] = {}
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                    python_constants[node.targets[0].id] = node.value.value
+            def python_string(node: ast.expr) -> str | None:
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    return node.value
+                if isinstance(node, ast.Name):
+                    return python_constants.get(node.id)
+                return None
+            safe_dynamic_keys: set[str] = set()
+            dictionary_keys = {
+                key.value
+                for item in ast.walk(tree)
+                if isinstance(item, ast.Dict)
+                for key in item.keys
+                if isinstance(key, ast.Constant) and isinstance(key.value, str)
+            }
+            for item in ast.walk(tree):
+                if not isinstance(item, ast.For) or not isinstance(item.target, ast.Tuple) or not item.target.elts:
+                    continue
+                if not isinstance(item.iter, ast.Call) or not isinstance(item.iter.func, ast.Attribute) or item.iter.func.attr != "items":
+                    continue
+                first_target = item.target.elts[0]
+                if isinstance(first_target, ast.Name) and not (dictionary_keys & identity_keys):
+                    safe_dynamic_keys.add(first_target.id)
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "set":
                     continue
-                if len(node.args) < 3 or not isinstance(node.args[1], ast.Constant) or node.args[1].value not in identity_keys:
+                if len(node.args) < 3:
                     continue
-                value = node.args[2].value if isinstance(node.args[2], ast.Constant) and isinstance(node.args[2].value, str) else None
-                check_identity(node.args[1].value, value)
+                key = python_string(node.args[1])
+                if key is None:
+                    if not (isinstance(node.args[1], ast.Name) and node.args[1].id in safe_dynamic_keys):
+                        violations.append("cfg.set identity key is not a parseable literal")
+                elif key in identity_keys:
+                    check_identity(key, python_string(node.args[2]))
         elif command == "cat":
             for raw in body.splitlines():
                 line = raw.strip()
@@ -305,16 +335,28 @@ def antelope_contract_violations(text: str) -> list[str]:
         if parsed is None:
             continue
         command, arguments = parsed
-        if command in {"dnf", "dnf_install_prefer_local"} and "openstack-release-antelope" in arguments:
+        if command == "dnf" and "install" in arguments and "openstack-release-antelope" in arguments and arguments.index("install") < arguments.index("openstack-release-antelope"):
             installs_release = True
     if not installs_release:
         violations.append("no active dnf install command for openstack-release-antelope")
+    def sed_is_required_rewrite(arguments: list[str]) -> bool:
+        positional = [argument for argument in arguments if not argument.startswith("-")]
+        if len(positional) < 2:
+            return False
+        expression, target = positional[0], positional[-1]
+        if len(expression) < 4 or expression[0] != "s":
+            return False
+        delimiter = expression[1]
+        fields = expression[2:].split(delimiter)
+        return (
+            len(fields) >= 3
+            and fields[0] == "openEuler-24.03-LTS-SP3"
+            and fields[1] == "openEuler-24.03-LTS-SP2"
+            and resolve_value(target, constants) == "/etc/yum.repos.d/openstack-antelope.repo"
+        )
+
     shell_rewrite = any(
-        (parsed := first_shell_command(line)) is not None
-        and parsed[0] == "sed"
-        and "openEuler-24.03-LTS-SP3" in line
-        and "openEuler-24.03-LTS-SP2" in line
-        and resolve_value(parsed[1][-1], constants) == "/etc/yum.repos.d/openstack-antelope.repo"
+        (parsed := first_shell_command(line)) is not None and parsed[0] == "sed" and sed_is_required_rewrite(parsed[1])
         for line in lines
     )
     if not shell_rewrite:
@@ -515,3 +557,26 @@ def test_nonexecuting_disk_text_and_option_positions_are_handled() -> None:
     assert destructive_disk_violations("echo pvcreate /dev/sda\nprintf 'mkfs.xfs /dev/sda'\n") == []
     assert destructive_disk_violations("vgcreate --physicalextentsize 4M cinder-volumes /dev/sdb\n") == []
     assert destructive_disk_violations("parted --align optimal /dev/sdb print\n") == []
+
+
+def test_antelope_rejects_non_install_dnf_actions_and_invalid_sed_expressions() -> None:
+    base = 'ANTELOPE_REPO_FILE="/etc/yum.repos.d/openstack-antelope.repo"\n'
+    rewrite = "sed -ri 's#openEuler-24.03-LTS-SP3#openEuler-24.03-LTS-SP2#g' \"${ANTELOPE_REPO_FILE}\"\n"
+    assert antelope_contract_violations(base + "dnf remove openstack-release-antelope\n" + rewrite)
+    install = base + "dnf install openstack-release-antelope\n"
+    assert antelope_contract_violations(install + "sed -ri 's#openEuler-24.03-LTS-SP2#openEuler-24.03-LTS-SP3#g' \"${ANTELOPE_REPO_FILE}\"\n")
+    assert antelope_contract_violations(install + "sed -n 'openEuler-24.03-LTS-SP3 openEuler-24.03-LTS-SP2' \"${ANTELOPE_REPO_FILE}\"\n")
+
+
+def test_python_cfg_set_resolves_constant_key_and_value_variables() -> None:
+    template = """\
+python3 - <<'PY'
+key = 'my_ip'
+value = '192.168.234.{}'
+cfg.set('DEFAULT', key, value)
+PY
+"""
+    assert role_identity_violations("10-compute-nova.sh", template.format("151"))
+    assert role_identity_violations("10-compute-nova.sh", template.format("150")) == []
+    unknown_key = "python3 - <<'PY'\ncfg.set('DEFAULT', key, '192.168.234.150')\nPY\n"
+    assert role_identity_violations("10-compute-nova.sh", unknown_key)
