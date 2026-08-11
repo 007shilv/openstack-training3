@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import json
 import os
 import re
@@ -3476,3 +3477,543 @@ def test_manual_nova_cell_mapping_commands_are_idempotent_and_url_safe() -> None
     assert "if [[ $cell0_count == 0 ]]; then nova-manage cell_v2 map_cell0; fi" in bash
     assert "if [[ $cell1_count == 0 ]]; then nova-manage cell_v2 create_cell --name=cell1; fi" in bash
     assert "list_cells --verbose" not in bash and "create_cell --name=cell1 --verbose" not in bash
+
+
+def _exact_nova_start_evidence() -> dict[str, object]:
+    interfaces = ("admin", "internal", "public")
+    endpoints = [
+        {"service": service, "interface": interface, "region": "RegionOne", "url": url,
+         "enabled": True, "service_id": f"{service}-id"}
+        for service, url in (
+            ("identity", "http://controller:5000/v3/"),
+            ("image", "http://controller:9292"),
+            ("placement", "http://controller:8778"),
+        )
+        for interface in interfaces
+    ]
+    return {
+        "controller": {
+            "probe_errors": [], "hostname": "controller", "ens33": "192.168.234.151/24",
+            "ens34_ipv4": [], "ntp": True, "enabled_repositories": ["openstack-local"],
+            "prerequisite_packages": {"openstack-keystone", "openstack-glance-api", "openstack-placement-api"},
+            "prerequisite_services": {
+                "chronyd", "mariadb", "rabbitmq-server", "memcached", "httpd", "openstack-glance-api"
+            },
+            "service_project": {"id": "project-id", "name": "service", "domain_id": "default", "enabled": True, "is_domain": False},
+            "global_admin_role": {"id": "role-id", "name": "admin", "domain_id": None},
+            "users": [
+                {"id": "glance-user", "name": "glance", "domain_id": "default", "enabled": True, "project_id": "project-id", "role_id": "role-id"},
+                {"id": "placement-user", "name": "placement", "domain_id": "default", "enabled": True, "project_id": "project-id", "role_id": "role-id"},
+            ],
+            "services": [
+                {"id": "identity-id", "name": "keystone", "type": "identity", "enabled": True},
+                {"id": "image-id", "name": "glance", "type": "image", "enabled": True},
+                {"id": "placement-id", "name": "placement", "type": "placement", "enabled": True},
+            ],
+            "endpoints": endpoints,
+            "apis": {
+                "keystone": {"http": 200, "id": "v3.14", "status": "stable"},
+                "glance": {"http": 300, "id": "v2.15", "status": "CURRENT"},
+                "placement": {"http": 200, "id": "v1.0", "status": "CURRENT", "max_version": "1.39"},
+            },
+            "schemas": {
+                "keystone": {"tables": 49, "heads": ["29e87d24a316", "e25ffa003242"]},
+                "glance": {"tables": 14, "heads": ["2023_1_contract01"]},
+                "placement": {"tables": 13, "heads": ["422ece571366"]},
+            },
+            "placement_upgrade": {"rc": 0, "successes": 3, "failures": 0, "warnings": 0},
+            "placement_providers": [],
+            "nova_and_later": {"packages": [], "databases": [], "db_users": [], "users": [], "services": [], "endpoints": [], "listeners": [], "temporary": []},
+        },
+        "compute": {
+            "probe_errors": [], "hostname": "compute", "ens33": "192.168.234.150/24",
+            "ens34_ipv4": [], "ntp": True, "enabled_repositories": ["openstack-local"],
+            "nova_and_later": {"packages": [], "compute_id": "absent", "temporary": []},
+            "disks": {
+                "/dev/sdb": {"bytes": 53687091200, "type": "disk", "root_ancestor": False, "children": 0, "filesystem": "", "mountpoint": "", "wipefs": [], "blkid_rc": 2},
+                "/dev/sdc": {"bytes": 53687091200, "type": "disk", "root_ancestor": False, "children": 0, "filesystem": "", "mountpoint": "", "wipefs": [], "blkid_rc": 2},
+            },
+        },
+    }
+
+
+def test_review_nova_start_classifier_fails_closed_before_any_stage() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "validate_nova_start_evidence")
+    validate = namespace["validate_nova_start_evidence"]
+    good = _exact_nova_start_evidence()
+    validate("controller", good["controller"])
+    validate("compute", good["compute"])
+
+    mutations: list[tuple[str, dict[str, object]]] = []
+    for role, mutate in (
+        ("controller", lambda e: e["probe_errors"].append("query failed")),
+        ("controller", lambda e: e["users"].append(dict(e["users"][0]))),
+        ("controller", lambda e: e["endpoints"].pop()),
+        ("controller", lambda e: e["apis"]["placement"].update(max_version="1.38")),
+        ("controller", lambda e: e["schemas"]["placement"].update(heads=["wrong"])),
+        ("controller", lambda e: e["placement_upgrade"].update(successes=2)),
+        ("controller", lambda e: e["placement_providers"].append({"name": "early"})),
+        ("controller", lambda e: e["nova_and_later"]["listeners"].append(8774)),
+        ("compute", lambda e: e["probe_errors"].append("blkid failed")),
+        ("compute", lambda e: e["nova_and_later"].update(compute_id="present")),
+        ("compute", lambda e: e["disks"]["/dev/sdb"].update(blkid_rc=4)),
+        ("compute", lambda e: e["disks"]["/dev/sdc"].update(children=1)),
+    ):
+        evidence = copy.deepcopy(good[role])
+        mutate(evidence)
+        mutations.append((role, evidence))
+    for role, evidence in mutations:
+        with pytest.raises((RuntimeError, ValueError)):
+            validate(role, evidence)
+
+
+def test_review_nova_unique_orchestrator_calls_every_production_stage_and_short_circuits_gates() -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "run_guarded_nova_deployment")
+    events: list[str] = []
+
+    def record(name: str, result: object = None):
+        def call(*_args: object, **_kwargs: object) -> object:
+            events.append(name)
+            return result
+        return call
+
+    for name, result in (
+        ("validate_controller_transaction", None), ("collect_grants", {"grants": "exact"}),
+        ("validate_grants", None), ("ensure_identity", {"identity": "exact"}),
+        ("validate_identity", None), ("write_controller_config", None),
+        ("validate_controller_config", None), ("classify_cells", {"cells": "exact"}),
+        ("validate_controller_schema", None), ("validate_compute_transaction", None),
+        ("write_compute_config", None), ("validate_compute_config", None),
+        ("ensure_compute_id", ("existing-stable", uuid.UUID("11111111-1111-4111-8111-111111111111"))),
+        ("validate_compute_id_fd", uuid.UUID("11111111-1111-4111-8111-111111111111")),
+        ("validate_integration", None), ("validate_final", None),
+    ):
+        namespace[name] = record(name, result)
+
+    namespace["validate_nova_transaction_evidence"] = lambda node, evidence: (
+        namespace[f"validate_{node}_transaction"](evidence)
+    )
+    namespace["collect_nova_grant_evidence"] = namespace["collect_grants"]
+    namespace["validate_nova_grant_evidence"] = namespace["validate_grants"]
+    namespace["ensure_nova_identity_objects"] = namespace["ensure_identity"]
+    namespace["validate_nova_identity_evidence"] = namespace["validate_identity"]
+    namespace["write_nova_config"] = namespace["write_controller_config"]
+    namespace["validate_written_nova_config"] = namespace["validate_controller_config"]
+    namespace["classify_cell_state"] = namespace["classify_cells"]
+    namespace["validate_nova_controller_schema"] = namespace["validate_controller_schema"]
+    namespace["write_compute_nova_config"] = namespace["write_compute_config"]
+    namespace["validate_written_compute_nova_config"] = namespace["validate_compute_config"]
+    namespace["ensure_compute_id"] = namespace["ensure_compute_id"]
+    namespace["validate_compute_id_fd"] = namespace["validate_compute_id_fd"]
+    namespace["validate_nova_integration_evidence"] = namespace["validate_integration"]
+    namespace["validate_nova_final_evidence"] = namespace["validate_final"]
+
+    class Runtime:
+        controller_config_args = (Path("/etc/nova/nova.conf"), "secret", 0, 0)
+        compute_config_args = (Path("/etc/nova/nova.conf"), "secret", 0, 0)
+        compute_id_args = (Path("/etc/nova/compute_id"),)
+        def __init__(self, failing_gate: str | None = None) -> None:
+            self.failing_gate = failing_gate
+            self.stage_calls: list[str] = []
+        def run_strict_gate(self, role: str, _password: str) -> None:
+            events.append(f"gate:{role}")
+            if role == self.failing_gate: raise RuntimeError(f"{role} gate failed")
+        def _stage(self, name: str, result: object = None) -> object:
+            self.stage_calls.append(name); events.append(name); return result
+        def install_controller_packages(self) -> object: return self._stage("controller_package", {"tx": 8})
+        def load_secret(self) -> str: return self._stage("secret_loader", "memory-only")
+        def create_controller_databases_and_grants(self, _secret: str) -> None: self._stage("database_create")
+        def grant_cursor(self) -> object: return self._stage("grant_cursor", object())
+        def identity_adapter(self, _secret: str) -> object:
+            return self._stage("identity_adapter", types.SimpleNamespace(query=record("identity_query"), mutate=record("identity_mutate")))
+        def sync_api_database(self) -> None: self._stage("api_db_sync")
+        def collect_and_ensure_cells(self) -> object: return self._stage("cells", {"query_ok": True, "rows": []})
+        def sync_main_database(self) -> None: self._stage("main_db_sync")
+        def collect_controller_schema(self) -> object: return self._stage("controller_schema", {"schema": "exact"})
+        def start_controller_services(self) -> None: self._stage("controller_services")
+        def install_compute_packages(self) -> object: return self._stage("compute_package", {"tx": 3})
+        def start_libvirt(self) -> None: self._stage("libvirt")
+        def start_nova_compute(self) -> None: self._stage("nova_compute")
+        def discover_hosts(self) -> None: self._stage("host_discovery")
+        def collect_integration_evidence(self) -> object: return self._stage("integration_collect", {"state": "exact"})
+        def collect_final_evidence(self) -> object: return self._stage("final_collect", {"state": "exact"})
+        def run_final_node_audits(self, _password: str) -> None: self._stage("final_node_audits")
+
+    for failing_gate, expected_gates in (("controller", ["gate:controller"]),
+                                          ("compute", ["gate:controller", "gate:compute"])):
+        events.clear(); runtime = Runtime(failing_gate)
+        with pytest.raises(RuntimeError, match=f"{failing_gate} gate failed"):
+            namespace["run_guarded_nova_deployment"]("memory-only", runtime)
+        assert events == expected_gates
+        assert runtime.stage_calls == []
+
+    events.clear(); runtime = Runtime()
+    namespace["run_guarded_nova_deployment"]("memory-only", runtime)
+    assert events == [
+        "gate:controller", "gate:compute", "controller_package", "validate_controller_transaction",
+        "secret_loader", "database_create", "grant_cursor", "collect_grants", "validate_grants",
+        "identity_adapter", "ensure_identity", "validate_identity", "write_controller_config",
+        "validate_controller_config", "api_db_sync", "cells", "classify_cells", "main_db_sync",
+        "controller_schema", "validate_controller_schema", "controller_services", "gate:compute",
+        "compute_package", "validate_compute_transaction", "write_compute_config",
+        "validate_compute_config", "ensure_compute_id", "validate_compute_id_fd", "libvirt",
+        "nova_compute", "host_discovery", "integration_collect", "validate_integration",
+        "final_collect", "validate_final", "final_node_audits",
+    ]
+
+
+def test_review_nova_cell_classifier_handles_zero_one_exact_and_all_ambiguous_states_without_urls() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "classify_cell_state")
+    classify = namespace["classify_cell_state"]
+    cell0 = {"name": "cell0", "uuid": "00000000-0000-0000-0000-000000000000", "disabled": False}
+    cell1 = {"name": "cell1", "uuid": "22222222-2222-4222-8222-222222222222", "disabled": False}
+    assert classify({"query_ok": True, "rows": []}) == "create-cell0-then-cell1"
+    assert classify({"query_ok": True, "rows": [cell0]}) == "create-cell1"
+    assert classify({"query_ok": True, "rows": [cell0, cell1]}) == "exact"
+
+    bad_evidence = (
+        {"query_ok": False, "rows": []},
+        {"query_ok": True, "rows": [cell1]},
+        {"query_ok": True, "rows": [cell0, dict(cell0)]},
+        {"query_ok": True, "rows": [cell0, cell1, dict(cell1)]},
+        {"query_ok": True, "rows": [{"name": "cell0", "uuid": "wrong", "disabled": False}]},
+        {"query_ok": True, "rows": [cell0, {"name": "other", "uuid": cell1["uuid"], "disabled": False}]},
+        {"query_ok": True, "rows": [cell0, cell1], "transport_url": "rabbit://user:secret@controller"},
+        {"query_ok": True, "rows": [cell0, cell1], "database_connection": "mysql://user:secret@controller/nova"},
+    )
+    for evidence in bad_evidence:
+        with pytest.raises((RuntimeError, ValueError)) as caught:
+            classify(evidence)
+        message = str(caught.value)
+        assert "secret" not in message and "rabbit://" not in message and "mysql://" not in message
+
+
+def _exact_nova_integration_evidence() -> dict[str, object]:
+    cell1_uuid = "22222222-2222-4222-8222-222222222222"
+    compute_uuid = "11111111-1111-4111-8111-111111111111"
+    service_id = "nova-service-id"
+    return {
+        "query_ok": True,
+        "compute_services": [
+            {"binary": "nova-scheduler", "host": "controller", "state": "up", "status": "enabled"},
+            {"binary": "nova-conductor", "host": "controller", "state": "up", "status": "enabled"},
+            {"binary": "nova-compute", "host": "compute", "state": "up", "status": "enabled"},
+        ],
+        "cells": [
+            {"name": "cell0", "uuid": "00000000-0000-0000-0000-000000000000", "disabled": False},
+            {"name": "cell1", "uuid": cell1_uuid, "disabled": False},
+        ],
+        "host_mappings": [{"host": "compute", "cell_uuid": cell1_uuid}],
+        "hypervisors": [{"name": "compute", "type": "QEMU", "state": "up", "status": "enabled", "uuid": compute_uuid}],
+        "providers": [{"name": "compute", "uuid": compute_uuid}],
+        "inventories": {
+            "VCPU": {"total": 4, "reserved": 0, "min_unit": 1, "max_unit": 4, "step_size": 1, "allocation_ratio": 16.0},
+            "MEMORY_MB": {"total": 7800, "reserved": 512, "min_unit": 1, "max_unit": 7800, "step_size": 1, "allocation_ratio": 1.5},
+            "DISK_GB": {"total": 92, "reserved": 0, "min_unit": 1, "max_unit": 92, "step_size": 1, "allocation_ratio": 1.0},
+        },
+        "nova_identity": {
+            "service": {"id": service_id, "name": "nova", "type": "compute", "enabled": True},
+            "endpoints": [
+                {"service_id": service_id, "interface": interface, "region": "RegionOne", "url": "http://controller:8774/v2.1", "enabled": True}
+                for interface in ("admin", "internal", "public")
+            ],
+        },
+        "nova_api": {"http": 200, "id": "v2.1", "status": "CURRENT", "authenticated": True},
+        "resources": {"images": [], "servers": [], "flavors": []},
+        "database_grants": {
+            "hosts": ["%", "127.0.0.1", "localhost"],
+            "schemas": ["nova", "nova_api", "nova_cell0"],
+            "global_only_usage": True, "object_privileges": 0, "proxy": 0, "roles": 0,
+        },
+        "compute_identity": {"file_uuid": compute_uuid, "database_uuid": compute_uuid, "hypervisor_uuid": compute_uuid,
+                             "owner": "nova:nova", "mode": "0644", "nlink": 1},
+        "upgrade": {"rc": 0, "successes": 7, "failures": 0, "warnings": 0},
+        "later": {"packages": [], "databases": [], "db_users": [], "users": [], "services": [], "endpoints": [], "listeners": []},
+        "disks": _exact_nova_start_evidence()["compute"]["disks"],
+        "temporary": [],
+    }
+
+
+def test_review_nova_integration_and_final_classifiers_reject_duplicates_wrong_bindings_and_invalid_inventory() -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "validate_nova_integration_evidence")
+    validate_integration = namespace["validate_nova_integration_evidence"]
+    validate_final = namespace["validate_nova_final_evidence"]
+    good = _exact_nova_integration_evidence()
+    validate_integration(good)
+
+    mutators = (
+        lambda e: e.update(query_ok=False),
+        lambda e: e["compute_services"].append(dict(e["compute_services"][0])),
+        lambda e: e["compute_services"][2].update(state="down"),
+        lambda e: e["host_mappings"][0].update(cell_uuid="wrong"),
+        lambda e: e["hypervisors"].append(dict(e["hypervisors"][0])),
+        lambda e: e["hypervisors"][0].update(type="KVM"),
+        lambda e: e["providers"].append(dict(e["providers"][0])),
+        lambda e: e["providers"][0].update(uuid="33333333-3333-4333-8333-333333333333"),
+        lambda e: e["inventories"].pop("VCPU"),
+        lambda e: e["inventories"]["MEMORY_MB"].update(reserved=7800),
+        lambda e: e["inventories"]["DISK_GB"].update(total=0),
+        lambda e: e["nova_identity"]["endpoints"].pop(),
+        lambda e: e["nova_api"].update(status="SUPPORTED"),
+        lambda e: e["resources"]["flavors"].append({"name": "unexpected"}),
+        lambda e: e["database_grants"]["hosts"].append("controller"),
+        lambda e: e["compute_identity"].update(database_uuid="33333333-3333-4333-8333-333333333333"),
+        lambda e: e["upgrade"].update(successes=6),
+        lambda e: e["later"]["packages"].append("openstack-neutron-common"),
+        lambda e: e["disks"]["/dev/sdb"].update(wipefs=["LVM2_member"]),
+        lambda e: e["temporary"].append("/root/.task5e-leftover"),
+    )
+    for mutate in mutators:
+        evidence = copy.deepcopy(good); mutate(evidence)
+        with pytest.raises((RuntimeError, ValueError)):
+            validate_integration(evidence)
+
+    final = {
+        "query_ok": True,
+        "integration": good,
+        "controller": {
+            "active_enabled": ["chronyd", "mariadb", "rabbitmq-server", "memcached", "httpd", "openstack-glance-api",
+                               "openstack-nova-api", "openstack-nova-scheduler", "openstack-nova-conductor", "openstack-nova-novncproxy"],
+            "listeners": [5000, 6080, 8774, 8778, 9292], "databases": ["glance", "keystone", "nova", "nova_api", "nova_cell0", "placement"],
+        },
+        "compute": {"active_enabled": ["chronyd", "sshd", "libvirtd", "openstack-nova-compute"],
+                    "virt_type": "qemu", "domains": [], "boot_changed": False},
+    }
+    validate_final(final)
+    for mutate in (
+        lambda e: e.update(query_ok=False),
+        lambda e: e["controller"]["active_enabled"].pop(),
+        lambda e: e["controller"]["listeners"].append(9696),
+        lambda e: e["compute"]["active_enabled"].remove("sshd"),
+        lambda e: e["compute"]["domains"].append("unexpected-domain"),
+        lambda e: e["compute"].update(boot_changed=True),
+    ):
+        evidence = copy.deepcopy(final); mutate(evidence)
+        with pytest.raises((RuntimeError, ValueError)):
+            validate_final(evidence)
+
+
+def test_review_nova_transaction_artifacts_preserve_every_history_row_and_three_way_match() -> None:
+    namespace = _nova_python_function_namespace("06-nova-controller.md", "load_nova_transaction_evidence")
+    load = namespace["load_nova_transaction_evidence"]
+    validate = namespace["validate_nova_transaction_evidence"]
+    root = MANUAL_INSTALL_DIR / "transaction-evidence"
+    controller = load(root / "nova-controller-transaction.txt")
+    compute = load(root / "nova-compute-transaction.txt")
+    validate("controller", controller)
+    validate("compute", compute)
+    assert len(controller["history_new"]) == 40 and controller["history_old"] == []
+    assert sum(row["action"] == "Install" for row in compute["history_new"]) == 398
+    assert sum(row["action"] == "Upgrade" for row in compute["history_new"]) == 5
+    assert len(compute["history_old"]) == 5
+
+    mutators = (
+        lambda e: e["history_new"].pop(),
+        lambda e: e["history_new"].append(dict(e["history_new"][0])),
+        lambda e: e["history_new"][0].update(repo="external"),
+        lambda e: e["history_new"][0].update(action="Downgrade"),
+        lambda e: e["current_rpm"].pop(),
+        lambda e: e["repository_metadata"].pop(),
+        lambda e: e["unsafe_actions"].append("Removing"),
+    )
+    for baseline in (controller, compute):
+        for mutate in mutators:
+            evidence = copy.deepcopy(baseline); mutate(evidence)
+            with pytest.raises((RuntimeError, ValueError)):
+                validate(evidence["node"], evidence)
+
+
+def test_review_nova_compute_id_uses_one_fd_and_rejects_symlink_metadata_content_and_descriptor_swap(tmp_path: Path) -> None:
+    namespace = _nova_python_function_namespace("07-nova-compute.md", "validate_compute_id_fd")
+    validate = namespace["validate_compute_id_fd"]
+    ensure = namespace["ensure_compute_id"]
+    source = next(block for block in markdown_fenced_blocks("07-nova-compute.md", "python") if "def validate_compute_id_fd" in block)
+    assert "path.read_text" not in source
+    assert "ops.read(" in source and source.count("ops.fstat(descriptor)") >= 2
+    assert "ops.O_RDONLY | getattr(ops, \"O_NOFOLLOW\"" in source
+
+    fixed = uuid.UUID("11111111-1111-4111-8111-111111111111")
+    account = types.SimpleNamespace(pw_uid=101, pw_gid=102)
+
+    class StrictOps:
+        O_RDONLY = os.O_RDONLY; O_WRONLY = os.O_WRONLY; O_RDWR = os.O_RDWR; O_CREAT = os.O_CREAT; O_EXCL = os.O_EXCL
+        O_DIRECTORY = getattr(os, "O_DIRECTORY", 0); O_NOFOLLOW = 0x20000000
+        def __init__(self, *, uid: int = 101, gid: int = 102, mode: int = 0o644, nlink: int = 1,
+                     swap_fstat: bool = False, fail_write: bool = False, swap_cleanup: bool = False,
+                     reject_as_symlink: bool = False) -> None:
+            self.uid, self.gid, self.mode, self.nlink = uid, gid, mode, nlink
+            self.swap_fstat, self.fail_write, self.swap_cleanup = swap_fstat, fail_write, swap_cleanup
+            self.reject_as_symlink = reject_as_symlink
+            self.fstat_calls = 0; self.opened_path: Path | None = None
+        def _meta(self, value: os.stat_result, *, swapped: bool = False) -> object:
+            return types.SimpleNamespace(st_mode=stat.S_IFREG | self.mode, st_uid=self.uid, st_gid=self.gid,
+                                         st_nlink=self.nlink, st_dev=value.st_dev,
+                                         st_ino=value.st_ino + (1 if swapped else 0))
+        def open(self, path: str, flags: int, mode: int = 0o777) -> int:
+            target = Path(path); self.opened_path = target
+            if (target.is_symlink() or self.reject_as_symlink) and flags & self.O_NOFOLLOW: raise OSError("symlink rejected")
+            if target.is_dir(): return -999
+            return os.open(path, flags & ~self.O_NOFOLLOW, mode)
+        def fstat(self, fd: int) -> object:
+            self.fstat_calls += 1
+            return self._meta(os.fstat(fd), swapped=self.swap_fstat and self.fstat_calls == 2)
+        def lstat(self, path: Path) -> object: return self._meta(os.lstat(path), swapped=self.swap_cleanup)
+        def read(self, fd: int, size: int) -> bytes: return os.read(fd, size)
+        def lseek(self, fd: int, offset: int, whence: int) -> int: return os.lseek(fd, offset, whence)
+        def write(self, fd: int, payload: bytes) -> int:
+            if self.fail_write:
+                raise OSError("injected write failure")
+            return os.write(fd, payload)
+        def fchown(self, *_args: object) -> None: return None
+        def fchmod(self, *_args: object) -> None: return None
+        def fsync(self, fd: int) -> None:
+            if fd != -999: os.fsync(fd)
+        def close(self, fd: int) -> None:
+            if fd != -999: os.close(fd)
+        def unlink(self, path: Path) -> None: os.unlink(path)
+
+    def write_target(name: str, payload: str) -> Path:
+        target = tmp_path / name; target.write_text(payload, encoding="ascii", newline="\n"); return target
+
+    exact = write_target("exact", f"{fixed}\n")
+    assert validate(exact, account.pw_uid, account.pw_gid, ops=StrictOps()) == fixed
+    for target, ops in (
+        (write_target("wrong-owner", f"{fixed}\n"), StrictOps(uid=999)),
+        (write_target("wrong-mode", f"{fixed}\n"), StrictOps(mode=0o600)),
+        (write_target("wrong-link", f"{fixed}\n"), StrictOps(nlink=2)),
+        (write_target("malformed", "not-a-uuid\n"), StrictOps()),
+        (write_target("empty", ""), StrictOps()),
+        (write_target("descriptor-swap", f"{fixed}\n"), StrictOps(swap_fstat=True)),
+    ):
+        with pytest.raises((OSError, RuntimeError, ValueError)):
+            validate(target, account.pw_uid, account.pw_gid, ops=ops)
+
+    symlink = write_target("symlink-probe", f"{fixed}\n")
+    with pytest.raises((OSError, RuntimeError, ValueError)):
+        validate(symlink, account.pw_uid, account.pw_gid, ops=StrictOps(reject_as_symlink=True))
+
+    created = tmp_path / "created"
+    state, value = ensure(created, account=account, ops=StrictOps(), value_factory=lambda: fixed)
+    assert state == "created" and value == fixed
+    state, repeated = ensure(created, account=account, ops=StrictOps(), value_factory=uuid.uuid4)
+    assert state == "existing-stable" and repeated == fixed
+
+    failed = tmp_path / "failed"
+    with pytest.raises(OSError, match="injected write failure"):
+        ensure(failed, account=account, ops=StrictOps(fail_write=True), value_factory=lambda: fixed)
+    assert not failed.exists()
+    swapped = tmp_path / "swapped"
+    with pytest.raises(OSError, match="injected write failure"):
+        ensure(swapped, account=account, ops=StrictOps(fail_write=True, swap_cleanup=True), value_factory=lambda: fixed)
+    assert swapped.exists(), "cleanup must not unlink a path whose lstat inode differs from the created inode"
+
+
+def test_review_nova_student_path_is_explicit_manual_commands_in_fixed_order_not_the_validation_model() -> None:
+    controller = manual_markdown("06-nova-controller.md")
+    compute = manual_markdown("07-nova-compute.md")
+    controller_steps = (
+        "mysql -uroot", "CREATE DATABASE nova_api", "CREATE DATABASE nova_cell0",
+        "CREATE USER 'nova'@'localhost'", "GRANT ALL PRIVILEGES ON nova_api.*",
+        "openstack user create --domain default --password-prompt nova",
+        "openstack role add --project service --user nova admin",
+        "openstack service create --name nova --description \"OpenStack Compute\" compute",
+        "openstack endpoint create --region RegionOne compute public http://controller:8774/v2.1",
+        "openstack endpoint create --region RegionOne compute internal http://controller:8774/v2.1",
+        "openstack endpoint create --region RegionOne compute admin http://controller:8774/v2.1",
+        "vi /etc/nova/nova.conf", "[api_database]", "[keystone_authtoken]", "[placement]",
+        "nova-manage api_db sync", "nova-manage cell_v2 map_cell0",
+        "nova-manage cell_v2 create_cell --name=cell1", "nova-manage db sync",
+        "systemctl enable --now openstack-nova-api", "systemctl enable --now openstack-nova-scheduler",
+        "systemctl enable --now openstack-nova-conductor", "systemctl enable --now openstack-nova-novncproxy",
+    )
+    positions = [controller.index(step) for step in controller_steps]
+    assert positions == sorted(positions), "controller manual command block was deleted or reordered"
+
+    compute_steps = (
+        "vi /etc/nova/nova.conf", "[keystone_authtoken]", "[vnc]", "[glance]", "[placement]", "virt_type = qemu",
+        "systemctl enable --now libvirtd", "systemctl enable --now openstack-nova-compute",
+        "nova-manage cell_v2 discover_hosts --by-service",
+    )
+    positions = [compute.index(step) for step in compute_steps]
+    assert positions == sorted(positions), "compute manual command block was deleted or reordered"
+    appendix = compute.index("附录：验证用顺序模型")
+    assert appendix > positions[-1]
+    assert "学生不得运行它来安装 OpenStack" in compute
+
+
+def test_review_nova_collectors_and_post_write_validators_are_real_and_fail_closed(tmp_path: Path) -> None:
+    grant_ns = _nova_python_function_namespace("06-nova-controller.md", "collect_nova_grant_evidence")
+    identity_ns = _nova_python_function_namespace("06-nova-controller.md", "validate_nova_identity_evidence")
+    controller_config_ns = _nova_python_function_namespace("06-nova-controller.md", "validate_written_nova_config")
+    compute_config_ns = _nova_python_function_namespace("07-nova-compute.md", "validate_written_compute_nova_config")
+    schema_ns = _nova_python_function_namespace("06-nova-controller.md", "validate_nova_controller_schema")
+
+    account = {
+        "global": [["USAGE", "NO"]],
+        "schema": [[database, privilege, "NO"] for database in sorted(grant_ns["EXPECTED_NOVA_DATABASES"])
+                   for privilege in sorted(grant_ns["EXPECTED_SCHEMA_PRIVILEGES"])],
+        "table": [], "column": [], "routine": [],
+    }
+    class Cursor:
+        def __init__(self) -> None:
+            self.results = [[("nova", host) for host in ("%", "127.0.0.1", "localhost")]]
+            for _host in ("%", "127.0.0.1", "localhost"):
+                self.results.extend([account["global"], account["schema"], account["table"], account["column"], account["routine"]])
+            self.results.extend([[], []]); self.index = -1; self.calls: list[tuple[str, object]] = []
+        def execute(self, sql: str, parameters: object = None) -> None:
+            self.calls.append((sql, parameters)); self.index += 1
+        def fetchall(self) -> object: return self.results[self.index]
+    cursor = Cursor()
+    grant_evidence = grant_ns["collect_nova_grant_evidence"](cursor)
+    grant_ns["validate_nova_grant_evidence"](grant_evidence)
+    assert len(cursor.calls) == 18 and all("authentication_string" not in sql for sql, _ in cursor.calls)
+
+    identity = {
+        "user": {"id": "user-id", "name": "nova", "domain_id": "default", "enabled": True},
+        "assignment": {"Role": "role-id", "User": "user-id", "Project": "project-id", "Group": "", "Domain": "", "System": "", "Inherited": False},
+        "service": {"id": "service-id", "name": "nova", "type": "compute", "enabled": True},
+        "endpoints": [{"id": f"endpoint-{interface}", "interface": interface, "region": "RegionOne",
+                       "service_id": "service-id", "url": "http://controller:8774/v2.1", "enabled": True}
+                      for interface in ("admin", "internal", "public")],
+        "service_project_id": "project-id", "admin_role_id": "role-id",
+    }
+    identity_ns["validate_nova_identity_evidence"](identity)
+    for mutate in (
+        lambda e: e["endpoints"].pop(), lambda e: e["assignment"].update(Project="wrong"),
+        lambda e: e["service"].update(type="network"),
+    ):
+        evidence = copy.deepcopy(identity); mutate(evidence)
+        with pytest.raises(ValueError): identity_ns["validate_nova_identity_evidence"](evidence)
+
+    password = "p@ss:/word"
+    for namespace, builder, validator, name in (
+        (controller_config_ns, "build_nova_config", "validate_written_nova_config", "controller.conf"),
+        (compute_config_ns, "build_compute_nova_config", "validate_written_compute_nova_config", "compute.conf"),
+    ):
+        target = tmp_path / name; target.write_text(namespace[builder](password), encoding="utf-8", newline="\n")
+        metadata = os.lstat(target)
+        class MetadataOps:
+            @staticmethod
+            def lstat(_path: Path) -> object:
+                return types.SimpleNamespace(st_mode=stat.S_IFREG | 0o640, st_uid=101, st_gid=102,
+                                             st_nlink=1, st_dev=metadata.st_dev, st_ino=metadata.st_ino)
+        namespace[validator](target, password, 101, 102, ops=MetadataOps())
+        target.write_text("[DEFAULT]\nwrong = true\n", encoding="utf-8")
+        with pytest.raises(ValueError): namespace[validator](target, password, 101, 102, ops=MetadataOps())
+
+    good_schema = {
+        "query_ok": True,
+        "api": {"tables": 32, "head": "b30f573d3377"},
+        "main": {"tables": 110, "head": "960aac0e09ea"},
+        "cell0": {"tables": 110, "head": "960aac0e09ea"},
+        "cells": {"query_ok": True, "rows": [
+            {"name": "cell0", "uuid": "00000000-0000-0000-0000-000000000000", "disabled": False},
+            {"name": "cell1", "uuid": "22222222-2222-4222-8222-222222222222", "disabled": False},
+        ]},
+        "upgrade": {"rc": 0, "successes": 7, "failures": 0, "warnings": 0},
+    }
+    schema_ns["validate_nova_controller_schema"](good_schema)
+    for mutate in (lambda e: e["api"].update(tables=31), lambda e: e["main"].update(head="wrong"),
+                   lambda e: e["cells"]["rows"].pop(), lambda e: e["upgrade"].update(successes=6)):
+        evidence = copy.deepcopy(good_schema); mutate(evidence)
+        with pytest.raises((RuntimeError, ValueError)): schema_ns["validate_nova_controller_schema"](evidence)

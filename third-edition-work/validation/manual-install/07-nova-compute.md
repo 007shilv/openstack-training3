@@ -48,13 +48,100 @@ rm -f -- "$work"/*; rmdir -- "$work"; trap - EXIT
 - `systemd-libs-255-58.oe2403sp3.x86_64`；
 - `systemd-udev-255-58.oe2403sp3.x86_64`。
 
-完整 403 行计划保存在 `third-edition-work/validation/repository/systemd-dependency-transaction-compute.txt`，实际 RPM after 集合与该列表的 name/epoch/version/release/arch 精确一致。升级只替换上述五个同名旧 NEVRA，不是包删除或替换依赖。真实事务号为 3；boot ID 未变化，sshd、chronyd 均 active/enabled，失败单元集合前后相同，安装脚本没有提前启动 libvirt 或 nova-compute，`/dev/sdb`、`/dev/sdc` 仍为空白盘。
+依赖闭包的 403 行审核计划保存在 `third-edition-work/validation/repository/systemd-dependency-transaction-compute.txt`；真实事务凭据另存为 `transaction-evidence/nova-compute-transaction.txt`。后者完整保存 398 条 Install、5 条 Upgrade 新 NEVRA、5 条 Upgraded 旧 NEVRA及其一一替换关系，并逐条保存 403 条当前 RPM 和 403 条 `openstack-local` repo metadata，不能只依赖安装前 assumeno 计划。升级只替换上述五个同名旧 NEVRA，不是包删除或依赖替换。真实事务号为 3；boot ID 未变化，sshd、chronyd 均 active/enabled，失败单元集合前后相同，安装脚本没有提前启动 libvirt 或 nova-compute，`/dev/sdb`、`/dev/sdc` 仍为空白盘。
 
 禁止使用 `--allowerasing`、`--nodeps`、`--skip-broken` 或外部仓库。教学环境的离线仓库仍为 `gpgcheck=0`，完整性依赖不可变原始 ZIP、官方签名 overlay、SHA-256 manifest 与复审后的仓库门禁；生产环境应启用仓库签名校验和独立供应链策略。
 
 ## 计算节点原子配置
 
 `rpm -V openstack-nova-common` 通过后，将 202457 字节软件包默认配置备份到 `/root/openstack-lab-backups/task-5e-20260811T122341Z/nova.conf.package-default`。计算节点不配置 Nova 数据库连接；消息队列、Keystone/service-user、VNC、Glance 和 Placement 与 controller 对齐。`[neutron]`、`[cinder]` 是 future inactive dependencies，只有各自后续切片通过后才进入业务路径。
+
+课堂安装必须先备份，再手工使用 `vi` 编辑；不要运行后面的测试写入器代替本步骤。把 `<SERVICE_PASSWORD>` 换成服务口令，把 `<URL_ENCODED_PASSWORD>` 换成 URL 编码后的消息队列口令，逐节核对后保存。
+
+```bash
+cp -a /etc/nova/nova.conf /etc/nova/nova.conf.package-default
+vi /etc/nova/nova.conf
+```
+
+```ini
+[DEFAULT]
+state_path = /var/lib/nova
+transport_url = rabbit://openstack:<URL_ENCODED_PASSWORD>@controller
+my_ip = 192.168.234.150
+compute_driver = libvirt.LibvirtDriver
+use_neutron = true
+firewall_driver = nova.virt.firewall.NoopFirewallDriver
+
+[api]
+auth_strategy = keystone
+
+[keystone_authtoken]
+www_authenticate_uri = http://controller:5000/
+auth_url = http://controller:5000/
+memcached_servers = controller:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = nova
+password = <SERVICE_PASSWORD>
+
+[service_user]
+send_service_user_token = true
+auth_url = http://controller:5000/v3
+auth_strategy = keystone
+auth_type = password
+project_domain_name = Default
+project_name = service
+user_domain_name = Default
+username = nova
+password = <SERVICE_PASSWORD>
+
+[vnc]
+enabled = true
+server_listen = 0.0.0.0
+server_proxyclient_address = $my_ip
+novncproxy_base_url = http://controller:6080/vnc_auto.html
+
+[glance]
+api_servers = http://controller:9292
+
+[oslo_concurrency]
+lock_path = /var/lib/nova/tmp
+
+[placement]
+region_name = RegionOne
+project_domain_name = Default
+project_name = service
+auth_type = password
+user_domain_name = Default
+auth_url = http://controller:5000/v3
+username = placement
+password = <SERVICE_PASSWORD>
+
+[libvirt]
+virt_type = qemu
+
+[neutron]
+auth_url = http://controller:5000
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+region_name = RegionOne
+project_name = service
+username = neutron
+password = <SERVICE_PASSWORD>
+
+[cinder]
+os_region_name = RegionOne
+```
+
+```bash
+chown root:nova /etc/nova/nova.conf
+chmod 0640 /etc/nova/nova.conf
+```
+
+下面的原子写入器只用于教材 focused tests 验证参数、失败清理和脱敏快照，不是学生安装命令。
 
 ```python
 from __future__ import annotations
@@ -114,6 +201,19 @@ def write_compute_nova_config(target: Path, password: str, uid: int, gid: int, o
             except FileNotFoundError: current = None
             if current is not None and (current.st_dev, current.st_ino) == identity and stat.S_ISREG(current.st_mode) and current.st_nlink == 1:
                 ops.unlink(temporary)
+
+
+def validate_written_compute_nova_config(target: Path, password: str, uid: int, gid: int, ops: object = os) -> None:
+    metadata = ops.lstat(target)
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_uid != uid \
+            or metadata.st_gid != gid or stat.S_IMODE(metadata.st_mode) != 0o640:
+        raise ValueError("compute nova.conf metadata mismatch")
+    try:
+        payload = target.read_bytes()
+    except OSError as error:
+        raise RuntimeError("compute nova.conf read failed") from error
+    if payload != build_compute_nova_config(password).encode("utf-8"):
+        raise ValueError("compute nova.conf exact content mismatch")
 ```
 
 真实配置为 root:nova、0640、单硬链接。快照用 `<URL_ENCODED_DB_PASSWORD>` 和 `<SERVICE_PASSWORD>` 替换真实口令。`virt_type=qemu` 是有意选择：本教学虚拟机没有 vmx/svm 标志，也没有 `/dev/kvm`；软件 QEMU 不依赖嵌套硬件虚拟化，可在更多学生终端上稳定复现。它的性能低于 KVM，因此生产环境应启用并验证硬件加速。
@@ -131,19 +231,50 @@ import stat
 import uuid
 
 
-def validate_compute_id(path: Path, uid: int, gid: int, ops: object = os) -> uuid.UUID:
-    metadata = ops.lstat(path)
-    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+def _validate_compute_id_descriptor(descriptor: int, uid: int, gid: int, ops: object) -> uuid.UUID:
+    before = ops.fstat(descriptor)
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
         raise RuntimeError("compute_id is not a regular single-link file")
-    if metadata.st_uid != uid or metadata.st_gid != gid or stat.S_IMODE(metadata.st_mode) != 0o644:
+    if before.st_uid != uid or before.st_gid != gid or stat.S_IMODE(before.st_mode) != 0o644:
         raise RuntimeError("compute_id ownership or mode mismatch")
-    lines = path.read_text(encoding="ascii").splitlines()
-    if len(lines) != 1:
-        raise RuntimeError("compute_id line count mismatch")
-    parsed = uuid.UUID(lines[0])
-    if str(parsed) != lines[0] or parsed.int == 0:
-        raise RuntimeError("compute_id UUID mismatch")
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = ops.read(descriptor, 128)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > 128:
+            raise RuntimeError("compute_id content is too long")
+        chunks.append(chunk)
+    after = ops.fstat(descriptor)
+    before_identity = (before.st_dev, before.st_ino, before.st_mode, before.st_uid, before.st_gid, before.st_nlink)
+    after_identity = (after.st_dev, after.st_ino, after.st_mode, after.st_uid, after.st_gid, after.st_nlink)
+    if after_identity != before_identity:
+        raise RuntimeError("compute_id descriptor identity changed during validation")
+    try:
+        payload = b"".join(chunks).decode("ascii")
+    except UnicodeDecodeError as error:
+        raise ValueError("compute_id is not ASCII") from error
+    if not payload.endswith("\n") or payload.count("\n") != 1:
+        raise RuntimeError("compute_id line format mismatch")
+    value = payload[:-1]
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError as error:
+        raise ValueError("compute_id UUID malformed") from error
+    if parsed.int == 0 or str(parsed) != value:
+        raise RuntimeError("compute_id UUID is not canonical and nonzero")
     return parsed
+
+
+def validate_compute_id_fd(path: Path, uid: int, gid: int, ops: object = os) -> uuid.UUID:
+    flags = ops.O_RDONLY | getattr(ops, "O_NOFOLLOW", 0)
+    descriptor = ops.open(str(path), flags)
+    try:
+        return _validate_compute_id_descriptor(descriptor, uid, gid, ops)
+    finally:
+        ops.close(descriptor)
 
 
 def ensure_compute_id(
@@ -155,25 +286,38 @@ def ensure_compute_id(
     if account is None:
         import pwd
         account = pwd.getpwnam("nova")
-    try: existing = ops.lstat(path)
-    except FileNotFoundError: existing = None
-    if existing is not None:
-        return "existing-stable", validate_compute_id(path, account.pw_uid, account.pw_gid, ops=ops)
-    flags = ops.O_WRONLY | ops.O_CREAT | ops.O_EXCL | getattr(ops, "O_NOFOLLOW", 0)
+    flags = getattr(ops, "O_RDWR", ops.O_WRONLY) | ops.O_CREAT | ops.O_EXCL | getattr(ops, "O_NOFOLLOW", 0)
     descriptor = None; created = False; identity = None
     try:
-        descriptor = ops.open(str(path), flags, 0o644); created = True
+        try:
+            descriptor = ops.open(str(path), flags, 0o644)
+        except FileExistsError:
+            return "existing-stable", validate_compute_id_fd(
+                path, account.pw_uid, account.pw_gid, ops=ops
+            )
+        created = True
         metadata = ops.fstat(descriptor); identity = (metadata.st_dev, metadata.st_ino)
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1: raise RuntimeError("unsafe compute_id")
         ops.fchmod(descriptor, 0o644); ops.fchown(descriptor, account.pw_uid, account.pw_gid)
-        payload = f"{value_factory()}\n".encode("ascii")
-        if ops.write(descriptor, payload) != len(payload): raise OSError("short compute_id write")
-        ops.fsync(descriptor); ops.close(descriptor); descriptor = None
+        value = value_factory()
+        if not isinstance(value, uuid.UUID) or value.int == 0: raise ValueError("new compute_id UUID invalid")
+        payload = f"{value}\n".encode("ascii"); offset = 0
+        while offset < len(payload):
+            written = ops.write(descriptor, payload[offset:])
+            if written <= 0: raise OSError("short compute_id write")
+            offset += written
+        ops.fsync(descriptor)
+        ops.lseek(descriptor, 0, os.SEEK_SET)
+        parsed = _validate_compute_id_descriptor(
+            descriptor, account.pw_uid, account.pw_gid, ops
+        )
+        if parsed != value: raise RuntimeError("created compute_id verification mismatch")
+        ops.close(descriptor); descriptor = None
         directory = ops.open(str(path.parent), ops.O_RDONLY | getattr(ops, "O_DIRECTORY", 0))
         try: ops.fsync(directory)
         finally: ops.close(directory)
-        value = validate_compute_id(path, account.pw_uid, account.pw_gid, ops=ops); created = False
-        return "created", value
+        created = False
+        return "created", parsed
     finally:
         if descriptor is not None: ops.close(descriptor)
         if created and identity is not None:
@@ -221,6 +365,231 @@ unset OS_PASSWORD
 真实结果是 cell0/cell1 精确两条、compute→cell1 精确一条，第二次发现无重复。服务精确为 scheduler/controller、conductor/controller、compute/compute 三条且均 up/enabled；唯一 hypervisor 名称为 compute、类型 QEMU、state=up、status=enabled。
 
 通过认证 Placement 1.39 REST 查询 `resource_providers`，Nova 自动创建唯一 provider `compute`，并自动上报 `VCPU`、`MEMORY_MB`、`DISK_GB` inventories；没有手工创建 provider 或 inventory。最终 `nova-status upgrade check` 七项均为 Success。
+
+下面两个只读分类器消费由本节逐条命令保存的脱敏 JSON/数据库元数据。它们不依赖 `openstack ... show` 的人眼观察：查询失败、重复行、错误绑定、非法 inventory、非空资源、后续组件残留或磁盘漂移都会失败，且错误信息不拼接原始证据。
+
+```python
+from __future__ import annotations
+
+import uuid
+
+
+def _valid_inventory(row: object) -> bool:
+    if not isinstance(row, dict) or set(row) != {
+        "total", "reserved", "min_unit", "max_unit", "step_size", "allocation_ratio"
+    }:
+        return False
+    numbers = (row["total"], row["reserved"], row["min_unit"], row["max_unit"], row["step_size"])
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in numbers):
+        return False
+    ratio = row["allocation_ratio"]
+    return (
+        row["total"] > 0 and 0 <= row["reserved"] < row["total"]
+        and 0 < row["min_unit"] <= row["max_unit"] <= row["total"]
+        and row["step_size"] > 0 and isinstance(ratio, (int, float))
+        and not isinstance(ratio, bool) and ratio > 0
+    )
+
+
+def validate_nova_integration_evidence(evidence: dict[str, object]) -> None:
+    if evidence.get("query_ok") is not True:
+        raise RuntimeError("Nova integration query failed")
+    services = evidence.get("compute_services")
+    expected_services = {
+        ("nova-scheduler", "controller", "up", "enabled"),
+        ("nova-conductor", "controller", "up", "enabled"),
+        ("nova-compute", "compute", "up", "enabled"),
+    }
+    if not isinstance(services, list) or len(services) != 3 or {
+        (row.get("binary"), row.get("host"), row.get("state"), row.get("status"))
+        for row in services if isinstance(row, dict)
+    } != expected_services:
+        raise ValueError("Nova compute-service exact state mismatch")
+
+    cells = evidence.get("cells")
+    if not isinstance(cells, list) or len(cells) != 2:
+        raise ValueError("Nova cell cardinality mismatch")
+    cell0 = [row for row in cells if row.get("name") == "cell0"]
+    cell1 = [row for row in cells if row.get("name") == "cell1"]
+    if len(cell0) != 1 or cell0[0] != {
+        "name": "cell0", "uuid": "00000000-0000-0000-0000-000000000000", "disabled": False
+    } or len(cell1) != 1 or cell1[0].get("disabled") is not False:
+        raise ValueError("Nova cell exact state mismatch")
+    try:
+        cell1_uuid = uuid.UUID(str(cell1[0].get("uuid")))
+    except ValueError as error:
+        raise ValueError("cell1 UUID mismatch") from error
+    if cell1_uuid.int == 0 or str(cell1_uuid) != cell1[0].get("uuid"):
+        raise ValueError("cell1 UUID mismatch")
+    mappings = evidence.get("host_mappings")
+    if mappings != [{"host": "compute", "cell_uuid": str(cell1_uuid)}]:
+        raise ValueError("compute host-to-cell1 mapping mismatch")
+
+    hypervisors = evidence.get("hypervisors")
+    if not isinstance(hypervisors, list) or len(hypervisors) != 1:
+        raise ValueError("hypervisor cardinality mismatch")
+    hypervisor = hypervisors[0]
+    if not isinstance(hypervisor, dict) or not (
+        hypervisor.get("name") == "compute" and hypervisor.get("type") == "QEMU"
+        and hypervisor.get("state") == "up" and hypervisor.get("status") == "enabled"
+    ):
+        raise ValueError("hypervisor exact state mismatch")
+    providers = evidence.get("providers")
+    if not isinstance(providers, list) or len(providers) != 1:
+        raise ValueError("Placement provider cardinality mismatch")
+    provider = providers[0]
+    if not isinstance(provider, dict) or provider.get("name") != "compute" or not provider.get("uuid"):
+        raise ValueError("Placement provider exact state mismatch")
+    if provider.get("uuid") != hypervisor.get("uuid"):
+        raise ValueError("Placement provider and hypervisor UUID mismatch")
+    inventories = evidence.get("inventories")
+    if not isinstance(inventories, dict) or set(inventories) != {"VCPU", "MEMORY_MB", "DISK_GB"}:
+        raise ValueError("required Placement inventory set mismatch")
+    if not all(_valid_inventory(inventories[name]) for name in sorted(inventories)):
+        raise ValueError("Placement inventory structure or totals invalid")
+
+    identity = evidence.get("nova_identity")
+    if not isinstance(identity, dict):
+        raise ValueError("Nova identity evidence missing")
+    service = identity.get("service")
+    if not isinstance(service, dict) or not (
+        service.get("id") and service.get("name") == "nova" and service.get("type") == "compute"
+        and service.get("enabled") is True
+    ):
+        raise ValueError("Nova identity service mismatch")
+    endpoints = identity.get("endpoints")
+    if not isinstance(endpoints, list) or len(endpoints) != 3 or {
+        row.get("interface") for row in endpoints if isinstance(row, dict)
+    } != {"admin", "internal", "public"} or any(
+        row.get("service_id") != service["id"] or row.get("region") != "RegionOne"
+        or row.get("url") != "http://controller:8774/v2.1" or row.get("enabled") is not True
+        for row in endpoints
+    ):
+        raise ValueError("Nova endpoint exact binding mismatch")
+    if evidence.get("nova_api") != {"http": 200, "id": "v2.1", "status": "CURRENT", "authenticated": True}:
+        raise ValueError("Nova current/authenticated API evidence mismatch")
+    if evidence.get("resources") != {"images": [], "servers": [], "flavors": []}:
+        raise ValueError("Nova slice must leave images, servers, and flavors empty")
+    if evidence.get("database_grants") != {
+        "hosts": ["%", "127.0.0.1", "localhost"],
+        "schemas": ["nova", "nova_api", "nova_cell0"],
+        "global_only_usage": True, "object_privileges": 0, "proxy": 0, "roles": 0,
+    }:
+        raise ValueError("Nova database-grant summary mismatch")
+
+    compute_identity = evidence.get("compute_identity")
+    if not isinstance(compute_identity, dict):
+        raise ValueError("compute identity evidence missing")
+    identifiers = [compute_identity.get(name) for name in ("file_uuid", "database_uuid", "hypervisor_uuid")]
+    try:
+        parsed_identifiers = [uuid.UUID(str(value)) for value in identifiers]
+    except ValueError as error:
+        raise ValueError("compute identity UUID malformed") from error
+    if len(set(identifiers)) != 1 or any(value.int == 0 or str(value) != raw for value, raw in zip(parsed_identifiers, identifiers)):
+        raise ValueError("compute identity internal UUID consistency mismatch")
+    if identifiers[0] != hypervisor.get("uuid") or compute_identity.get("owner") != "nova:nova" \
+            or compute_identity.get("mode") != "0644" or compute_identity.get("nlink") != 1:
+        raise ValueError("compute identity metadata or hypervisor binding mismatch")
+    if evidence.get("upgrade") != {"rc": 0, "successes": 7, "failures": 0, "warnings": 0}:
+        raise ValueError("Nova upgrade-check evidence mismatch")
+    if evidence.get("later") != {"packages": [], "databases": [], "db_users": [], "users": [],
+                                 "services": [], "endpoints": [], "listeners": []}:
+        raise ValueError("Neutron or later state is present")
+    expected_disk = {"bytes": 53687091200, "type": "disk", "root_ancestor": False,
+                     "children": 0, "filesystem": "", "mountpoint": "", "wipefs": [], "blkid_rc": 2}
+    disks = evidence.get("disks")
+    if not isinstance(disks, dict) or set(disks) != {"/dev/sdb", "/dev/sdc"} \
+            or any(disks[name] != expected_disk for name in sorted(disks)):
+        raise ValueError("compute disk boundary mismatch")
+    if evidence.get("temporary") != []:
+        raise ValueError("task temporary files remain")
+
+
+def validate_nova_final_evidence(evidence: dict[str, object]) -> None:
+    if evidence.get("query_ok") is not True:
+        raise RuntimeError("final two-node query failed")
+    integration = evidence.get("integration")
+    if not isinstance(integration, dict):
+        raise ValueError("final integration evidence missing")
+    validate_nova_integration_evidence(integration)
+    controller = evidence.get("controller")
+    compute = evidence.get("compute")
+    expected_controller_services = {
+        "chronyd", "mariadb", "rabbitmq-server", "memcached", "httpd", "openstack-glance-api",
+        "openstack-nova-api", "openstack-nova-scheduler", "openstack-nova-conductor", "openstack-nova-novncproxy",
+    }
+    if not isinstance(controller, dict) or set(controller.get("active_enabled", [])) != expected_controller_services \
+            or len(controller.get("active_enabled", [])) != len(expected_controller_services):
+        raise ValueError("final controller service audit mismatch")
+    if controller.get("listeners") != [5000, 6080, 8774, 8778, 9292] or controller.get("databases") != [
+        "glance", "keystone", "nova", "nova_api", "nova_cell0", "placement"
+    ]:
+        raise ValueError("final controller listeners or databases mismatch")
+    if not isinstance(compute, dict) or set(compute.get("active_enabled", [])) != {
+        "chronyd", "sshd", "libvirtd", "openstack-nova-compute"
+    } or len(compute.get("active_enabled", [])) != 4:
+        raise ValueError("final compute service audit mismatch")
+    if compute.get("virt_type") != "qemu" or compute.get("domains") != [] or compute.get("boot_changed") is not False:
+        raise ValueError("final compute virtualization or boot audit mismatch")
+```
+
+## 附录：验证用顺序模型（禁止用于学生安装）
+
+下列函数只供教材 focused tests 对“手工步骤的先后关系与失败短路”建模，**学生不得运行它来安装 OpenStack，也不能把它作为一键部署入口**。课堂正文的唯一安装路径仍是前后各小节：先通过只读门禁，再由学生手工创建数据库与授权、手工创建用户/服务/端点、手工编辑并核对配置参数、逐条执行 `nova-manage`、逐条启动服务和发现主机。`runtime` 的每个方法仅代表相应手工命令块，以便测试删除或交换任一块时失败；它不提供也不允许自动化替代这些正文步骤。
+
+```python
+from __future__ import annotations
+
+
+def run_guarded_nova_deployment(password: str, runtime: object) -> dict[str, object]:
+    runtime.run_strict_gate("controller", password)
+    runtime.run_strict_gate("compute", password)
+
+    controller_transaction = runtime.install_controller_packages()
+    validate_nova_transaction_evidence("controller", controller_transaction)
+    secret = runtime.load_secret()
+    runtime.create_controller_databases_and_grants(secret)
+    grant_evidence = collect_nova_grant_evidence(runtime.grant_cursor())
+    validate_nova_grant_evidence(grant_evidence)
+
+    identity_adapter = runtime.identity_adapter(secret)
+    identity_evidence = ensure_nova_identity_objects(
+        secret, identity_adapter.query, identity_adapter.mutate
+    )
+    validate_nova_identity_evidence(identity_evidence)
+    write_nova_config(*runtime.controller_config_args)
+    validate_written_nova_config(*runtime.controller_config_args)
+
+    runtime.sync_api_database()
+    cell_evidence = runtime.collect_and_ensure_cells()
+    classify_cell_state(cell_evidence)
+    runtime.sync_main_database()
+    controller_schema = runtime.collect_controller_schema()
+    validate_nova_controller_schema(controller_schema)
+    runtime.start_controller_services()
+
+    runtime.run_strict_gate("compute", password)
+    compute_transaction = runtime.install_compute_packages()
+    validate_nova_transaction_evidence("compute", compute_transaction)
+    write_compute_nova_config(*runtime.compute_config_args)
+    validate_written_compute_nova_config(*runtime.compute_config_args)
+    _identity_state, expected_compute_id = ensure_compute_id(*runtime.compute_id_args)
+    actual_compute_id = validate_compute_id_fd(*runtime.compute_id_args)
+    if actual_compute_id != expected_compute_id:
+        raise RuntimeError("compute_id changed between ensure and same-FD validation")
+
+    runtime.start_libvirt()
+    runtime.start_nova_compute()
+    runtime.discover_hosts()
+    integration_evidence = runtime.collect_integration_evidence()
+    validate_nova_integration_evidence(integration_evidence)
+    final_evidence = runtime.collect_final_evidence()
+    validate_nova_final_evidence(final_evidence)
+    runtime.run_final_node_audits(password)
+    return {"integration": integration_evidence, "final": final_evidence}
+```
+
+测试映射严格为：`run_strict_gate`→本章双节点 `RejectPolicy` 门禁；`install_*_packages`→对应本地源事务；数据库和授权方法→控制节点三库/九授权手工小节；身份适配器→正文逐条 OpenStack CLI；配置参数→正文手工编辑后的只读复核；同步、cell、服务、libvirt、nova-compute、发现方法→各同名手工命令段；两个证据收集器→下节的严格集成分类器和最终双节点审计。本顺序模型不得出现在学生操作命令中，也不得替代 `vi`、`openstack`、`nova-manage` 或 `systemctl` 的逐步教学。
 
 ## 最终双节点审计
 
