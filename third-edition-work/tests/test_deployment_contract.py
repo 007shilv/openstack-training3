@@ -740,3 +740,358 @@ PY
     assert role_identity_violations("10-compute-nova.sh", template.format("150")) == []
     unknown_key = "python3 - <<'PY'\ncfg.set('DEFAULT', key, '192.168.234.150')\nPY\n"
     assert role_identity_violations("10-compute-nova.sh", unknown_key)
+
+
+MANUAL_INSTALL_DIR = WORK_ROOT / "validation" / "manual-install"
+
+
+def manual_markdown(name: str) -> str:
+    return (MANUAL_INSTALL_DIR / name).read_text(encoding="utf-8")
+
+
+def markdown_fenced_blocks(name: str, language: str) -> list[str]:
+    pattern = re.compile(
+        rf"(?ms)^```{re.escape(language)}[ \t]*\n(?P<body>.*?)^```[ \t]*$"
+    )
+    return [match.group("body") for match in pattern.finditer(manual_markdown(name))]
+
+
+def manual_shell_text(name: str) -> str:
+    return "\n\n".join(markdown_fenced_blocks(name, "bash"))
+
+
+def manual_function_definitions(text: str, names: tuple[str, ...]) -> str:
+    return "\n\n".join(shell_function_definition(text, name) for name in names)
+
+
+def run_git_bash(text: str) -> subprocess.CompletedProcess[str]:
+    assert GIT_BASH.is_file(), "Git Bash is required for manual-install behavior tests"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        harness_path = Path(temp_dir) / "harness.sh"
+        harness_path.write_text(textwrap.dedent(text), encoding="utf-8", newline="\n")
+        return subprocess.run(
+            [str(GIT_BASH), str(harness_path)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+
+@pytest.mark.parametrize(
+    ("document", "runner", "stages", "failing_stage"),
+    (
+        (
+            "01-base.md",
+            "run_base_sequence",
+            (
+                "stage_starting_state",
+                "stage_identity_hosts",
+                "stage_repository_security",
+                "stage_chrony",
+                "stage_secret_metadata",
+            ),
+            "stage_chrony",
+        ),
+        (
+            "02-infrastructure.md",
+            "run_infrastructure_sequence",
+            (
+                "stage_package_install",
+                "stage_mariadb",
+                "stage_rabbitmq",
+                "stage_memcached",
+                "stage_openstack_cli",
+            ),
+            "stage_rabbitmq",
+        ),
+    ),
+)
+def test_manual_install_sessions_stop_at_the_first_failed_gate(
+    document: str,
+    runner: str,
+    stages: tuple[str, ...],
+    failing_stage: str,
+) -> None:
+    text = manual_shell_text(document)
+    active = active_lines(text)
+    assert "set -Eeuo pipefail" in active, f"{document} must start a strict reusable shell session"
+    assert any(first_shell_command(line) == ("trap", ["on_error \"$LINENO\" \"$BASH_COMMAND\"", "ERR"]) for line in active), (
+        f"{document} must install an executable ERR trap"
+    )
+    runner_body = shell_function_body(text, runner)
+    assert runner_body is not None, f"{document} is missing {runner}"
+    calls = [line.strip() for line in active_lines(runner_body) if line.strip() in stages]
+    assert calls == list(stages), f"{runner} does not preserve the required gate order: {calls}"
+
+    mocks = "\n".join(
+        f"{stage}() {{ printf '%s\\n' {stage}; {'return 23' if stage == failing_stage else 'return 0'}; }}"
+        for stage in stages
+    )
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {shell_function_definition(text, runner)}
+        {mocks}
+        {runner}
+        """
+    )
+    assert completed.returncode != 0
+    observed = completed.stdout.splitlines()
+    assert observed == list(stages[: stages.index(failing_stage) + 1]), (
+        f"{runner} continued after {failing_stage}: {observed}"
+    )
+
+
+def run_manual_blank_disk_guard(scenario: str) -> int:
+    text = manual_shell_text("01-base.md")
+    definitions = manual_function_definitions(
+        text,
+        ("die", "is_block_device", "assert_not_root_ancestor", "assert_blank_data_disk"),
+    )
+    pvs_definition = "" if scenario == "pvs_missing" else f"""
+    pvs() {{
+      [[ {scenario!r} == pvs_error ]] && return 4
+      [[ {scenario!r} == pv ]] && printf '%s\\n' 'pv-uuid /dev/sdb'
+      return 0
+    }}
+    """
+    harness = f"""
+    set -Eeuo pipefail
+    {definitions}
+    is_block_device() {{ [[ {scenario!r} != not_block ]]; }}
+    readlink() {{ [[ "$1" == -f ]] || return 9; printf '%s\\n' "$2"; }}
+    findmnt() {{ printf '%s\\n' /dev/mapper/system-root; }}
+    blockdev() {{ [[ "$1" == --getsize64 ]] || return 9; [[ {scenario!r} == wrong_size ]] && printf '%s\\n' 1 || printf '%s\\n' 53687091200; }}
+    lsblk() {{
+      if [[ "$1" == -s && "$2" == -nrpo && "$3" == NAME ]]; then
+        printf '%s\\n' /dev/mapper/system-root
+        [[ {scenario!r} == root ]] && printf '%s\\n' /dev/sdb || printf '%s\\n' /dev/sda
+      elif [[ "$1" == -nrpo && "$2" == NAME ]]; then
+        printf '%s\\n' /dev/sdb
+        [[ {scenario!r} == child ]] && printf '%s\\n' /dev/sdb1
+        return 0
+      elif [[ "$1" == -dnro && "$2" == FSTYPE,MOUNTPOINT ]]; then
+        [[ {scenario!r} == filesystem ]] && printf '%s\\n' 'xfs '
+        [[ {scenario!r} == mount ]] && printf '%s\\n' ' /srv/data'
+        return 0
+      else
+        return 9
+      fi
+    }}
+    {pvs_definition}
+    blkid() {{
+      [[ {scenario!r} == signature ]] && return 0
+      [[ {scenario!r} == blkid_error ]] && return 4
+      return 2
+    }}
+    assert_blank_data_disk /dev/sdb 53687091200
+    """
+    return run_git_bash(harness).returncode
+
+
+def test_manual_base_blank_disk_guard_is_behaviorally_fail_closed() -> None:
+    expected_success = {"blank"}
+    scenarios = {
+        "blank", "not_block", "wrong_size", "root", "child", "filesystem",
+        "mount", "pvs_missing", "pvs_error", "pv", "signature", "blkid_error",
+    }
+    actual_success = {scenario for scenario in scenarios if run_manual_blank_disk_guard(scenario) == 0}
+    assert actual_success == expected_success
+
+
+def test_manual_hosts_rewrite_preserves_unrelated_aliases_and_comments() -> None:
+    shell = manual_shell_text("01-base.md")
+    bodies = [body for _opener, _delimiter, body in shell_sections(shell)[1] if "TARGET_ALIASES" in body]
+    assert len(bodies) == 1, "01-base must contain one executable hosts-rewrite heredoc"
+    source = """\
+127.0.0.1 localhost
+192.168.234.151 controller repo mirror # preserve-controller-line
+10.0.0.8 compute legacy # preserve-other-ip
+# controller and compute in this comment must survive
+192.168.234.150 compute # preserve-comment-only
+"""
+    expected = """\
+127.0.0.1 localhost
+192.168.234.151 repo mirror  # preserve-controller-line
+10.0.0.8 legacy  # preserve-other-ip
+# controller and compute in this comment must survive
+# preserve-comment-only
+192.168.234.151 controller
+192.168.234.150 compute
+"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source_path = Path(temp_dir) / "hosts.in"
+        output_path = Path(temp_dir) / "hosts.out"
+        source_path.write_text(source, encoding="utf-8", newline="\n")
+        completed = subprocess.run(
+            ["python", "-c", bodies[0], str(source_path), str(output_path)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert output_path.read_text(encoding="utf-8") == expected
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_success"),
+    (("absent", True), ("installed", False), ("query_error", False), ("misleading_rc1", False)),
+)
+def test_manual_later_package_absence_probe_distinguishes_all_exit_classes(
+    scenario: str, expected_success: bool
+) -> None:
+    text = manual_shell_text("02-infrastructure.md")
+    definitions = manual_function_definitions(text, ("die", "assert_packages_absent"))
+    completed = run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        {definitions}
+        rpm() {{
+          if [[ "$2" == rpm ]]; then return 0; fi
+          case {scenario!r} in
+            absent) printf '%s\\n' 'package openstack-keystone is not installed'; return 1 ;;
+            installed) printf '%s\\n' 'openstack-keystone-1.0-1.noarch'; return 0 ;;
+            query_error) printf '%s\\n' 'rpmdb unavailable' >&2; return 2 ;;
+            misleading_rc1) printf '%s\\n' 'rpmdb unavailable' >&2; return 1 ;;
+          esac
+        }}
+        assert_packages_absent openstack-keystone
+        """
+    )
+    assert (completed.returncode == 0) is expected_success
+
+
+def test_manual_secret_transfer_is_strict_exclusive_atomic_and_cleanup_safe() -> None:
+    blocks = [block for block in markdown_fenced_blocks("01-base.md", "python") if "def connect_pinned" in block]
+    assert len(blocks) == 1, "01-base must contain one full workstation Paramiko transfer program"
+    source = blocks[0]
+    tree = ast.parse(source)
+    compile(tree, "01-base-secret-transfer", "exec")
+
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    constants = {node.value for node in ast.walk(tree) if isinstance(node, ast.Constant)}
+    assert {"load_host_keys", "RejectPolicy", "getpass"} <= (attributes | names)
+    assert "AutoAddPolicy" not in attributes
+    assert "hashlib" not in names and "hexdigest" not in attributes
+    assert ".superpowers/sdd/known_hosts.controller" in constants
+    assert ".superpowers/sdd/known_hosts.compute" in constants
+    assert 65536 in constants
+
+    exclusive_assignment = next(
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "CREATE_EXCLUSIVE_PROGRAM" for target in node.targets)
+    )
+    assert isinstance(exclusive_assignment.value, ast.Constant) and isinstance(exclusive_assignment.value.value, str)
+    exclusive_tree = ast.parse(exclusive_assignment.value.value)
+    exclusive_attributes = {
+        node.attr for node in ast.walk(exclusive_tree) if isinstance(node, ast.Attribute)
+    }
+    exclusive_constants = {
+        node.value for node in ast.walk(exclusive_tree) if isinstance(node, ast.Constant)
+    }
+    assert {"O_EXCL", "O_NOFOLLOW", "fchmod", "fchown", "fsync"} <= exclusive_attributes
+    assert 0o600 in exclusive_constants and 65536 in exclusive_constants
+
+    connect_calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "connect"
+    ]
+    assert len(connect_calls) == 1
+    for call in connect_calls:
+        password_keywords = [kw.value for kw in call.keywords if kw.arg == "password"]
+        assert len(password_keywords) == 1 and isinstance(password_keywords[0], ast.Name), (
+            "SSH password must be supplied from an in-memory variable, never a literal"
+        )
+    pinned_calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "connect_pinned"
+    ]
+    assert len(pinned_calls) == 2, "controller and compute must each use the pinned connector"
+
+    transfer = next(
+        node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "transfer_secret"
+    )
+    calls = [
+        node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+        for node in ast.walk(transfer)
+        if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute))
+    ]
+    assert "create_exclusive_temp" in calls
+    assert "promote_atomic" in calls
+    assert "verify_metadata_equal" in calls
+    assert any(isinstance(node, ast.Try) and node.finalbody for node in ast.walk(transfer)), (
+        "partial-transfer cleanup must be protected by finally"
+    )
+    assert "cleanup_exact_temp" in calls
+
+
+def run_rabbit_configuration_harness(existing: bool, auth_ok: bool) -> subprocess.CompletedProcess[str]:
+    text = manual_shell_text("02-infrastructure.md")
+    definitions = manual_function_definitions(text, ("die", "configure_rabbitmq"))
+    user_row = "openstack\t[]" if existing else "guest\t[administrator]"
+    return run_git_bash(
+        f"""
+        set -Eeuo pipefail
+        TRACE=$(mktemp)
+        {definitions}
+        systemctl() {{ return 0; }}
+        rabbitmqctl() {{
+          case "$1" in
+            list_users) printf 'user\\ttags\\n%b\\n' {user_row!r} ;;
+            add_user) printf '%s\\n' add >> "$TRACE" ;;
+            change_password) printf '%s\\n' change >> "$TRACE" ;;
+            set_permissions) printf '%s\\n' permissions >> "$TRACE" ;;
+            authenticate_user) printf '%s\\n' auth >> "$TRACE"; [[ {str(auth_ok).lower()} == true ]] ;;
+            *) return 9 ;;
+          esac
+        }}
+        configure_rabbitmq '<RABBIT_PASS>'
+        cat "$TRACE"
+        rm -f "$TRACE"
+        """
+    )
+
+
+def test_manual_rabbitmq_configuration_is_idempotent_and_auth_failure_is_fatal() -> None:
+    missing = run_rabbit_configuration_harness(existing=False, auth_ok=True)
+    existing = run_rabbit_configuration_harness(existing=True, auth_ok=True)
+    auth_failure = run_rabbit_configuration_harness(existing=True, auth_ok=False)
+    assert missing.returncode == 0, missing.stderr
+    assert missing.stdout.splitlines() == ["add", "change", "permissions", "auth"]
+    assert existing.returncode == 0, existing.stderr
+    assert existing.stdout.splitlines() == ["change", "permissions", "auth"]
+    assert auth_failure.returncode != 0, "failed RabbitMQ authentication must stop the session"
+
+
+def test_manual_service_gates_assert_live_state_not_just_display_it() -> None:
+    base = manual_shell_text("01-base.md")
+    infrastructure = manual_shell_text("02-infrastructure.md")
+    chrony = shell_function_body(base, "assert_chrony")
+    mariadb = shell_function_body(infrastructure, "assert_mariadb")
+    rabbit = shell_function_body(infrastructure, "assert_rabbitmq")
+    memcached = shell_function_body(infrastructure, "assert_memcached")
+    assert all(body is not None for body in (chrony, mariadb, rabbit, memcached))
+    assert "Leap status" in chrony and "Normal" in chrony and "chronyc sources" in chrony
+    assert "@@bind_address" in mariadb and "0.0.0.0" in mariadb and "grep -qx" in mariadb
+    assert "list_user_permissions" in rabbit and "authenticate_user" in rabbit
+    assert "expected_listeners" in memcached and "actual_listeners" in memcached
+    memcache_bodies = [
+        body for _opener, _delimiter, body in shell_sections(infrastructure)[1]
+        if "task5a_listener_check" in body
+    ]
+    assert len(memcache_bodies) == 1
+    tree = ast.parse(memcache_bodies[0])
+    assert any(isinstance(node, ast.Raise) for node in ast.walk(tree)), (
+        "Memcached client verification must raise on set/get/delete failure"
+    )
+
+
+def test_manual_protected_checks_do_not_mask_failures_with_or_true() -> None:
+    violations: dict[str, list[str]] = {}
+    for document in ("01-base.md", "02-infrastructure.md"):
+        offenders = [line for line in active_lines(manual_shell_text(document)) if "|| true" in line]
+        if offenders:
+            violations[document] = offenders
+    assert not violations, f"protected manual-install checks mask failures: {violations}"

@@ -25,6 +25,16 @@ The run used hard stop-on-failure gates:
 
 No later component ran while an earlier gate was unresolved. The required order for subsequent slices is Keystone → Glance → Placement/Nova → Neutron → Cinder/Swift → Horizon. Each slice must finish database, service, endpoint, synchronization, and API/CLI checks before the next begins; they must not race in parallel.
 
+## First-round review remediation
+
+The independent first-round review reported no Critical finding. Every Important and Minor item was addressed without reconnecting to either VM and without changing the already verified remote state:
+
+1. Both manual records now establish `set -Eeuo pipefail`, an inherited ERR trap, `die`, executable assertion functions, and ordered stage runners. Behavior tests inject a failure into a middle stage and prove that no later stage runs. MariaDB live values, chrony synchronization, RabbitMQ user/permission/authentication state, Memcached exact listeners and set/get/delete behavior are assertions rather than display-only probes. RabbitMQ authentication failure clears the transient variable inside the failure branch before terminating.
+2. The compute disk guard accepts only `blkid -p` RC=2 as blank and rejects RC=0 plus every other exit class. It also asserts block-device identity, exact byte size, no child/partition, no filesystem, no mount, no LVM PV (including orphan PV), and exclusion from the canonical root-device ancestry. Later-service RPM absence now distinguishes installed, expected absent, RPM database/query failure, and misleading RC=1 output.
+3. The base record now includes a complete executable workstation Paramiko transfer example. It loads only the two reviewed known-host files with `RejectPolicy`, obtains the SSH credential through `getpass`, creates a root-owned `0600` remote temporary file with `O_EXCL|O_NOFOLLOW`, streams in 64 KiB chunks without output or hashing, performs same-directory atomic promotion, always cleans the exact temporary path, and compares only safe metadata. RabbitMQ's user-present and user-absent rerun branches are executable and behavior-tested.
+4. The `/etc/hosts` transformation removes only the two target aliases, preserves unrelated aliases and comments on the same line, and appends one canonical mapping for each node. A behavior test executes the extracted Python heredoc against mixed-alias/comment fixtures and compares the exact result.
+5. Twelve targeted contract-test cases now cover strict-session short-circuiting, disk-probe exit classes and safety dimensions, hosts preservation, later-package absence classes, transfer-program AST and syntax, RabbitMQ idempotence/authentication failure, live-service assertions, and the ban on `|| true` in protected manual checks. Together with the original 26 tests, the suite contains 38 passing tests.
+
 ## Starting-state proof
 
 - Both nodes reported openEuler 24.03 LTS SP3 x86_64.
@@ -143,13 +153,15 @@ All snapshots were captured from final remote files after successful checks. Non
 
 ## Required local gates
 
-- `python -m pytest -q third-edition-work/tests/test_deployment_contract.py`: 26 passed.
+- TDD review-fix RED evidence: the 12 new Task 5A cases initially failed against the first-round documents for the missing executable contracts; after remediation, all 12 pass.
+- `python -m pytest -q`: 38 passed (26 existing plus 12 targeted Task 5A cases).
 - `git diff --check`: RC=0, no output.
 - `git diff --cached --check`: RC=0, no output.
+- Extracted Python transfer/hosts/Memcached snippets: parsed and compiled or executed by the targeted tests; extracted Bash gate functions: executed with command mocks under Git Bash.
 - Canonical snapshot-to-remote comparison through host-key-pinned SFTP: controller 9/9 and compute 7/7 match. Only trailing whitespace and redundant final blank lines in remote text were normalized.
 - Artifact requirement audit: PASS for the two manual records, strict order gates, placeholders, rollback/diagnostic sections, 16 snapshots, and absence of copied-script invocation.
-- Targeted credential scan of all staged Task 5A text: PASS for the known login credential, literal long secret assignments, credential-bearing URLs, and private-key markers.
-- Task-only staged-file audit: 19 required Task 5A artifacts, no unrelated path and no binary file.
+- Targeted credential scan of the complete committed Task 5A artifact set and the remediation diff: PASS for the known login credential, literal long secret assignments, credential-bearing URLs, and private-key markers. Runtime-secret values were never read for scanning.
+- Remediation staged-file audit: only the two manual records, their contract-test file, and this report changed; no binary or unrelated path.
 
 ## Residual risks
 

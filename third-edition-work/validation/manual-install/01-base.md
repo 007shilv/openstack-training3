@@ -17,6 +17,30 @@
 
 任一检查失败均停止。实际执行中没有修改 `ens33` 的既有静态地址，没有给 `ens34` 配置地址，也没有访问磁盘写路径。
 
+以下所有 `bash` 片段必须在同一个 root shell 中按文档顺序执行。先建立严格会话；不要逐行复制到会吞掉退出状态的外层工具中：
+
+```bash
+set -Eeuo pipefail
+
+die() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+on_error() {
+  local rc=$?
+  local line=${1:-unknown}
+  local command=${2:-unknown}
+  trap - ERR
+  printf 'ERROR: rc=%s line=%s command=%s\n' "$rc" "$line" "$command" >&2
+  exit "$rc"
+}
+
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+```
+
+`set -E` 让函数内错误继承 ERR trap，`-e` 在未处理失败时退出，`-u` 拒绝未定义变量，`pipefail` 防止流水线前段失败被末段成功掩盖。后文的 `die`、断言函数和阶段函数依赖这一会话合同。
+
 ## 实验拓扑与起始状态
 
 | 节点 | 管理地址 | 管理接口 | 第二接口 | 用途 |
@@ -24,32 +48,87 @@
 | controller | `192.168.234.151/24` | `ens33` | `ens34`，无 IP | 控制节点与本地仓库 |
 | compute | `192.168.234.150/24` | `ens33` | `ens34`，无 IP | 计算节点 |
 
-在两节点分别执行以下只读核验：
+在两节点分别执行以下只读核验。接口、RPM 数据库或磁盘探针本身异常时立即停止，不能把探针错误解释为“没有地址”“没有安装”或“空盘”：
 
 ```bash
+assert_packages_absent_initial() {
+  local package output rc
+  LC_ALL=C rpm -q rpm >/dev/null 2>&1 || die "RPM database health probe failed"
+  for package in "$@"; do
+    if output=$(LC_ALL=C rpm -q "$package" 2>&1); then
+      die "unexpected starting package: $package"
+    else
+      rc=$?
+      [[ "$rc" -eq 1 ]] || die "RPM query failed for $package (rc=$rc)"
+      [[ "$output" == "package $package is not installed" ]] || \
+        die "unexpected RPM absence response for $package"
+    fi
+  done
+}
+
 cat /etc/os-release
 hostnamectl --static
 ip -4 -o addr show dev ens33
-ip -4 -o addr show dev ens34 || true
+ens34_ipv4=$(ip -4 -o addr show dev ens34)
+[[ -z "$ens34_ipv4" ]] || die "ens34 must not have an IPv4 address"
 ip -4 route
 findmnt -n -o SOURCE,FSTYPE,TARGET /
 lsblk -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
 rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort
-rpm -q openstack-release-antelope mariadb-server rabbitmq-server \
-  memcached python3-openstackclient 2>/dev/null || true
+assert_packages_absent_initial openstack-release-antelope mariadb-server \
+  rabbitmq-server memcached python3-openstackclient
 ```
 
-compute 额外执行：
+compute 额外执行以下只读、fail-closed 空盘门禁。`blkid -p` 只有返回码 2 表示未发现签名；返回 0 表示有签名，其他返回码均表示探针故障。检查同时覆盖块设备身份、精确容量、子项/分区、文件系统、挂载、LVM/PV，以及根文件系统完整祖先链；任一项失败即退出，且不执行任何磁盘写命令：
 
 ```bash
-for disk in /dev/sdb /dev/sdc; do
-  if blkid -p "$disk" >/dev/null 2>&1; then
-    echo "$disk: signature-present"
+is_block_device() {
+  [[ -b "$1" ]]
+}
+
+assert_not_root_ancestor() {
+  local device root_source root_chain
+  device=$(readlink -f "$1") || die "cannot canonicalize data disk: $1"
+  root_source=$(findmnt -nro SOURCE /) || die "cannot resolve root source"
+  root_source=$(readlink -f "$root_source") || die "cannot canonicalize root source"
+  root_chain=$(lsblk -s -nrpo NAME "$root_source") || die "cannot inspect root ancestry"
+  if grep -Fxq "$device" <<<"$root_chain"; then
+    die "$device belongs to the root-device ancestry"
+  fi
+}
+
+assert_blank_data_disk() {
+  local device=$1 expected_size=$2 actual_size nodes facts pv_output rc
+  is_block_device "$device" || die "$device is not a block device"
+  actual_size=$(blockdev --getsize64 "$device") || die "cannot read size for $device"
+  [[ "$actual_size" == "$expected_size" ]] || die "unexpected size for $device: $actual_size"
+  assert_not_root_ancestor "${device}"
+
+  nodes=$(lsblk -nrpo NAME "$device") || die "cannot inspect children for $device"
+  [[ $(printf '%s\n' "$nodes" | sed '/^[[:space:]]*$/d' | wc -l) -eq 1 ]] || \
+    die "$device has a partition or another child"
+  facts=$(lsblk -dnro FSTYPE,MOUNTPOINT "$device") || \
+    die "cannot inspect filesystem or mount state for $device"
+  [[ -z "${facts//[[:space:]]/}" ]] || die "$device has a filesystem or mount"
+
+  command -v pvs >/dev/null 2>&1 || die "pvs is unavailable; refusing to classify $device"
+  pv_output=$(pvs --noheadings --readonly -o pv_uuid,pv_name) || \
+    die "LVM PV probe failed for $device"
+  if awk -v device="$device" 'NF >= 2 && $2 == device { found=1 } END { exit !found }' \
+      <<<"$pv_output"; then
+    die "$device is an LVM physical volume"
+  fi
+
+  if blkid -p "$device" >/dev/null 2>&1; then
+    die "$device contains a detectable signature"
   else
     rc=$?
-    echo "$disk: no-visible-signature, rc=$rc"
+    [[ "$rc" -eq 2 ]] || die "blkid probe failed for $device (rc=$rc)"
   fi
-done
+}
+
+assert_blank_data_disk /dev/sdb 53687091200
+assert_blank_data_disk /dev/sdc 53687091200
 ```
 
 脱敏代表性结果：
@@ -89,26 +168,56 @@ compute：
 hostnamectl set-hostname compute
 ```
 
-两节点均以同一保留式方法更新 `/etc/hosts`。该命令只移除旧的 controller/compute 映射，再追加唯一的精确映射，其他条目和注释保持不变：
+两节点均以同一保留式方法更新 `/etc/hosts`。该命令只从地址行的别名字段移除 `controller`/`compute`，不会因为同一行含目标别名而丢弃其他别名或行尾注释；再追加唯一的精确映射：
 
 ```bash
 tmp=$(mktemp /etc/.hosts.task5a.XXXXXX)
-awk '{
-  keep=1
-  if ($1=="192.168.234.151" || $1=="192.168.234.150") keep=0
-  for (i=2; i<=NF; i++)
-    if ($i=="controller" || $i=="compute") keep=0
-  if (keep) print
-}' /etc/hosts > "$tmp"
-printf '%s\n' \
-  '192.168.234.151 controller' \
-  '192.168.234.150 compute' >> "$tmp"
+python3 - /etc/hosts "$tmp" <<'PY'
+from pathlib import Path
+import sys
+
+TARGET_ALIASES = {"controller", "compute"}
+source = Path(sys.argv[1])
+destination = Path(sys.argv[2])
+result = []
+
+for raw in source.read_text(encoding="utf-8").splitlines():
+    if not raw.strip() or raw.lstrip().startswith("#"):
+        result.append(raw)
+        continue
+    address_and_aliases, marker, comment_tail = raw.partition("#")
+    fields = address_and_aliases.split()
+    if len(fields) < 2:
+        result.append(raw)
+        continue
+    aliases = [alias for alias in fields[1:] if alias not in TARGET_ALIASES]
+    comment = marker + comment_tail.rstrip() if marker else ""
+    if aliases:
+        rewritten = " ".join([fields[0], *aliases])
+        if comment:
+            rewritten += "  " + comment
+        result.append(rewritten)
+    elif comment:
+        result.append(comment)
+
+result.extend((
+    "192.168.234.151 controller",
+    "192.168.234.150 compute",
+))
+destination.write_text("\n".join(result) + "\n", encoding="utf-8")
+PY
 chown root:root "$tmp"
 chmod 0644 "$tmp"
-restorecon -F "$tmp" >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F "$tmp" >/dev/null
+fi
 mv -f "$tmp" /etc/hosts
-restorecon -F /etc/hosts >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F /etc/hosts >/dev/null
+fi
 ```
+
+例如，`192.168.234.151 controller repo mirror # keep` 会保留为 `192.168.234.151 repo mirror  # keep`，而不是整行删除；纯注释行保持原样。
 
 检查命令：
 
@@ -166,9 +275,22 @@ systemctl disable --now firewalld
 检查：
 
 ```bash
-getenforce
-systemctl is-active firewalld || true
-systemctl is-enabled firewalld || true
+[[ $(getenforce) == Permissive ]] || die "SELinux runtime mode is not Permissive"
+grep -qx 'SELINUX=permissive' /etc/selinux/config || die "SELinux boot mode is not permissive"
+if firewall_active=$(systemctl is-active firewalld 2>&1); then
+  die "firewalld is unexpectedly active"
+else
+  rc=$?
+  [[ "$rc" -eq 3 && "$firewall_active" == inactive ]] || \
+    die "firewalld active-state probe failed (rc=$rc)"
+fi
+if firewall_enabled=$(systemctl is-enabled firewalld 2>&1); then
+  die "firewalld is unexpectedly enabled"
+else
+  rc=$?
+  [[ "$rc" -eq 1 && "$firewall_enabled" == disabled ]] || \
+    die "firewalld enable-state probe failed (rc=$rc)"
+fi
 ```
 
 实际输出为 `Permissive`、`inactive`、`disabled`。
@@ -217,8 +339,10 @@ for section in ('debuginfo', 'source', 'update-source'):
 with open(path, 'w', encoding='utf-8') as stream:
     cfg.write(stream)
 PY
-restorecon -F /etc/yum.repos.d/openEuler.repo \
-  /etc/yum.repos.d/openstack-antelope.repo >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F /etc/yum.repos.d/openEuler.repo \
+    /etc/yum.repos.d/openstack-antelope.repo >/dev/null
+fi
 dnf clean all
 dnf -q makecache --disablerepo='*' --enablerepo='openstack-local'
 ```
@@ -233,10 +357,21 @@ dnf -q makecache --disablerepo='*' --enablerepo='openstack-local'
 dnf -y --disablerepo='*' --enablerepo='openstack-local' install chrony
 systemctl enable --now chronyd
 chronyc -a makestep
-systemctl is-active chronyd
-systemctl is-enabled chronyd
-chronyc tracking
-chronyc sources
+
+assert_chrony() {
+  local tracking sources stratum
+  systemctl is-active --quiet chronyd || die "chronyd is not active"
+  systemctl is-enabled --quiet chronyd || die "chronyd is not enabled"
+  tracking=$(chronyc tracking) || die "chronyc tracking failed"
+  grep -Eq '^Leap status[[:space:]]*:[[:space:]]*Normal$' <<<"$tracking" || \
+    die "chrony Leap status is not Normal"
+  stratum=$(awk -F: '/^Stratum[[:space:]]*:/ {gsub(/[[:space:]]/, "", $2); print $2}' <<<"$tracking")
+  [[ "$stratum" =~ ^[0-9]+$ ]] && (( stratum > 0 )) || die "chrony stratum is invalid"
+  sources=$(chronyc sources) || die "chronyc sources failed"
+  grep -Eq '^\^\*' <<<"$sources" || die "chrony has no selected synchronized source"
+}
+
+assert_chrony
 ```
 
 `chrony-4.3-4.oe2403sp3.x86_64` 在起始 RPM 基线中已存在，因此安装命令为本地源约束下的幂等确认。最终结果：controller Stratum 3、compute Stratum 4，二者 `Leap status: Normal`，服务均为 `active/enabled`。
@@ -260,11 +395,200 @@ mv -f "$tmp" /root/.openstack-lab-secrets
 trap - EXIT
 ```
 
-随后通过两端均使用复核 host key 的 SFTP 会话，把该文件从 controller 直接流式写入 compute 的独占 root-only 临时文件，再原子改名为同一路径；没有生成本地副本，也没有把文件内容返回到执行记录。只验证以下元数据条件：两端文件均非空、大小相同、属主 `root:root`、模式 `0600`。
+随后在仓库根目录的工作站会话执行下面完整示例。它只加载已经人工复核并纳入本任务输入的两个 `known_hosts` 文件，使用 Paramiko `RejectPolicy`；登录密码通过 `getpass` 只进入进程内存。controller 文件以 64 KiB 块流经内存写入 compute 上由 `O_EXCL|O_NOFOLLOW` 建立的随机临时文件，不落工作站磁盘，不显示或哈希内容。临时文件在 `/root` 中固定为 `root:root`、`0600`，校验后同目录原子提升；`finally` 对精确临时路径做失败清理。最后只比较文件类型、非零大小、大小相等、UID/GID 与权限，不读取第二遍、更不输出内容：
+
+```python
+from getpass import getpass
+from pathlib import Path
+import os
+import shlex
+import stat
+import uuid
+
+import paramiko
+
+CONTROLLER_HOST_KEYS = Path(".superpowers/sdd/known_hosts.controller")
+COMPUTE_HOST_KEYS = Path(".superpowers/sdd/known_hosts.compute")
+SECRET_PATH = "/root/.openstack-lab-secrets"
+CHUNK_SIZE = 65536
+
+CREATE_EXCLUSIVE_PROGRAM = r"""
+import os
+import sys
+
+path = sys.argv[1]
+flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+fd = os.open(path, flags, 0o600)
+try:
+    os.fchmod(fd, 0o600)
+    os.fchown(fd, 0, 0)
+    while True:
+        chunk = sys.stdin.buffer.read(65536)
+        if not chunk:
+            break
+        view = memoryview(chunk)
+        while view:
+            written = os.write(fd, view)
+            view = view[written:]
+    os.fsync(fd)
+finally:
+    os.close(fd)
+"""
+
+PROMOTE_PROGRAM = r"""
+import os
+import stat
+import sys
+
+temporary, target = sys.argv[1:3]
+info = os.lstat(temporary)
+if not stat.S_ISREG(info.st_mode):
+    raise RuntimeError("temporary path is not a regular file")
+if info.st_uid != 0 or info.st_gid != 0 or stat.S_IMODE(info.st_mode) != 0o600:
+    raise RuntimeError("temporary metadata is unsafe")
+if info.st_size <= 0:
+    raise RuntimeError("temporary file is empty")
+if os.path.lexists(target):
+    raise FileExistsError(target)
+os.replace(temporary, target)
+directory = os.open(os.path.dirname(target), os.O_RDONLY | os.O_DIRECTORY)
+try:
+    os.fsync(directory)
+finally:
+    os.close(directory)
+"""
+
+CLEANUP_PROGRAM = r"""
+import os
+import sys
+
+path = sys.argv[1]
+try:
+    os.unlink(path)
+except FileNotFoundError:
+    pass
+"""
+
+
+def connect_pinned(host, reviewed_host_keys, password):
+    if not reviewed_host_keys.is_file():
+        raise FileNotFoundError(reviewed_host_keys)
+    client = paramiko.SSHClient()
+    client.load_host_keys(str(reviewed_host_keys))
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    client.connect(
+        hostname=host,
+        username="root",
+        password=password,
+        look_for_keys=False,
+        allow_agent=False,
+        timeout=10,
+        auth_timeout=10,
+    )
+    return client
+
+
+def remote_command(client, program, *arguments):
+    command = "python3 -c " + shlex.quote(program)
+    command += " " + " ".join(shlex.quote(value) for value in arguments)
+    remote_stdin, remote_stdout, remote_stderr = client.exec_command(command)
+    return remote_stdin, remote_stdout, remote_stderr
+
+
+def create_exclusive_temp(client, temporary):
+    return remote_command(client, CREATE_EXCLUSIVE_PROGRAM, temporary)
+
+
+def run_remote_python(client, program, *arguments):
+    remote_stdin, remote_stdout, remote_stderr = remote_command(client, program, *arguments)
+    remote_stdin.close()
+    remote_stdout.read()
+    remote_stderr.read()
+    status = remote_stdout.channel.recv_exit_status()
+    if status != 0:
+        raise RuntimeError(f"remote metadata operation failed with rc={status}")
+
+
+def promote_atomic(client, temporary, target):
+    run_remote_python(client, PROMOTE_PROGRAM, temporary, target)
+
+
+def cleanup_exact_temp(client, temporary):
+    run_remote_python(client, CLEANUP_PROGRAM, temporary)
+
+
+def checked_metadata(sftp, path):
+    info = sftp.lstat(path)
+    if not stat.S_ISREG(info.st_mode):
+        raise RuntimeError("secret path is not a regular file")
+    metadata = (info.st_size, info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode))
+    if info.st_size <= 0 or metadata[1:] != (0, 0, 0o600):
+        raise RuntimeError("secret metadata is unsafe")
+    return metadata
+
+
+def verify_metadata_equal(controller_sftp, compute_sftp):
+    source = checked_metadata(controller_sftp, SECRET_PATH)
+    target = checked_metadata(compute_sftp, SECRET_PATH)
+    if source != target:
+        raise RuntimeError("secret metadata differs between nodes")
+
+
+def transfer_secret(controller, compute):
+    temporary = SECRET_PATH + ".task5a-" + uuid.uuid4().hex
+    controller_sftp = controller.open_sftp()
+    compute_sftp = compute.open_sftp()
+    try:
+        source = controller_sftp.open(SECRET_PATH, "rb")
+        remote_stdin, remote_stdout, remote_stderr = create_exclusive_temp(compute, temporary)
+        try:
+            while True:
+                chunk = source.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                remote_stdin.write(chunk)
+            remote_stdin.flush()
+            remote_stdin.close()
+            remote_stdout.read()
+            remote_stderr.read()
+            status = remote_stdout.channel.recv_exit_status()
+            if status != 0:
+                raise RuntimeError(f"exclusive streaming transfer failed with rc={status}")
+        finally:
+            source.close()
+        promote_atomic(compute, temporary, SECRET_PATH)
+        verify_metadata_equal(controller_sftp, compute_sftp)
+    finally:
+        cleanup_exact_temp(compute, temporary)
+        controller_sftp.close()
+        compute_sftp.close()
+
+
+password = getpass("SSH root password (memory only): ")
+controller = connect_pinned("192.168.234.151", CONTROLLER_HOST_KEYS, password)
+compute = connect_pinned("192.168.234.150", COMPUTE_HOST_KEYS, password)
+try:
+    transfer_secret(controller, compute)
+finally:
+    password = None
+    controller.close()
+    compute.close()
+```
+
+远端目标必须在执行前不存在；如果目标或临时路径已存在，程序拒绝覆盖。发生认证、主机密钥、读写、元数据或提升错误时，异常使该阶段非零退出，后续阶段不得继续。该流程没有 `AutoAddPolicy`，也不从 DNS、默认用户 known_hosts 或命令行参数静默采信密钥。
+
+节点上只验证以下元数据条件；不得执行 `cat`、哈希或其他内容输出：
 
 ```bash
-stat -c '%a:%U:%G' /root/.openstack-lab-secrets
-test -s /root/.openstack-lab-secrets
+assert_secret_metadata() {
+  local metadata
+  metadata=$(stat -c '%a:%u:%g' /root/.openstack-lab-secrets) || \
+    die "cannot stat runtime secret"
+  [[ "$metadata" == 600:0:0 ]] || die "runtime secret metadata is unsafe"
+  [[ -s /root/.openstack-lab-secrets ]] || die "runtime secret is empty"
+}
+
+assert_secret_metadata
 ```
 
 代表性结果：
@@ -276,6 +600,95 @@ metadata parity: PASS
 ```
 
 ## 收口检查
+
+下面的阶段驱动器把本页关键不变量组成一个真实短路链。前述变更命令在同一严格 shell 中按章节执行；每完成一章立即执行对应 `stage_*`，页末再调用一次 `run_base_sequence` 做收口复验。任何函数非零返回时，`set -e` 与 ERR trap 终止会话，后续函数不会运行：
+
+```bash
+stage_starting_state() {
+  local role expected_ip ens34_ipv4
+  role=$(hostnamectl --static) || die "cannot read hostname"
+  case "$role" in
+    controller) expected_ip=192.168.234.151 ;;
+    compute) expected_ip=192.168.234.150 ;;
+    *) die "unexpected role hostname: $role" ;;
+  esac
+  ip -4 -o addr show dev ens33 | grep -q "[[:space:]]${expected_ip}/24[[:space:]]" || \
+    die "ens33 address does not match $role"
+  ens34_ipv4=$(ip -4 -o addr show dev ens34) || die "cannot inspect ens34"
+  [[ -z "$ens34_ipv4" ]] || die "ens34 unexpectedly has an IPv4 address"
+  findmnt -nro SOURCE,FSTYPE,TARGET / >/dev/null || die "root mount probe failed"
+  if [[ "$role" == compute ]]; then
+    assert_blank_data_disk /dev/sdb 53687091200
+    assert_blank_data_disk /dev/sdc 53687091200
+  fi
+}
+
+stage_identity_hosts() {
+  local role peer expected_controller expected_compute
+  role=$(hostnamectl --static) || die "cannot read hostname"
+  [[ $(grep -Ec '^192\.168\.234\.151[[:space:]]+controller([[:space:]]|$)' /etc/hosts) -eq 1 ]] || \
+    die "controller hosts mapping is not unique"
+  [[ $(grep -Ec '^192\.168\.234\.150[[:space:]]+compute([[:space:]]|$)' /etc/hosts) -eq 1 ]] || \
+    die "compute hosts mapping is not unique"
+  expected_controller=$(getent ahostsv4 controller) || die "controller resolution failed"
+  expected_compute=$(getent ahostsv4 compute) || die "compute resolution failed"
+  grep -q '^192\.168\.234\.151[[:space:]]' <<<"$expected_controller" || \
+    die "controller resolved to an unexpected address"
+  grep -q '^192\.168\.234\.150[[:space:]]' <<<"$expected_compute" || \
+    die "compute resolved to an unexpected address"
+  [[ "$role" == controller ]] && peer=compute || peer=controller
+  ping -c 2 -W 2 "$peer" >/dev/null || die "cross-node ping failed: $role -> $peer"
+}
+
+assert_lab_security() {
+  local active_state enabled_state rc
+  [[ $(getenforce) == Permissive ]] || die "SELinux is not Permissive"
+  grep -qx 'SELINUX=permissive' /etc/selinux/config || die "SELinux boot mode differs"
+  if active_state=$(systemctl is-active firewalld 2>&1); then
+    die "firewalld is active"
+  else
+    rc=$?
+    [[ "$rc" -eq 3 && "$active_state" == inactive ]] || die "firewalld active probe failed"
+  fi
+  if enabled_state=$(systemctl is-enabled firewalld 2>&1); then
+    die "firewalld is enabled"
+  else
+    rc=$?
+    [[ "$rc" -eq 1 && "$enabled_state" == disabled ]] || die "firewalld enabled probe failed"
+  fi
+}
+
+stage_repository_security() {
+  dnf -q repolist --disablerepo='*' --enablerepo='openstack-local' | \
+    grep -q 'openstack-local' || die "isolated repository is unavailable"
+  dnf -q makecache --disablerepo='*' --enablerepo='openstack-local'
+  rpm -q openstack-release-antelope >/dev/null || die "Antelope release package is absent"
+  grep -q 'openEuler-24.03-LTS-SP2' /etc/yum.repos.d/openstack-antelope.repo || \
+    die "Antelope repository was not corrected to SP2"
+  if grep -q 'openEuler-24.03-LTS-SP3' /etc/yum.repos.d/openstack-antelope.repo; then
+    die "SP3 Antelope URL remains"
+  fi
+  assert_lab_security
+}
+
+stage_chrony() {
+  assert_chrony
+}
+
+stage_secret_metadata() {
+  assert_secret_metadata
+}
+
+run_base_sequence() {
+  stage_starting_state
+  stage_identity_hosts
+  stage_repository_security
+  stage_chrony
+  stage_secret_metadata
+}
+
+run_base_sequence
+```
 
 ```text
 controller: identity/repo/security/time/secret-metadata/later-service-absence = PASS

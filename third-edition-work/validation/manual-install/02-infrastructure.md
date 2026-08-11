@@ -15,25 +15,75 @@ controller package preflight
 
 每个箭头都是硬门禁；后一步没有与前一步并行执行。任一步失败先诊断并重验，不跳过。
 
-## 软件包预检与安装
-
-先检查脚本中提到的 MariaDB 配置包冲突：
+从 controller 新开一个 root shell，并先建立严格会话；本页全部 `bash` 片段在该会话中按顺序执行：
 
 ```bash
-rpm -q mysql-config
+set -Eeuo pipefail
+
+die() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+on_error() {
+  local rc=$?
+  local line=${1:-unknown}
+  local command=${2:-unknown}
+  trap - ERR
+  printf 'ERROR: rc=%s line=%s command=%s\n' "$rc" "$line" "$command" >&2
+  exit "$rc"
+}
+
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+```
+
+所有显示命令都由本页的断言函数包裹；只有断言返回 0 才进入下一阶段。
+
+## 软件包预检与安装
+
+先定义 fail-closed 的 RPM 缺席断言，再检查脚本中提到的 MariaDB 配置包冲突。只有 RPM 查询返回 1 且英文规范输出精确表示“未安装”才接受；返回 0 是已安装，其他返回码或异常文本都是探针故障：
+
+```bash
+assert_packages_absent() {
+  local package output rc
+  LC_ALL=C rpm -q rpm >/dev/null 2>&1 || die "RPM database health probe failed"
+  for package in "$@"; do
+    if output=$(LC_ALL=C rpm -q "$package" 2>&1); then
+      die "later-stage package is already installed: $package"
+    else
+      rc=$?
+      [[ "$rc" -eq 1 ]] || die "RPM query failed for $package (rc=$rc)"
+      [[ "$output" == "package $package is not installed" ]] || \
+        die "unexpected RPM absence response for $package"
+    fi
+  done
+}
+
+assert_packages_absent mysql-config
 dnf -q repoquery --disablerepo='*' --enablerepo='openstack-local' \
   --conflicts mariadb-config
 ```
 
 实际结果为 `mysql-config is not installed`，而本地 `mariadb-config` 未声明冲突，因此没有执行卸载。
 
-Task 4B 补齐经完整可信链验证的 `mysql-selinux` 和 `memcached-selinux` 后，执行无变更事务预检：
+Task 4B 补齐经完整可信链验证的 `mysql-selinux` 和 `memcached-selinux` 后，执行无变更事务预检。`--assumeno` 的退出码 1 是本次唯一允许的非零结果，并且输出必须同时证明 163 个安装项、主动中止、没有移除类动作；其他返回码或输出差异均停止：
 
 ```bash
-dnf --assumeno --setopt=install_weak_deps=False \
-  --disablerepo='*' --enablerepo='openstack-local' install \
-  mariadb-config mariadb mariadb-server python3-PyMySQL \
-  rabbitmq-server memcached python3-memcached python3-openstackclient
+if preflight=$(LC_ALL=C dnf --assumeno --setopt=install_weak_deps=False \
+    --disablerepo='*' --enablerepo='openstack-local' install \
+    mariadb-config mariadb mariadb-server python3-PyMySQL \
+    rabbitmq-server memcached python3-memcached python3-openstackclient 2>&1); then
+  die "package preflight unexpectedly committed or returned success"
+else
+  rc=$?
+  [[ "$rc" -eq 1 ]] || die "package preflight probe failed (rc=$rc)"
+fi
+grep -Eq 'Install[[:space:]]+163 Packages' <<<"$preflight" || \
+  die "package preflight install count changed"
+grep -q 'Operation aborted' <<<"$preflight" || die "package preflight did not abort"
+if grep -Eiq '(^|[[:space:]])(Removing|Erasing|Obsoleting|Replacing)([[:space:]]|$)' <<<"$preflight"; then
+  die "package preflight contains a removal-class action"
+fi
 ```
 
 预检结果：`Install 163 Packages`、`Operation aborted`（`--assumeno` 的预期退出），零 Removing/Erasing/Obsoleting/Replacing 条目。确认后执行同一包集合：
@@ -88,23 +138,39 @@ character-set-server = utf8
 EOF
 chown root:root "$tmp"
 chmod 0644 "$tmp"
-restorecon -F "$tmp" >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F "$tmp" >/dev/null
+fi
 mv "$tmp" /etc/my.cnf.d/openstack.cnf
 trap - EXIT
-restorecon -F /etc/my.cnf.d/openstack.cnf >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F /etc/my.cnf.d/openstack.cnf >/dev/null
+fi
 ```
 
 启动并检查：
 
 ```bash
 systemctl enable --now mariadb
-systemctl is-active mariadb
-systemctl is-enabled mariadb
-mysql -uroot --batch --skip-column-names \
-  -e 'SELECT 1 AS local_sql_access;'
-mysql -uroot --batch --skip-column-names \
-  -e 'SELECT @@bind_address,@@default_storage_engine,@@innodb_file_per_table,@@max_connections,@@collation_server,@@character_set_server;'
-ss -ltn '( sport = :3306 )'
+
+assert_mariadb() {
+  local sql_probe live_variables
+  systemctl is-active --quiet mariadb || die "MariaDB is not active"
+  systemctl is-enabled --quiet mariadb || die "MariaDB is not enabled"
+  sql_probe=$(mysql -uroot --batch --skip-column-names \
+    -e 'SELECT 1 AS local_sql_access;') || die "MariaDB local SQL probe failed"
+  grep -qx '1' <<<"$sql_probe" || die "MariaDB SELECT 1 returned an unexpected value"
+  live_variables=$(mysql -uroot --batch --skip-column-names \
+    -e 'SELECT @@bind_address,@@default_storage_engine,@@innodb_file_per_table,@@max_connections,@@collation_server,@@character_set_server;') || \
+    die "MariaDB live-variable probe failed"
+  grep -qx $'0.0.0.0\tInnoDB\t1\t4096\tutf8_general_ci\tutf8' <<<"$live_variables" || \
+    die "MariaDB live variables differ from openstack.cnf"
+  ss -H -ltn '( sport = :3306 )' | \
+    awk '$4 == "0.0.0.0:3306" { found=1 } END { exit !found }' || \
+    die "MariaDB is not listening on 0.0.0.0:3306"
+}
+
+assert_mariadb
 ```
 
 脱敏代表性输出：
@@ -120,29 +186,68 @@ LISTEN 0 869 0.0.0.0:3306 0.0.0.0:*
 
 ## RabbitMQ
 
-`<RABBIT_PASS>` 是文档占位符，实际值只从 `/root/.openstack-lab-secrets` 读入当前非交互 shell 的临时变量，从未输出。实际执行逻辑：
+`<RABBIT_PASS>` 是文档占位符，实际值只从 `/root/.openstack-lab-secrets` 读入当前非交互 shell 的临时变量，从未输出。`configure_rabbitmq` 明确区分用户不存在与已存在两条重跑路径：不存在时先创建；已存在时跳过创建；两条路径都更新密码、重设权限并做受保护认证。认证失败分支先清除变量再调用 `die`，不会被后续 `unset` 的成功状态掩盖：
 
 ```bash
-secret_record=$(</root/.openstack-lab-secrets)
-case "$secret_record" in
-  OPENSTACK_DEPLOY_PASSWORD=*)
-    RABBIT_PASS=${secret_record#OPENSTACK_DEPLOY_PASSWORD=}
-    ;;
-  *)
-    exit 41
-    ;;
-esac
-test -n "$RABBIT_PASS"
+load_rabbit_password() {
+  local secret_record
+  secret_record=$(</root/.openstack-lab-secrets) || die "cannot read runtime secret"
+  case "$secret_record" in
+    OPENSTACK_DEPLOY_PASSWORD=*)
+      RABBIT_PASS=${secret_record#OPENSTACK_DEPLOY_PASSWORD=}
+      ;;
+    *)
+      die "runtime secret record has an unexpected format"
+      ;;
+  esac
+  [[ -n "$RABBIT_PASS" ]] || die "runtime secret is empty"
+  secret_record=
+}
 
-systemctl enable --now rabbitmq-server
-rabbitmqctl add_user openstack "$RABBIT_PASS" >/dev/null
-rabbitmqctl change_password openstack "$RABBIT_PASS" >/dev/null
-rabbitmqctl set_permissions -p / openstack '.*' '.*' '.*' >/dev/null
-rabbitmqctl authenticate_user openstack "$RABBIT_PASS" >/dev/null 2>&1
-unset RABBIT_PASS secret_record
+configure_rabbitmq() {
+  local rabbit_password=$1
+  systemctl enable --now rabbitmq-server
+  if rabbitmqctl list_users | \
+      awk '$1 == "openstack" { found=1 } END { exit !found }'; then
+    : "openstack user already exists; keep the idempotent update path"
+  else
+    rabbitmqctl add_user openstack "$rabbit_password" >/dev/null
+  fi
+  rabbitmqctl change_password openstack "$rabbit_password" >/dev/null
+  rabbitmqctl set_permissions -p / openstack '.*' '.*' '.*' >/dev/null
+  if ! rabbitmqctl authenticate_user openstack "$rabbit_password" >/dev/null 2>&1; then
+    unset rabbit_password
+    die "RabbitMQ protected authentication failed"
+  fi
+  unset rabbit_password
+}
+
+assert_rabbitmq() {
+  local rabbit_password=$1 users permissions
+  systemctl is-active --quiet rabbitmq-server || die "RabbitMQ is not active"
+  systemctl is-enabled --quiet rabbitmq-server || die "RabbitMQ is not enabled"
+  users=$(rabbitmqctl list_users) || die "RabbitMQ user probe failed"
+  awk '$1 == "openstack" { count++ } END { exit !(count == 1) }' <<<"$users" || \
+    die "RabbitMQ openstack user is absent or duplicated"
+  permissions=$(rabbitmqctl list_user_permissions openstack) || \
+    die "RabbitMQ permission probe failed"
+  awk '$1 == "/" && $2 == ".*" && $3 == ".*" && $4 == ".*" { found=1 } END { exit !found }' \
+    <<<"$permissions" || die "RabbitMQ permissions differ from the required triple"
+  if ! rabbitmqctl authenticate_user openstack "$rabbit_password" >/dev/null 2>&1; then
+    unset rabbit_password
+    die "RabbitMQ protected authentication assertion failed"
+  fi
+  unset rabbit_password
+}
+
+RABBIT_PASS=
+load_rabbit_password
+configure_rabbitmq "$RABBIT_PASS"
+assert_rabbitmq "$RABBIT_PASS"
+unset RABBIT_PASS
 ```
 
-再次运行时，若用户已经存在，应跳过 `add_user`，只执行 `change_password` 和权限设置。验证命令不显示密码：
+验证显示命令不含密码；真正的用户唯一性、权限三元组和认证成功已经由 `assert_rabbitmq` 判定：
 
 ```bash
 systemctl is-active rabbitmq-server
@@ -187,33 +292,34 @@ OPTIONS="-l 127.0.0.1,::1,192.168.234.151"
 EOF
 chown root:root "$tmp"
 chmod 0644 "$tmp"
-restorecon -F "$tmp" >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F "$tmp" >/dev/null
+fi
 mv "$tmp" /etc/sysconfig/memcached
 trap - EXIT
-restorecon -F /etc/sysconfig/memcached >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -F /etc/sysconfig/memcached >/dev/null
+fi
 systemctl enable --now memcached
 ```
 
-服务与监听检查：
+服务、监听集合和读写验证由一个断言函数完成。监听必须与三个预期地址精确相等，不能多出通配地址或其他接口；Python 客户端的 set/get/delete 任一步失败均显式抛出异常并使阶段非零退出：
 
 ```bash
-systemctl is-active memcached
-systemctl is-enabled memcached
-ss -lnt '( sport = :11211 )'
-```
+assert_memcached() {
+  local expected_listeners actual_listeners
+  systemctl is-active --quiet memcached || die "Memcached is not active"
+  systemctl is-enabled --quiet memcached || die "Memcached is not enabled"
+  expected_listeners=$(printf '%s\n' \
+    '127.0.0.1:11211' \
+    '192.168.234.151:11211' \
+    '[::1]:11211' | sort)
+  actual_listeners=$(ss -H -lnt '( sport = :11211 )' | awk '{print $4}' | sort -u) || \
+    die "Memcached listener probe failed"
+  [[ "$actual_listeners" == "$expected_listeners" ]] || \
+    die "Memcached listener set differs from the required three addresses"
 
-实际监听：
-
-```text
-192.168.234.151:11211
-127.0.0.1:11211
-[::1]:11211
-```
-
-使用已安装的 `python3-memcached` 对三个监听逐一执行短期 set/get/delete：
-
-```bash
-python3 - <<'PY'
+  python3 - <<'PY'
 import memcache
 
 servers = (
@@ -224,11 +330,26 @@ servers = (
 for server in servers:
     client = memcache.Client([server], socket_timeout=2)
     key = 'task5a_listener_check'
-    assert client.set(key, 'PASS', time=10), server
-    assert client.get(key) == 'PASS', server
-    client.delete(key)
-print('python3-memcached set/get: PASS on 127.0.0.1, ::1, 192.168.234.151')
+    if not client.set(key, 'PASS', time=10):
+        raise RuntimeError(f'memcached set failed: {server}')
+    if client.get(key) != 'PASS':
+        raise RuntimeError(f'memcached get failed: {server}')
+    if not client.delete(key):
+        raise RuntimeError(f'memcached delete failed: {server}')
+    if client.get(key) is not None:
+        raise RuntimeError(f'memcached delete verification failed: {server}')
 PY
+}
+
+assert_memcached
+```
+
+实际监听：
+
+```text
+192.168.234.151:11211
+127.0.0.1:11211
+[::1]:11211
 ```
 
 本发行版 `python3-memcached 1.59` 的 IPv6 连接串必须带 `inet6:` 前缀；普通 `::1` 或 `[::1]:11211` 会在客户端解析阶段失败，这不是 Memcached 监听故障。
@@ -238,7 +359,13 @@ PY
 前三项基础设施门禁均通过后，最后执行：
 
 ```bash
-openstack --version
+assert_openstack_cli() {
+  local version
+  version=$(openstack --version 2>&1) || die "OpenStack CLI execution failed"
+  [[ "$version" == "openstack 6.2.0" ]] || die "unexpected OpenStack CLI version: $version"
+}
+
+assert_openstack_cli
 ```
 
 实际输出：
@@ -251,12 +378,56 @@ openstack 6.2.0
 
 ## 最终验证
 
+下面的阶段驱动器把安装后状态重新串成同一真实短路链；它不替代各节紧随变更执行的断言，而是证明收口时仍满足相同顺序。`run_infrastructure_sequence` 中每个调用只有在前一调用返回 0 后才会开始：
+
 ```bash
-systemctl is-active mariadb rabbitmq-server memcached
-systemctl is-enabled mariadb rabbitmq-server memcached
-rpm -q openstack-keystone openstack-glance openstack-placement-api \
-  openstack-nova-common openstack-neutron-common openstack-cinder-common \
-  openstack-swift-common python3-horizon 2>/dev/null || true
+stage_package_install() {
+  rpm -q mariadb-config mariadb mariadb-server python3-PyMySQL \
+    rabbitmq-server memcached python3-memcached python3-openstackclient \
+    mysql-selinux memcached-selinux policycoreutils-python-utils >/dev/null || \
+    die "one or more infrastructure packages are absent"
+}
+
+stage_mariadb() {
+  assert_mariadb
+}
+
+stage_rabbitmq() {
+  local RABBIT_PASS=
+  load_rabbit_password
+  assert_rabbitmq "$RABBIT_PASS"
+  unset RABBIT_PASS
+}
+
+stage_memcached() {
+  assert_memcached
+}
+
+stage_openstack_cli() {
+  assert_openstack_cli
+}
+
+run_infrastructure_sequence() {
+  stage_package_install
+  stage_mariadb
+  stage_rabbitmq
+  stage_memcached
+  stage_openstack_cli
+}
+
+run_infrastructure_sequence
+
+later_packages=(
+  openstack-keystone
+  openstack-glance
+  openstack-placement-api
+  openstack-nova-common
+  openstack-neutron-common
+  openstack-cinder-common
+  openstack-swift-common
+  python3-horizon
+)
+assert_packages_absent "${later_packages[@]}"
 ss -lnt '( sport = :3306 or sport = :5672 or sport = :11211 )'
 ```
 
