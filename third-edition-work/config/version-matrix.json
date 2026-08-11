@@ -1,0 +1,13 @@
+{
+  "openstack_release": "2023.1 Antelope",
+  "components": {
+    "keystone": "23.0.1",
+    "glance": "26.0.0",
+    "placement": "9.0.0",
+    "nova": "27.3.0",
+    "neutron": "22.1.0",
+    "cinder": "22.1.2",
+    "swift": "2.31.1",
+    "horizon": "23.1.0"
+  }
+}
