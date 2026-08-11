@@ -116,3 +116,19 @@ and disk evidence is in `dependency-closure.txt`. Final packaging must use the
 tracked `third-edition-work/config/repository-overlay-manifest.json` together
 with the ignored `third-edition-work/environment-cache/repository-overlay/`
 payloads; the original ZIP must remain unchanged.
+
+### Task 4B reviewer evidence addendum
+
+- Trusted key package: openEuler-gpg-keys-0:1.0-5.4.oe2403sp3.x86_64.
+- Trusted key path: /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler.
+- Package/file rpm verification: RC=0 / RC=0, no differences.
+- Trusted file and official HTTPS response SHA256:
+  006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1.
+- Full fingerprint: 8AA16BF9F2CA5244010DCA963B477C60B675600B.
+- Overlay issuer long ID: 3B477C60B675600B, matching the fingerprint.
+- Complete controller transaction: 163 entries, openstack-local only, all removal classes zero.
+- Complete compute transaction: 163 entries, openstack-local only, all removal classes zero.
+- Unabridged records: dependency-closure-transaction-controller.txt and
+  dependency-closure-transaction-compute.txt.
+- Actual swap/rollback/cleanup paths and the contemporaneous-versus-post-hoc
+  evidence boundary are recorded in dependency-closure.txt and the Task 4B report.

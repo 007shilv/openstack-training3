@@ -69,6 +69,26 @@ Exact selected packages (the exact-NEVRA queries each returned one official loca
 
 Signature verification used an isolated temporary rpmdb containing only the configured official openEuler key. Both Header RSA/SHA256 signatures, header digests, payload SHA256 digests, and MD5 digests returned OK.
 
+Trusted-key binding chain:
+  Trusted system path: /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler
+  Owning package NEVRA: openEuler-gpg-keys-0:1.0-5.4.oe2403sp3.x86_64
+  `rpm -V openEuler-gpg-keys-1.0-5.4.oe2403sp3.x86_64`: RC=0, no differences
+  `rpm -Vf /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler`: RC=0, no differences
+  File identity: root:root, mode 0644, regular file, 3033 bytes
+  Trusted file SHA256: 006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1
+  Primary fingerprint from `gpg --batch --with-colons --show-keys`:
+    8AA16BF9F2CA5244010DCA963B477C60B675600B
+  Signing subkey fingerprint:
+    812E1BDCB68F9B756AA48CEF007FB747FB37BC6F
+  Official HTTPS key URL:
+    https://repo.openeuler.org/openEuler-24.03-LTS-SP3/everything/x86_64/RPM-GPG-KEY-openEuler
+  HTTPS response SHA256: 006e79d37c10e74c24df6d07c4efc4176515cec009daa5ed493b06f5b6ef39c1
+  HTTPS response fingerprint: 8AA16BF9F2CA5244010DCA963B477C60B675600B
+
+The official HTTPS response and the RPM-verified system trust file are byte-for-byte identical by SHA256 and expose the same full fingerprint. Each overlay RPM's `RSAHEADER:pgpsig` issuer long ID is `3B477C60B675600B`, exactly the final 16 hexadecimal digits of that full fingerprint. The earlier isolated-rpmdb `rpmkeys --checksig --verbose` verification therefore binds both overlay signatures to this RPM-owned, file-verified system trust anchor rather than only to the short `b675600b` display.
+
+Compute independently reported the same owning NEVRA, package/file verification RC=0/0, system-key SHA256, and official HTTPS-response SHA256. Because its RPM-verified key file is byte-identical to the controller key whose fingerprint was parsed, it is bound to the same full fingerprint. The compute check left no `/root/.gnupg`, `/root/pubring.kbx`, or `/root/trustdb.gpg` residue.
+
 Candidate resolution also showed policycoreutils-python-utils-3.5-4.oe2403sp3.noarch as a required dependency. It and every other direct/transitive requirement were already supplied by the original reviewed repository or installed SP3 system; no third overlay RPM was required.
 
 The update repository also advertised memcached-selinux-1.6.22-5.oe2403sp3. It was not selected: the immutable local repository contains memcached-1.6.22-4.oe2403sp3, and the selected SELinux subpackage is the uniquely located policy built by the same memcached-1.6.22-4 source RPM. mysql-selinux had one advertised SP3 candidate. No package-source ambiguity remained after exact EVR pairing.
@@ -89,6 +109,30 @@ The update repository also advertised memcached-selinux-1.6.22-5.oe2403sp3. It w
 - All eight Task 4 core RPM hashes were unchanged: 8/8.
 - Candidate metadata parsed with all configured repositories disabled.
 
+Actual path and swap record:
+  Task parent: /opt
+  Task staging parent: /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1
+  Candidate source: /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/candidate
+  Rollback parent: /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1
+  Rollback repository child: /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/repo
+  Promotion target: /opt/openstack_repo
+
+Forward rename 1:
+  rename("/opt/openstack_repo",
+         "/opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/repo")
+Forward rename 2:
+  rename("/opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/candidate",
+         "/opt/openstack_repo")
+
+Failure/reverse commands:
+  If forward rename 1 failed, execution stopped with the target unchanged; no reverse command was needed.
+  If rename 1 succeeded but rename 2 failed:
+    mv -- /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/repo /opt/openstack_repo
+  If any post-promotion check failed after both forward renames:
+    mv -- /opt/openstack_repo /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/failed-candidate-after-promotion
+    mv -- /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/repo /opt/openstack_repo
+  These reverse commands were prepared and guarded but were not executed because all post-promotion checks passed.
+
 Candidate transaction plan (all packages came from task4b-candidate):
   Direct installs: mariadb-config, mariadb, mariadb-server, python3-PyMySQL,
     rabbitmq-server, memcached, python3-memcached, python3-openstackclient.
@@ -100,6 +144,15 @@ Candidate transaction plan (all packages came from task4b-candidate):
   Resolution result: Dependencies resolved; Operation aborted by --assumeno.
   Removing/Erasing entries: 0.
   Installed packages: 0.
+
+Complete post-promotion isolated transaction records are tracked separately:
+  dependency-closure-transaction-controller.txt
+    file:///opt/openstack_repo; 163 complete action/NEVRA/arch/repository rows;
+    Repository=openstack-local for 163/163; removal-class sections=0.
+  dependency-closure-transaction-compute.txt
+    ftp://192.168.234.151/openstack_repo; 163 complete action/NEVRA/arch/repository rows;
+    Repository=openstack-local for 163/163; removal-class sections=0.
+Both records contain the exact command, complete unabridged stdout/stderr, RC=1 user-abort semantics, and identical before/after RPM baselines. `install_weak_deps=False` is explicit so this independent evidence exactly reproduces the reviewed 163-entry Task 5A resolution plan.
 
 The temporary repofrompath repository was explicitly set to gpgcheck=0 for the DNF plan, matching the deployed openstack-local contract. Overlay integrity did not depend on that setting: the two new RPMs had already passed the isolated official-key signature check and exact SHA256 verification.
 
@@ -147,6 +200,25 @@ Compute disk state before and after:
   No disk command with write semantics was run.
 
 Cleanup authorization revalidated both exact /opt children, nonce, root ownership, modes, non-symlink state, markers, expected child sets, old 1079-RPM/repomd identity, and promoted 1081-RPM/overlay identity. Only the authorized staging and rollback objects were removed. Their exact post-cleanup absence passed, and /opt again contained only openstack_repo.
+
+Cleanup precondition record and exact targets:
+  Staging expected child set before cleanup (exactly six names):
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/.task4b-owner.json
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/candidate-plan.txt
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/dnf-cache/
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/downloads/
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/rpmdb/
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1/tool/
+  Rollback expected child set before cleanup (exactly two names):
+    /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/.task4b-owner.json
+    /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1/repo/
+  Exact recursively cleaned task objects, only after marker and set validation:
+    /opt/.openstack_repo.task-10149dbfc0998dded61b930bacaf67e1
+    /opt/.openstack_repo.rollback-10149dbfc0998dded61b930bacaf67e1
+
+The marker hashes, forward-rename success, expected child sets, and cleanup success are contemporaneous execution records captured in the task execution output; no separate append-only remote execution log was preserved. The current fact that `/opt` contains only `openstack_repo` and both nonce paths are absent is post-execution corroboration only, not a substitute for durable pre-cleanup evidence.
+
+Key-inspection deviation: the first `gpg --show-keys` invocation omitted a non-default home, and GPG contemporaneously reported creating `/root/.gnupg`, a 32-byte empty keybox, and a 1200-byte trustdb. Before cleanup, the exact directory was root-owned mode 0700 and contained only those two root-owned mode-0600 files; their sizes and SHA256 values were recorded. Only those exact files were deleted and the directory removed, then exact absence passed. No key was imported and no repository or RPM database changed. No further default-home key parsing was used; compute trust was corroborated through RPM verification and byte-identical hashes without creating GPG state.
 
 ## Local final-environment cache
 

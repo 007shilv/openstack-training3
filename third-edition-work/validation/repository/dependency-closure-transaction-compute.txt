@@ -1,0 +1,388 @@
+# Lab Task 4B complete isolated DNF transaction - compute
+Host role: compute
+Repository baseurl: ftp://192.168.234.151/openstack_repo
+Exact command: dnf --color=never --disablerepo='*' --enablerepo='openstack-local' --setopt=install_weak_deps=False --assumeno install mariadb-config mariadb mariadb-server python3-PyMySQL rabbitmq-server memcached python3-memcached python3-openstackclient
+Command environment: no deployment secret or secret environment variable was supplied
+Exit code: 1
+Exit-code semantics: expected --assumeno user abort after Dependencies resolved / Operation aborted; no transaction executed
+Parsed transaction entries: 163
+Parsed repositories: openstack-local
+Removing sections: 0
+Erasing sections: 0
+Obsoleting sections: 0
+Replacing sections: 0
+
+## RPM baseline before
+package mariadb-config is not installed
+package mariadb is not installed
+package mariadb-server is not installed
+package python3-PyMySQL is not installed
+package rabbitmq-server is not installed
+package memcached is not installed
+package python3-memcached is not installed
+package python3-openstackclient is not installed
+package mysql-selinux is not installed
+package memcached-selinux is not installed
+
+## Complete stdout
+Last metadata expiration check: 0:21:07 ago on Tue 11 Aug 2026 12:58:00 PM CST.
+Dependencies resolved.
+=============================================================================================
+ Package                                 Arch    Version               Repository        Size
+=============================================================================================
+Installing:
+ mariadb                                 x86_64  4:10.5.29-4.oe2403sp3 openstack-local  6.1 M
+ mariadb-config                          x86_64  4:10.5.29-4.oe2403sp3 openstack-local  4.5 k
+ mariadb-server                          x86_64  4:10.5.29-4.oe2403sp3 openstack-local   18 M
+ memcached                               x86_64  1.6.22-4.oe2403sp3    openstack-local  125 k
+ python3-PyMySQL                         noarch  1.0.2-1.oe2403sp2     openstack-local  107 k
+ python3-memcached                       noarch  1.59-3.oe2403sp3      openstack-local   45 k
+ python3-openstackclient                 noarch  6.2.0-1.oe2403sp2     openstack-local  1.8 M
+ rabbitmq-server                         x86_64  3.9.23-2.oe2403sp3    openstack-local   15 M
+Installing dependencies:
+ Lmod                                    x86_64  8.7.32-1.oe2403sp3    openstack-local  251 k
+ checkpolicy                             x86_64  3.5-3.oe2403sp3       openstack-local  295 k
+ compat-openssl11-libs                   x86_64  1:1.1.1m-18.oe2403sp3 openstack-local  1.4 M
+ emacs-filesystem                        noarch  1:29.1-8.oe2403sp3    openstack-local  3.5 k
+ erlang-asn1                             x86_64  25.3.2.6-13.oe2403sp3 openstack-local  1.0 M
+ erlang-compiler                         x86_64  25.3.2.6-13.oe2403sp3 openstack-local  2.4 M
+ erlang-crypto                           x86_64  25.3.2.6-13.oe2403sp3 openstack-local  195 k
+ erlang-eldap                            x86_64  25.3.2.6-13.oe2403sp3 openstack-local  137 k
+ erlang-erts                             x86_64  25.3.2.6-13.oe2403sp3 openstack-local  2.6 M
+ erlang-inets                            x86_64  25.3.2.6-13.oe2403sp3 openstack-local  780 k
+ erlang-kernel                           x86_64  25.3.2.6-13.oe2403sp3 openstack-local  2.2 M
+ erlang-mnesia                           x86_64  25.3.2.6-13.oe2403sp3 openstack-local  1.0 M
+ erlang-os_mon                           x86_64  25.3.2.6-13.oe2403sp3 openstack-local  108 k
+ erlang-public_key                       x86_64  25.3.2.6-13.oe2403sp3 openstack-local  858 k
+ erlang-runtime_tools                    x86_64  25.3.2.6-13.oe2403sp3 openstack-local  222 k
+ erlang-sasl                             x86_64  25.3.2.6-13.oe2403sp3 openstack-local  370 k
+ erlang-snmp                             x86_64  25.3.2.6-13.oe2403sp3 openstack-local  2.2 M
+ erlang-ssl                              x86_64  25.3.2.6-13.oe2403sp3 openstack-local  1.8 M
+ erlang-stdlib                           x86_64  25.3.2.6-13.oe2403sp3 openstack-local  4.2 M
+ erlang-syntax_tools                     x86_64  25.3.2.6-13.oe2403sp3 openstack-local  297 k
+ erlang-tools                            x86_64  25.3.2.6-13.oe2403sp3 openstack-local  740 k
+ erlang-xmerl                            x86_64  25.3.2.6-13.oe2403sp3 openstack-local  1.5 M
+ git-core                                x86_64  2.43.0-11.oe2403sp3   openstack-local   10 M
+ libaio                                  x86_64  0.3.113-10.oe2403sp3  openstack-local   19 k
+ libxslt                                 x86_64  1.1.39-7.oe2403sp3    openstack-local  176 k
+ lksctp-tools                            x86_64  1.0.19-3.oe2403sp3    openstack-local   60 k
+ lua-filesystem                          x86_64  1.8.0-1.oe2403sp3     openstack-local   15 k
+ lua-json                                noarch  1.3.4-2.oe2403sp3     openstack-local   22 k
+ lua-lpeg                                x86_64  1.0.2-3.oe2403sp3     openstack-local   63 k
+ lua-posix                               x86_64  36.1-1.oe2403sp3      openstack-local   99 k
+ lua-term                                x86_64  0.07-2.oe2403sp3      openstack-local   12 k
+ mariadb-common                          x86_64  4:10.5.29-4.oe2403sp3 openstack-local   24 k
+ mariadb-connector-c                     x86_64  3.3.8-6.oe2403sp3     openstack-local  185 k
+ mariadb-errmsg                          x86_64  4:10.5.29-4.oe2403sp3 openstack-local  228 k
+ memcached-help                          noarch  1.6.22-4.oe2403sp3    openstack-local   56 k
+ memcached-selinux                       x86_64  1.6.22-4.oe2403sp3    openstack-local   16 k
+ mysql-selinux                           noarch  1.0.10-1.oe2403sp3    openstack-local   31 k
+ policycoreutils-python-utils            noarch  3.5-4.oe2403sp3       openstack-local   22 k
+ python-openstackclient-lang             noarch  6.2.0-1.oe2403sp2     openstack-local   53 k
+ python-sphinx-locale                    noarch  1:4.5.0-1.oe2403sp2   openstack-local  335 k
+ python3-IPy                             noarch  1.01-2.oe2403sp3      openstack-local   44 k
+ python3-appdirs                         noarch  1.4.4-4.oe2403sp3     openstack-local   22 k
+ python3-asn1crypto                      noarch  1.5.1-1.oe2403sp3     openstack-local  236 k
+ python3-attrs                           noarch  22.1.0-1.oe2403sp2    openstack-local  114 k
+ python3-audit                           x86_64  1:3.1.2-13.oe2403sp3  openstack-local   76 k
+ python3-autopage                        noarch  0.5.0-1.oe2403sp2     openstack-local   73 k
+ python3-babel                           noarch  2.10.3-1.oe2403sp2    openstack-local  6.9 M
+ python3-betamax                         noarch  0.8.1-2.oe2403sp3     openstack-local   79 k
+ python3-blinker                         noarch  1.6.2-1.oe2403sp3     openstack-local   34 k
+ python3-cffi                            x86_64  1.15.1-1.oe2403sp2    openstack-local  299 k
+ python3-chardet                         noarch  5.2.0-1.oe2403sp3     openstack-local  281 k
+ python3-charset-normalizer              noarch  2.1.1-1.oe2403sp2     openstack-local   92 k
+ python3-cinderclient                    noarch  9.3.0-1.oe2403sp2     openstack-local  497 k
+ python3-cliff                           noarch  4.2.0-1.oe2403sp2     openstack-local  158 k
+ python3-cmd2                            noarch  2.4.2-1.oe2403sp2     openstack-local  299 k
+ python3-coverage                        x86_64  6.5.0-1.oe2403sp2     openstack-local  349 k
+ python3-cryptography                    x86_64  38.0.2-2.oe2403sp2    openstack-local  984 k
+ python3-debtcollector                   noarch  2.5.0-1.oe2403sp3     openstack-local   45 k
+ python3-docutils                        noarch  0.17.1-3.oe2403sp2    openstack-local  1.0 M
+ python3-dogpile-cache                   noarch  1.1.8-1.oe2403sp2     openstack-local  108 k
+ python3-extras                          noarch  1.0.0-8.oe2403sp3     openstack-local   20 k
+ python3-fixtures                        noarch  4.0.1-1.oe2403sp2     openstack-local  119 k
+ python3-flake8                          noarch  3.9.2-2.oe2403sp2     openstack-local  157 k
+ python3-greenlet                        x86_64  1.1.3-1.oe2403sp2     openstack-local  118 k
+ python3-gssapi                          x86_64  1.8.1-1.oe2403sp2     openstack-local  507 k
+ python3-idna                            noarch  3.4-2.oe2403sp2       openstack-local   92 k
+ python3-imagesize                       noarch  1.3.0-1.oe2403sp2     openstack-local   19 k
+ python3-importlib-metadata              noarch  5.0.0-2.oe2403sp2     openstack-local   52 k
+ python3-iniconfig                       noarch  1.1.1-2.oe2403sp2     openstack-local   15 k
+ python3-inotify                         noarch  0.9.6-19.oe2403sp3    openstack-local   62 k
+ python3-invoke                          noarch  2.2.0-1.oe2403sp3     openstack-local  326 k
+ python3-iso8601                         noarch  1.1.0-1.oe2403sp3     openstack-local   24 k
+ python3-jinja2                          noarch  3.1.2-2.oe2403sp2     openstack-local  324 k
+ python3-jmespath                        noarch  0.10.0-2.oe2403sp2    openstack-local   56 k
+ python3-jsonpatch                       noarch  1.32-1.oe2403sp2      openstack-local   30 k
+ python3-jsonpointer                     noarch  2.3-1.oe2403sp2       openstack-local   18 k
+ python3-jwt                             noarch  2.5.0-1.oe2403sp2     openstack-local   56 k
+ python3-keystoneauth1                   noarch  5.1.2-1.oe2403sp2     openstack-local  562 k
+ python3-keystoneclient                  noarch  5.1.0-1.oe2403sp2     openstack-local  685 k
+ python3-libselinux                      x86_64  3.5-7.oe2403sp3       openstack-local  175 k
+ python3-libsemanage                     x86_64  3.5-7.oe2403sp3       openstack-local   71 k
+ python3-linecache2                      noarch  1.0.0-20.oe2403sp3    openstack-local   17 k
+ python3-lxml                            x86_64  4.9.1-3.oe2403sp2     openstack-local  1.2 M
+ python3-markupsafe                      x86_64  2.1.1-1.oe2403sp2     openstack-local   25 k
+ python3-mccabe                          noarch  0.6.1-11.oe2403sp2    openstack-local   21 k
+ python3-mimeparse                       noarch  1.6.0-9.oe2403sp3     openstack-local   15 k
+ python3-mock                            noarch  4.0.3-2.oe2403sp2     openstack-local   75 k
+ python3-msgpack                         x86_64  1.0.4-1.oe2403sp2     openstack-local   85 k
+ python3-munch                           noarch  2.5.0-2.oe2403sp2     openstack-local   24 k
+ python3-mypy                            x86_64  0.982-1.oe2403sp2     openstack-local  3.4 M
+ python3-mypy-extensions                 noarch  0.4.3-2.oe2403sp2     openstack-local   13 k
+ python3-netaddr                         noarch  0.8.0-4.oe2403sp2     openstack-local  1.8 M
+ python3-netifaces                       x86_64  0.11.0-1.oe2403sp3    openstack-local   18 k
+ python3-neutronclient                   noarch  9.0.0-1.oe2403sp2     openstack-local  782 k
+ python3-novaclient                      noarch  18.7.0-1.oe2403sp2    openstack-local  654 k
+ python3-oauthlib                        noarch  3.2.1-1.oe2403sp2     openstack-local  231 k
+ python3-openstacksdk                    noarch  1.0.1-1.oe2403sp2     openstack-local  2.6 M
+ python3-os-client-config                noarch  2.1.0-2.oe2403sp2     openstack-local   72 k
+ python3-os-service-types                noarch  1.7.0-2.oe2403sp2     openstack-local   38 k
+ python3-osc-lib                         noarch  2.7.0-1.oe2403sp2     openstack-local  176 k
+ python3-oslo-config                     noarch  9.1.1-1.oe2403sp2     openstack-local  298 k
+ python3-oslo-context                    noarch  5.1.1-1.oe2403sp2     openstack-local   41 k
+ python3-oslo-i18n                       noarch  6.0.0-1.oe2403sp2     openstack-local   70 k
+ python3-oslo-log                        noarch  5.2.0-1.oe2403sp2     openstack-local  140 k
+ python3-oslo-serialization              noarch  5.1.1-1.oe2403sp2     openstack-local   51 k
+ python3-oslo-utils                      noarch  6.1.0-1.oe2403sp2     openstack-local  197 k
+ python3-packaging                       noarch  24.2-1.oe2403sp3      openstack-local  141 k
+ python3-pbr                             noarch  5.11.1-1.oe2403sp2    openstack-local  104 k
+ python3-pluggy                          noarch  1.4.0-1.oe2403sp3     openstack-local   51 k
+ python3-ply                             noarch  3.11-4.oe2403sp3      openstack-local  118 k
+ python3-policycoreutils                 noarch  3.5-4.oe2403sp3       openstack-local  2.2 M
+ python3-prettytable                     noarch  2.4.0-2.oe2403sp2     openstack-local   59 k
+ python3-pycodestyle                     noarch  2.7.0-1.oe2403sp2     openstack-local   85 k
+ python3-pycparser                       noarch  2.21-2.oe2403sp3      openstack-local  144 k
+ python3-pyflakes                        noarch  2.3.1-2.oe2403sp2     openstack-local  176 k
+ python3-pygments                        noarch  2.13.0-1.oe2403sp2    openstack-local  2.0 M
+ python3-pyperclip                       noarch  1.8.2-2.oe2403sp3     openstack-local   27 k
+ python3-pysocks                         noarch  1.7.1-2.oe2403sp3     openstack-local   38 k
+ python3-pyspnego                        noarch  0.9.1-1.oe2403sp3     openstack-local  282 k
+ python3-pytest                          noarch  7.2.0-1.oe2403sp2     openstack-local  789 k
+ python3-pytest-cov                      noarch  4.1.0-2.oe2403sp3     openstack-local   50 k
+ python3-pytest-mock                     noarch  3.11.1-1.oe2403sp3    openstack-local   29 k
+ python3-pytz                            noarch  2023.3-1.oe2403sp3    openstack-local   54 k
+ python3-pyyaml                          x86_64  6.0-1.oe2403sp2       openstack-local  209 k
+ python3-requests                        noarch  2.28.1-1.oe2403sp2    openstack-local  132 k
+ python3-requests-kerberos               noarch  0.14.0-1.oe2403sp3    openstack-local   25 k
+ python3-requestsexceptions              noarch  1.4.0-2.oe2403sp3     openstack-local   11 k
+ python3-rfc3986                         noarch  1.5.0-2.oe2403sp2     openstack-local   61 k
+ python3-ruamel-yaml                     noarch  0.17.21-1.oe2403sp2   openstack-local  274 k
+ python3-setools                         x86_64  4.4.3-1.oe2403sp3     openstack-local  657 k
+ python3-setuptools_scm                  noarch  7.1.0-1.oe2403sp3     openstack-local  100 k
+ python3-simplejson                      x86_64  3.17.6-1.oe2403sp2    openstack-local  142 k
+ python3-snowballstemmer                 noarch  2.2.0-3.oe2403sp3     openstack-local  242 k
+ python3-sphinx                          noarch  1:4.5.0-1.oe2403sp2   openstack-local  2.5 M
+ python3-sphinx-theme-alabaster          noarch  0.7.12-3.oe2403sp2    openstack-local   24 k
+ python3-sphinx_rtd_theme                noarch  1.0.0-1.oe2403sp2     openstack-local  2.5 M
+ python3-sphinxcontrib-applehelp         noarch  1.0.2-1.oe2403sp2     openstack-local   35 k
+ python3-sphinxcontrib-devhelp           noarch  1.0.2-1.oe2403sp2     openstack-local   29 k
+ python3-sphinxcontrib-htmlhelp          noarch  2.0.0-2.oe2403sp2     openstack-local   45 k
+ python3-sphinxcontrib-jsmath            noarch  1.0.1-1.oe2403sp3     openstack-local   16 k
+ python3-sphinxcontrib-qthelp            noarch  1.0.3-3.oe2403sp2     openstack-local   35 k
+ python3-sphinxcontrib-serializinghtml   noarch  1.1.5-2.oe2403sp3     openstack-local   34 k
+ python3-sphinxcontrib-websupport        noarch  1.2.4-3.oe2403sp3     openstack-local   73 k
+ python3-sqlalchemy                      x86_64  1.4.41-1.oe2403sp2    openstack-local  3.3 M
+ python3-stevedore                       noarch  5.0.0-1.oe2403sp2     openstack-local   83 k
+ python3-testtools                       noarch  2.5.0-2.oe2403sp2     openstack-local  456 k
+ python3-toml                            noarch  0.10.2-2.oe2403sp3    openstack-local   50 k
+ python3-traceback2                      noarch  1.4.0-20.oe2403sp3    openstack-local   25 k
+ python3-typing-extensions               noarch  4.12.2-2.oe2403sp3    openstack-local   85 k
+ python3-unittest2                       noarch  1.1.0-19.oe2403sp3    openstack-local  249 k
+ python3-urllib3                         noarch  1.26.12-6.oe2403sp2   openstack-local  246 k
+ python3-wcwidth                         noarch  0.2.5-2.oe2403sp2     openstack-local   41 k
+ python3-whoosh                          noarch  2.7.4-15.oe2403sp3    openstack-local  1.3 M
+ python3-wrapt                           x86_64  1.14.1-1.oe2403sp2    openstack-local   60 k
+ python3-zipp                            noarch  3.8.1-1.oe2403sp2     openstack-local   18 k
+
+Transaction Summary
+=============================================================================================
+Install  163 Packages
+
+Total download size: 123 M
+Installed size: 466 M
+
+## Complete stderr
+Operation aborted.
+
+## Machine-readable complete action/NEVRA/arch/repository table
+Format: ordinal|action|NEVRA|arch=...|repository=...|size=...
+001|install-direct|mariadb-4:10.5.29-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=6.1 M
+002|install-direct|mariadb-config-4:10.5.29-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=4.5 k
+003|install-direct|mariadb-server-4:10.5.29-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 M
+004|install-direct|memcached-1.6.22-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=125 k
+005|install-direct|python3-PyMySQL-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=107 k
+006|install-direct|python3-memcached-1.59-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=45 k
+007|install-direct|python3-openstackclient-6.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.8 M
+008|install-direct|rabbitmq-server-3.9.23-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=15 M
+009|install-dependency|Lmod-8.7.32-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=251 k
+010|install-dependency|checkpolicy-3.5-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=295 k
+011|install-dependency|compat-openssl11-libs-1:1.1.1m-18.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.4 M
+012|install-dependency|emacs-filesystem-1:29.1-8.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=3.5 k
+013|install-dependency|erlang-asn1-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.0 M
+014|install-dependency|erlang-compiler-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=2.4 M
+015|install-dependency|erlang-crypto-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=195 k
+016|install-dependency|erlang-eldap-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=137 k
+017|install-dependency|erlang-erts-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=2.6 M
+018|install-dependency|erlang-inets-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=780 k
+019|install-dependency|erlang-kernel-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=2.2 M
+020|install-dependency|erlang-mnesia-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.0 M
+021|install-dependency|erlang-os_mon-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=108 k
+022|install-dependency|erlang-public_key-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=858 k
+023|install-dependency|erlang-runtime_tools-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=222 k
+024|install-dependency|erlang-sasl-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=370 k
+025|install-dependency|erlang-snmp-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=2.2 M
+026|install-dependency|erlang-ssl-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.8 M
+027|install-dependency|erlang-stdlib-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=4.2 M
+028|install-dependency|erlang-syntax_tools-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=297 k
+029|install-dependency|erlang-tools-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=740 k
+030|install-dependency|erlang-xmerl-25.3.2.6-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=1.5 M
+031|install-dependency|git-core-2.43.0-11.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=10 M
+032|install-dependency|libaio-0.3.113-10.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=19 k
+033|install-dependency|libxslt-1.1.39-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=176 k
+034|install-dependency|lksctp-tools-1.0.19-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=60 k
+035|install-dependency|lua-filesystem-1.8.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=15 k
+036|install-dependency|lua-json-1.3.4-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+037|install-dependency|lua-lpeg-1.0.2-3.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=63 k
+038|install-dependency|lua-posix-36.1-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=99 k
+039|install-dependency|lua-term-0.07-2.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=12 k
+040|install-dependency|mariadb-common-4:10.5.29-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=24 k
+041|install-dependency|mariadb-connector-c-3.3.8-6.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=185 k
+042|install-dependency|mariadb-errmsg-4:10.5.29-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=228 k
+043|install-dependency|memcached-help-1.6.22-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=56 k
+044|install-dependency|memcached-selinux-1.6.22-4.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=16 k
+045|install-dependency|mysql-selinux-1.0.10-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=31 k
+046|install-dependency|policycoreutils-python-utils-3.5-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+047|install-dependency|python-openstackclient-lang-6.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=53 k
+048|install-dependency|python-sphinx-locale-1:4.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=335 k
+049|install-dependency|python3-IPy-1.01-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=44 k
+050|install-dependency|python3-appdirs-1.4.4-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=22 k
+051|install-dependency|python3-asn1crypto-1.5.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=236 k
+052|install-dependency|python3-attrs-22.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=114 k
+053|install-dependency|python3-audit-1:3.1.2-13.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=76 k
+054|install-dependency|python3-autopage-0.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=73 k
+055|install-dependency|python3-babel-2.10.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=6.9 M
+056|install-dependency|python3-betamax-0.8.1-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=79 k
+057|install-dependency|python3-blinker-1.6.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=34 k
+058|install-dependency|python3-cffi-1.15.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=299 k
+059|install-dependency|python3-chardet-5.2.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=281 k
+060|install-dependency|python3-charset-normalizer-2.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=92 k
+061|install-dependency|python3-cinderclient-9.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=497 k
+062|install-dependency|python3-cliff-4.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=158 k
+063|install-dependency|python3-cmd2-2.4.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=299 k
+064|install-dependency|python3-coverage-6.5.0-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=349 k
+065|install-dependency|python3-cryptography-38.0.2-2.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=984 k
+066|install-dependency|python3-debtcollector-2.5.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=45 k
+067|install-dependency|python3-docutils-0.17.1-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.0 M
+068|install-dependency|python3-dogpile-cache-1.1.8-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=108 k
+069|install-dependency|python3-extras-1.0.0-8.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=20 k
+070|install-dependency|python3-fixtures-4.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=119 k
+071|install-dependency|python3-flake8-3.9.2-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=157 k
+072|install-dependency|python3-greenlet-1.1.3-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=118 k
+073|install-dependency|python3-gssapi-1.8.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=507 k
+074|install-dependency|python3-idna-3.4-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=92 k
+075|install-dependency|python3-imagesize-1.3.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=19 k
+076|install-dependency|python3-importlib-metadata-5.0.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=52 k
+077|install-dependency|python3-iniconfig-1.1.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=15 k
+078|install-dependency|python3-inotify-0.9.6-19.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=62 k
+079|install-dependency|python3-invoke-2.2.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=326 k
+080|install-dependency|python3-iso8601-1.1.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=24 k
+081|install-dependency|python3-jinja2-3.1.2-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=324 k
+082|install-dependency|python3-jmespath-0.10.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=56 k
+083|install-dependency|python3-jsonpatch-1.32-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=30 k
+084|install-dependency|python3-jsonpointer-2.3-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=18 k
+085|install-dependency|python3-jwt-2.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=56 k
+086|install-dependency|python3-keystoneauth1-5.1.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=562 k
+087|install-dependency|python3-keystoneclient-5.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=685 k
+088|install-dependency|python3-libselinux-3.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=175 k
+089|install-dependency|python3-libsemanage-3.5-7.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=71 k
+090|install-dependency|python3-linecache2-1.0.0-20.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=17 k
+091|install-dependency|python3-lxml-4.9.1-3.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=1.2 M
+092|install-dependency|python3-markupsafe-2.1.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=25 k
+093|install-dependency|python3-mccabe-0.6.1-11.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=21 k
+094|install-dependency|python3-mimeparse-1.6.0-9.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=15 k
+095|install-dependency|python3-mock-4.0.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=75 k
+096|install-dependency|python3-msgpack-1.0.4-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=85 k
+097|install-dependency|python3-munch-2.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=24 k
+098|install-dependency|python3-mypy-0.982-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=3.4 M
+099|install-dependency|python3-mypy-extensions-0.4.3-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=13 k
+100|install-dependency|python3-netaddr-0.8.0-4.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=1.8 M
+101|install-dependency|python3-netifaces-0.11.0-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=18 k
+102|install-dependency|python3-neutronclient-9.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=782 k
+103|install-dependency|python3-novaclient-18.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=654 k
+104|install-dependency|python3-oauthlib-3.2.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=231 k
+105|install-dependency|python3-openstacksdk-1.0.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.6 M
+106|install-dependency|python3-os-client-config-2.1.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=72 k
+107|install-dependency|python3-os-service-types-1.7.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=38 k
+108|install-dependency|python3-osc-lib-2.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=176 k
+109|install-dependency|python3-oslo-config-9.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=298 k
+110|install-dependency|python3-oslo-context-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=41 k
+111|install-dependency|python3-oslo-i18n-6.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=70 k
+112|install-dependency|python3-oslo-log-5.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=140 k
+113|install-dependency|python3-oslo-serialization-5.1.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=51 k
+114|install-dependency|python3-oslo-utils-6.1.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=197 k
+115|install-dependency|python3-packaging-24.2-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=141 k
+116|install-dependency|python3-pbr-5.11.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=104 k
+117|install-dependency|python3-pluggy-1.4.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=51 k
+118|install-dependency|python3-ply-3.11-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=118 k
+119|install-dependency|python3-policycoreutils-3.5-4.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=2.2 M
+120|install-dependency|python3-prettytable-2.4.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=59 k
+121|install-dependency|python3-pycodestyle-2.7.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=85 k
+122|install-dependency|python3-pycparser-2.21-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=144 k
+123|install-dependency|python3-pyflakes-2.3.1-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=176 k
+124|install-dependency|python3-pygments-2.13.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.0 M
+125|install-dependency|python3-pyperclip-1.8.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=27 k
+126|install-dependency|python3-pysocks-1.7.1-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=38 k
+127|install-dependency|python3-pyspnego-0.9.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=282 k
+128|install-dependency|python3-pytest-7.2.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=789 k
+129|install-dependency|python3-pytest-cov-4.1.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=50 k
+130|install-dependency|python3-pytest-mock-3.11.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=29 k
+131|install-dependency|python3-pytz-2023.3-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=54 k
+132|install-dependency|python3-pyyaml-6.0-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=209 k
+133|install-dependency|python3-requests-2.28.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=132 k
+134|install-dependency|python3-requests-kerberos-0.14.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=25 k
+135|install-dependency|python3-requestsexceptions-1.4.0-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=11 k
+136|install-dependency|python3-rfc3986-1.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=61 k
+137|install-dependency|python3-ruamel-yaml-0.17.21-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=274 k
+138|install-dependency|python3-setools-4.4.3-1.oe2403sp3.x86_64|arch=x86_64|repository=openstack-local|size=657 k
+139|install-dependency|python3-setuptools_scm-7.1.0-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=100 k
+140|install-dependency|python3-simplejson-3.17.6-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=142 k
+141|install-dependency|python3-snowballstemmer-2.2.0-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=242 k
+142|install-dependency|python3-sphinx-1:4.5.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.5 M
+143|install-dependency|python3-sphinx-theme-alabaster-0.7.12-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=24 k
+144|install-dependency|python3-sphinx_rtd_theme-1.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=2.5 M
+145|install-dependency|python3-sphinxcontrib-applehelp-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=35 k
+146|install-dependency|python3-sphinxcontrib-devhelp-1.0.2-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=29 k
+147|install-dependency|python3-sphinxcontrib-htmlhelp-2.0.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=45 k
+148|install-dependency|python3-sphinxcontrib-jsmath-1.0.1-1.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=16 k
+149|install-dependency|python3-sphinxcontrib-qthelp-1.0.3-3.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=35 k
+150|install-dependency|python3-sphinxcontrib-serializinghtml-1.1.5-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=34 k
+151|install-dependency|python3-sphinxcontrib-websupport-1.2.4-3.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=73 k
+152|install-dependency|python3-sqlalchemy-1.4.41-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=3.3 M
+153|install-dependency|python3-stevedore-5.0.0-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=83 k
+154|install-dependency|python3-testtools-2.5.0-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=456 k
+155|install-dependency|python3-toml-0.10.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=50 k
+156|install-dependency|python3-traceback2-1.4.0-20.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=25 k
+157|install-dependency|python3-typing-extensions-4.12.2-2.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=85 k
+158|install-dependency|python3-unittest2-1.1.0-19.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=249 k
+159|install-dependency|python3-urllib3-1.26.12-6.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=246 k
+160|install-dependency|python3-wcwidth-0.2.5-2.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=41 k
+161|install-dependency|python3-whoosh-2.7.4-15.oe2403sp3.noarch|arch=noarch|repository=openstack-local|size=1.3 M
+162|install-dependency|python3-wrapt-1.14.1-1.oe2403sp2.x86_64|arch=x86_64|repository=openstack-local|size=60 k
+163|install-dependency|python3-zipp-3.8.1-1.oe2403sp2.noarch|arch=noarch|repository=openstack-local|size=18 k
+
+## RPM baseline after
+package mariadb-config is not installed
+package mariadb is not installed
+package mariadb-server is not installed
+package python3-PyMySQL is not installed
+package rabbitmq-server is not installed
+package memcached is not installed
+package python3-memcached is not installed
+package python3-openstackclient is not installed
+package mysql-selinux is not installed
+package memcached-selinux is not installed
+
+## Audit result
+Entries=163; repositories=openstack-local only; removing=0; erasing=0; obsoleting=0; replacing=0; baseline unchanged; installed=0.
