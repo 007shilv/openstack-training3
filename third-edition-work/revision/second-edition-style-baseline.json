@@ -1,0 +1,26 @@
+{
+  "source_filename": "云计算基础架构平台构建与应用（第二版初稿）.docx",
+  "source_sha256": "96bcad5246cc56574f5f38f4b210b8f0ed71363a1794fac9beb877332d2ae5d6",
+  "section_count": 5,
+  "page_cm": [18.4, 26.0],
+  "margins_cm": [2.0, 2.0, 2.0, 2.0],
+  "header_cm": 1.5,
+  "footer_cm": 1.75,
+  "body_font": "宋体",
+  "body_size_pt": 10.5,
+  "heading_sizes_pt": {
+    "heading_1": 22.0,
+    "heading_2": 16.0,
+    "heading_3": 16.0
+  },
+  "caption_format": {
+    "font": "宋体",
+    "size_pt": 9.0,
+    "bold": true,
+    "alignment": "center",
+    "numbering": "图<chapter>.<section>.<sequence>"
+  },
+  "paragraph_count": 5202,
+  "inline_shape_count": 522,
+  "table_count": 3
+}
