@@ -1277,10 +1277,10 @@ def test_task5_chapters_follow_second_edition_textbook_shape_and_manual_prompts(
         assert headings == expected
         assert 8_500 <= compact_length(text) <= 13_000
         assert "本章导读" in text
-        assert "一、实训前提环境" in text
-        assert "二、实训涉及节点" in text
-        assert "三、实训目标" in text
-        assert "四、实训步骤及其详解" in text
+        assert "一．实训前提环境：" in text
+        assert "二．实训涉及节点：" in text
+        assert "三．实训目标：" in text
+        assert "四．实训步骤及其详解：" in text
 
         for kind, body in re.findall(r"```(command|config)\n(.*?)\n```", text, re.S):
             lines = [line for line in body.splitlines() if line.strip()]
@@ -1372,6 +1372,7 @@ def test_task5_chapters_stop_after_deployment_without_automation_or_validation()
         assert re.search(pattern, combined, re.I) is None, pattern
     assert "qwer1234" in combined
     assert "隔离" in combined and "生产环境" in combined
+    assert "第二版" not in combined and "第三版" not in combined
 
 
 def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None:
