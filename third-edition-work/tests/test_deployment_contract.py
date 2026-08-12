@@ -3908,6 +3908,84 @@ def test_review_nova_compute_id_uses_one_fd_and_rejects_symlink_metadata_content
     assert swapped.exists(), "cleanup must not unlink a path whose lstat inode differs from the created inode"
 
 
+def _neutron_python_function_namespace(required_name: str) -> dict[str, object]:
+    candidates = markdown_fenced_blocks("09-neutron-compute.md", "python")
+    source = next(block for block in candidates if f"def {required_name}" in block)
+    tree = ast.parse(source)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.AnnAssign, ast.FunctionDef, ast.ClassDef))
+    ]
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), f"neutron-{required_name}", "exec"), namespace)
+    return namespace
+
+
+def test_manual_neutron_documents_keep_the_required_manual_order_and_boundaries() -> None:
+    controller = manual_markdown("08-neutron-controller.md")
+    compute = manual_markdown("09-neutron-compute.md")
+    markers = (
+        "只读双节点门禁", "控制节点本地源软件包", "neutron 数据库与三条主机授权",
+        "身份、服务和端点", "手工编辑控制节点配置", "数据库同步与启用控制节点服务",
+    )
+    assert [controller.index(marker) for marker in markers] == sorted(controller.index(marker) for marker in markers)
+    assert "再次只读门禁" in compute and "计算节点本地源软件包" in compute
+    combined = controller + compute
+    for command in (
+        "openstack user create --domain Default --password", "openstack role add --project service --user neutron admin",
+        "openstack service create --name neutron --description", "openstack endpoint create --region RegionOne network",
+        "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head",
+        "systemctl enable --now neutron-server neutron-linuxbridge-agent neutron-dhcp-agent neutron-metadata-agent neutron-l3-agent",
+        "systemctl enable --now neutron-linuxbridge-agent", "systemctl restart openstack-nova-compute",
+    ):
+        assert command in combined
+    for forbidden in ("openstack router", "openstack subnet", "server create", "snapshot"):
+        assert forbidden not in manual_shell_text("08-neutron-controller.md") + manual_shell_text("09-neutron-compute.md")
+
+
+def test_manual_neutron_snapshots_are_sanitized_and_match_the_two_node_mapping() -> None:
+    snapshots = MANUAL_INSTALL_DIR / "config-snapshots"
+    required = {
+        "controller-neutron.conf", "controller-ml2_conf.ini", "controller-linuxbridge_agent.ini",
+        "controller-l3_agent.ini", "controller-dhcp_agent.ini", "controller-metadata_agent.ini",
+        "controller-99-openstack-neutron.conf", "compute-neutron.conf", "compute-linuxbridge_agent.ini",
+        "compute-99-openstack-neutron.conf",
+    }
+    assert required <= {path.name for path in snapshots.iterdir()}
+    payloads = {name: (snapshots / name).read_text(encoding="utf-8") for name in required}
+    combined = "\n".join(payloads.values())
+    assert "<SERVICE_PASSWORD>" in combined and "<URL_ENCODED_PASSWORD>" in combined
+    assert "guosai" not in combined and "rabbit://openstack:@" not in combined
+    assert "provider:ens34" in payloads["controller-linuxbridge_agent.ini"]
+    assert "local_ip = 192.168.234.151" in payloads["controller-linuxbridge_agent.ini"]
+    assert "local_ip = 192.168.234.150" in payloads["compute-linuxbridge_agent.ini"]
+    assert "vni_ranges = 1:1000" in payloads["controller-ml2_conf.ini"]
+
+
+def test_focused_neutron_contract_accepts_only_a_clean_lightweight_result() -> None:
+    validate = _neutron_python_function_namespace("validate_neutron_lightweight_evidence")["validate_neutron_lightweight_evidence"]
+    good = {
+        "services": {
+            "controller": ["neutron-server", "neutron-linuxbridge-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent"],
+            "compute": ["neutron-linuxbridge-agent", "openstack-nova-compute"],
+        },
+        "api": {"http": 200, "authenticated": True},
+        "agents": {"alive": True, "hosts": ["controller", "compute"], "types": ["DHCP agent", "L3 agent", "Linux bridge agent", "Metadata agent"]},
+        "network_lifecycle": {"name_prefix": "task5f-private-", "created": True, "listed": True, "deleted_exact_id": True, "absent_after_delete": True},
+        "boundaries": {"ens34_address_free": True, "compute_disks_unchanged": True, "routers": [], "subnets": [], "instances": [], "provider_networks": []},
+    }
+    validate(good)
+    for mutate in (
+        lambda item: item["api"].update(authenticated=False),
+        lambda item: item["agents"].update(hosts=["controller"]),
+        lambda item: item["network_lifecycle"].update(absent_after_delete=False),
+        lambda item: item["boundaries"]["subnets"].append("unexpected"),
+    ):
+        evidence = copy.deepcopy(good); mutate(evidence)
+        with pytest.raises((RuntimeError, ValueError)):
+            validate(evidence)
+
+
 def test_review_nova_student_path_is_explicit_manual_commands_in_fixed_order_not_the_validation_model() -> None:
     controller = manual_markdown("06-nova-controller.md")
     compute = manual_markdown("07-nova-compute.md")
