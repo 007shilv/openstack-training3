@@ -23,5 +23,17 @@
     "start_heading": "第四章 原生OpenStack云平台的环境准备",
     "end_heading": "第五章 MySQL数据库的安装及其配置",
     "fragment": "fragments/ch04.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第五章 MySQL数据库的安装及其配置",
+    "end_heading": "第六章 Keystone的安装及其配置",
+    "fragment": "fragments/ch05.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第六章 Keystone的安装及其配置",
+    "end_heading": "第七章 Glance的安装及其配置",
+    "fragment": "fragments/ch06.md"
   }
 ]

@@ -35,6 +35,10 @@ TASK3_FRAGMENTS = {
     3: FRAGMENTS_DIR / "ch03.md",
 }
 TASK4_FRAGMENT = FRAGMENTS_DIR / "ch04.md"
+TASK5_FRAGMENTS = {
+    5: FRAGMENTS_DIR / "ch05.md",
+    6: FRAGMENTS_DIR / "ch06.md",
+}
 
 
 def task3_fragment(chapter: int) -> str:
@@ -43,6 +47,10 @@ def task3_fragment(chapter: int) -> str:
 
 def task4_fragment() -> str:
     return TASK4_FRAGMENT.read_text(encoding="utf-8")
+
+
+def task5_fragment(chapter: int) -> str:
+    return TASK5_FRAGMENTS[chapter].read_text(encoding="utf-8")
 
 
 def prose_paragraphs(markdown: str) -> list[str]:
@@ -1248,6 +1256,124 @@ def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> N
             require_core_contract(corrupted)
 
 
+def test_task5_chapters_follow_second_edition_textbook_shape_and_manual_prompts() -> None:
+    expected_headings = {
+        5: [
+            "# 第五章 MariaDB数据库及基础服务的安装与配置",
+            "## 5.1 MariaDB数据库功能简介",
+            "## 5.2 OpenStack基础服务功能简介",
+            "## 5.3 实训项目2 MariaDB数据库及基础服务的手工安装与配置",
+        ],
+        6: [
+            "# 第六章 Keystone的安装及其配置",
+            "## 6.1 Keystone功能详解",
+            "## 6.2 Keystone的令牌、密钥与Web承载",
+            "## 6.3 实训项目3 Keystone的手工安装与配置",
+        ],
+    }
+    for chapter, expected in expected_headings.items():
+        text = task5_fragment(chapter)
+        headings = [line for line in text.splitlines() if line.startswith("#")]
+        assert headings == expected
+        assert 8_500 <= compact_length(text) <= 13_000
+        assert "本章导读" in text
+        assert "一、实训前提环境" in text
+        assert "二、实训涉及节点" in text
+        assert "三、实训目标" in text
+        assert "四、实训步骤及其详解" in text
+
+        for kind, body in re.findall(r"```(command|config)\n(.*?)\n```", text, re.S):
+            lines = [line for line in body.splitlines() if line.strip()]
+            if kind == "command":
+                assert all(
+                    re.match(r"^\[root@controller ~\]# ", line)
+                    or re.match(r"^MariaDB \[\(none\)\]> ", line)
+                    or re.match(r"^\s+-> ", line)
+                    for line in lines
+                )
+            else:
+                assert all("]# " not in line for line in lines)
+
+
+def test_task5_chapters_keep_exact_manual_order_and_configuration() -> None:
+    ch5 = task5_fragment(5)
+    ch6 = task5_fragment(6)
+    ch5_commands = "\n".join(re.findall(r"```command\n(.*?)\n```", ch5, re.S))
+    ch6_commands = "\n".join(re.findall(r"```command\n(.*?)\n```", ch6, re.S))
+
+    ch5_steps = (
+        "install mariadb-config mariadb mariadb-server python3-PyMySQL",
+        "vi /etc/my.cnf.d/openstack.cnf",
+        "systemctl start mariadb.service",
+        "install rabbitmq-server",
+        "rabbitmqctl add_user openstack qwer1234",
+        "install memcached python3-memcached",
+        "vi /etc/sysconfig/memcached",
+        "systemctl start memcached.service",
+        "install python3-openstackclient",
+    )
+    assert [ch5_commands.index(step) for step in ch5_steps] == sorted(
+        ch5_commands.index(step) for step in ch5_steps
+    )
+    for value in (
+        "bind-address = 0.0.0.0",
+        "default-storage-engine = innodb",
+        'OPTIONS="-l 127.0.0.1,::1,192.168.234.151"',
+        'rabbitmqctl set_permissions -p / openstack ".*" ".*" ".*"',
+    ):
+        assert value in ch5
+
+    ch6_steps = (
+        "CREATE DATABASE keystone;",
+        "install openstack-keystone httpd python3-mod_wsgi",
+        "vi /etc/keystone/keystone.conf",
+        'keystone-manage db_sync',
+        "keystone-manage fernet_setup",
+        "keystone-manage credential_setup",
+        "keystone-manage bootstrap",
+        "vi /etc/httpd/conf/httpd.conf",
+        "vi /root/admin-openrc",
+        "systemctl start httpd.service",
+        ". /root/admin-openrc",
+        "openstack project create --domain default",
+    )
+    assert [ch6_commands.index(step) for step in ch6_steps] == sorted(
+        ch6_commands.index(step) for step in ch6_steps
+    )
+    for value in (
+        "CREATE USER 'keystone'@'localhost' IDENTIFIED BY 'qwer1234';",
+        "GRANT ALL PRIVILEGES ON keystone.*",
+        "connection = mysql+pymysql://keystone:qwer1234@127.0.0.1/keystone",
+        "provider = fernet",
+        "--bootstrap-public-url http://controller:5000/v3/",
+        "export OS_PASSWORD=qwer1234",
+    ):
+        assert value in ch6
+
+
+def test_task5_chapters_stop_after_deployment_without_automation_or_validation() -> None:
+    combined = "\n".join(task5_fragment(chapter) for chapter in (5, 6))
+    forbidden = (
+        r"```python",
+        r"\bpython3?\s+-[cEm]",
+        r"set -Eeuo",
+        r"\bcurl\b",
+        r"(?m)^\s*ss\b",
+        r"dnf history",
+        r"systemctl (?:status|is-active)",
+        r"openstack token issue",
+        r"openstack \S+ list",
+        r"门禁",
+        r"验收",
+        r"自动化部署",
+        r"一键安装",
+    )
+    for pattern in forbidden:
+        assert re.search(pattern, combined, re.I) is None, pattern
+    assert "qwer1234" in combined
+    assert "隔离" in combined and "生产环境" in combined
+
+
 def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None:
     mapping = json.loads((WORK_ROOT / "revision" / "revision-map.json").read_text(encoding="utf-8"))
 
@@ -1276,6 +1402,18 @@ def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None
             "start_heading": "第四章 原生OpenStack云平台的环境准备",
             "end_heading": "第五章 MySQL数据库的安装及其配置",
             "fragment": "fragments/ch04.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第五章 MySQL数据库的安装及其配置",
+            "end_heading": "第六章 Keystone的安装及其配置",
+            "fragment": "fragments/ch05.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第六章 Keystone的安装及其配置",
+            "end_heading": "第七章 Glance的安装及其配置",
+            "fragment": "fragments/ch06.md",
         },
     ]
 
