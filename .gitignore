@@ -2,6 +2,7 @@
 .worktrees/
 worktrees/
 .superpowers/
+third-edition-work/assets/second-edition-media/
 
 # Runtime credentials must remain outside version control.
 .env

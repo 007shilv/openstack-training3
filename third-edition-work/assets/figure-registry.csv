@@ -1,0 +1,21 @@
+figure_no,chapter,caption,type,source_url,access_date,local_path,status
+图1.1,1,从大型机到智算云的计算模式演进,redraw,,2026-07-31,第三版教材图片/图1.1.png,planned
+图3.1,3,OpenStack双节点逻辑架构与API调用链,redraw,https://docs.openstack.org/2026.1/,2026-08-12,第三版教材图片/图3.1.png,planned
+图4.1,4,openEuler双节点实验网络与存储拓扑,redraw,https://www.openeuler.org/en/download/,2026-08-12,第三版教材图片/图4.1.png,planned
+图12.1,12,智能体感知规划执行与反馈闭环,redraw,,2026-07-31,第三版教材图片/图12.1.png,planned
+图12.2,12,TRAE官方下载页面,official-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.2.png,pending-capture
+图12.3,12,TRAE安装向导,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.3.png,pending-capture
+图12.4,12,TRAE首次启动与工作区,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.4.png,pending-capture
+图12.5,12,TRAE模型设置入口,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.5.png,pending-capture
+图12.6,12,DeepSeek模型接入参数,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.6.png,pending-capture
+图12.7,12,DeepSeek连通性验证,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.7.png,pending-capture
+图12.8,12,Claude Code官方界面,official-screenshot,https://docs.anthropic.com/en/docs/claude-code,2026-08-12,第三版教材图片/图12.8.png,pending-capture
+图12.9,12,OpenAI Codex官方界面,official-screenshot,https://openai.com/codex/,2026-08-12,第三版教材图片/图12.9.png,pending-capture
+图12.10,12,OpenClaw项目界面,official-screenshot,,2026-08-12,第三版教材图片/图12.10.png,pending-source
+图12.11,12,Hermes Agent项目界面,official-screenshot,,2026-08-12,第三版教材图片/图12.11.png,pending-source
+图13.1,13,智能体一次性部署任务与人工确认边界,redraw,,2026-07-31,第三版教材图片/图13.1.png,planned
+图13.2,13,智能体读取openstack-ts项目,real-screenshot,,2026-08-12,第三版教材图片/图13.2.png,pending-capture
+图13.3,13,智能体生成部署计划,real-screenshot,,2026-08-12,第三版教材图片/图13.3.png,pending-capture
+图13.4,13,磁盘与主机安全确认,real-screenshot,,2026-08-12,第三版教材图片/图13.4.png,pending-capture
+图13.5,13,OpenStack部署里程碑,real-screenshot,,2026-08-12,第三版教材图片/图13.5.png,pending-capture
+图13.6,13,服务与API验收结果,real-screenshot,,2026-08-12,第三版教材图片/图13.6.png,pending-capture
