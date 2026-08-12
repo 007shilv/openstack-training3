@@ -13,7 +13,7 @@ Baseline Swift PASS commit: `9a66c6edb36e088d50f4f18921d6f8ea8c1550d4`.
 ## Lightweight acceptance
 
 - Apache is active and enabled; configuration test is valid.
-- `/dashboard/` returns HTTP 302 to the dashboard login route. The login route returns HTTP 200 and includes form, username, password, and CSRF markers.
+- `/dashboard/` is required to return exactly HTTP 302 (not 301); its `Location` is parsed and required to have exactly `/dashboard/auth/login/` with `next=/dashboard/`, whether the URL is absolute or relative. Only after that redirect check does the login route have to return exactly HTTP 200 before form, username, password, and CSRF markers are checked. Curl/probe errors and missing values fail the gate.
 - Interactive browser automation was unavailable. No login cookie, password, token, session export, or screenshot was created. The remaining manual-browser acceptance is: visit `http://controller/dashboard/`, authenticate with the existing administrator account, confirm Overview loads, choose Logout, and close the browser tab without exporting browser data.
 
 ## Final scope and teaching notes

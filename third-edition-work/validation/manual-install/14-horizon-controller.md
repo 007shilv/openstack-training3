@@ -121,14 +121,40 @@ set -Eeuo pipefail
 httpd -t
 systemctl is-active --quiet httpd
 systemctl is-enabled --quiet httpd
-curl --noproxy '*' -sSI http://127.0.0.1/dashboard/ | \
-  grep -Eqi '^HTTP/.* (302|301)|^Location: .*/dashboard/auth/login/'
-page=$(curl --noproxy '*' -fsS http://127.0.0.1/dashboard/auth/login/)
+headers=$(mktemp /tmp/task5i-dashboard-headers.XXXXXX)
+login_page=$(mktemp /tmp/task5i-dashboard-login.XXXXXX)
+trap 'rm -f "$headers" "$login_page"' EXIT
+
+# 先严格验证根路径：不接受 301 或其他状态；Location 可为绝对或相对 URL，
+# 但解析后的 path 和 query 必须精确匹配。
+root_status=$(curl --noproxy '*' -sS -D "$headers" -o /dev/null \
+  -w '%{http_code}' http://127.0.0.1/dashboard/)
+[[ $root_status == 302 ]]
+root_location=$(awk 'BEGIN{IGNORECASE=1} /^Location:/{sub(/^[^:]*:[[:space:]]*/, ""); sub(/\\r$/, ""); print; exit}' "$headers")
+[[ -n $root_location ]]
+python3 - "$root_location" <<'PY'
+import sys
+from urllib.parse import urlsplit
+
+location = urlsplit(sys.argv[1])
+if (location.path, location.query, location.fragment) != (
+    '/dashboard/auth/login/', 'next=/dashboard/', ''
+):
+    raise SystemExit('dashboard redirect path/query is not exact')
+PY
+
+# 仅在登录 URL 已严格返回 200 后，才检查登录表单标记。
+login_status=$(curl --noproxy '*' -sS -o "$login_page" -w '%{http_code}' \
+  http://127.0.0.1/dashboard/auth/login/)
+[[ $login_status == 200 ]]
+page=$(<"$login_page")
 grep -qi '<form' <<< "$page"
 grep -qi 'username' <<< "$page"
 grep -qi 'password' <<< "$page"
 grep -qi 'csrfmiddlewaretoken' <<< "$page"
 unset page
+rm -f "$headers" "$login_page"
+trap - EXIT
 ```
 
 ### 手工浏览器验收
@@ -162,7 +188,9 @@ pvs --noheadings --readonly -o pv_name,vg_name | grep -Eq '/dev/sdb[[:space:]]+c
 def validate_horizon_lightweight_evidence(evidence: dict[str, object]) -> None:
     expected = {
         'httpd': {'active': True, 'enabled': True, 'configtest': True},
-        'dashboard': {'root_status': 302, 'login_status': 200, 'login_form': True},
+        'dashboard': {'root_status': 302,
+                      'login_location_path_query': '/dashboard/auth/login/?next=/dashboard/',
+                      'login_status': 200, 'login_form': True},
         'settings': {'webroot': '/dashboard/', 'keystone_v3': True, 'multidomain': True,
                      'timezone': 'Asia/Shanghai', 'cache': 'controller:11211'},
         'boundaries': {'cinder_sdb_unchanged': True, 'swift_sdc_unchanged': True,

@@ -4315,7 +4315,9 @@ def test_manual_horizon_record_is_manual_sanitized_and_login_ready() -> None:
         "LOGIN_URL = '/dashboard/auth/login/'", "LOGOUT_URL = '/dashboard/auth/logout/'",
         "TIME_ZONE = 'Asia/Shanghai'", "PyMemcacheCache", "controller:11211",
         "httpd -t", "manage.py check", "systemctl enable httpd", "systemctl restart httpd",
-        "/dashboard/auth/login/", "csrfmiddlewaretoken", "手工浏览器验收",
+        "root_status", "[[ $root_status == 302 ]]", "root_location",
+        "urlsplit", "/dashboard/auth/login/?next=/dashboard/", "login_status",
+        "[[ $login_status == 200 ]]", "csrfmiddlewaretoken", "手工浏览器验收",
     ):
         assert token in record
     assert "17-controller-horizon.sh" not in shell
@@ -4326,3 +4328,23 @@ def test_manual_horizon_record_is_manual_sanitized_and_login_ready() -> None:
     assert "<PACKAGE_GENERATED_SECRET_KEY>" in snapshot_text
     assert "SECRET_KEY='" not in snapshot_text
     assert "guosai@205" not in record + snapshot_text
+    source = next(block for block in markdown_fenced_blocks("14-horizon-controller.md", "python")
+                  if "validate_horizon_lightweight_evidence" in block)
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.parse(source), "horizon-contract", "exec"), namespace)
+    valid = {
+        "httpd": {"active": True, "enabled": True, "configtest": True},
+        "dashboard": {"root_status": 302, "login_location_path_query": "/dashboard/auth/login/?next=/dashboard/",
+                      "login_status": 200, "login_form": True},
+        "settings": {"webroot": "/dashboard/", "keystone_v3": True, "multidomain": True,
+                     "timezone": "Asia/Shanghai", "cache": "controller:11211"},
+        "boundaries": {"cinder_sdb_unchanged": True, "swift_sdc_unchanged": True,
+                       "snapshots_created": False, "cookies_saved": False},
+    }
+    namespace["validate_horizon_lightweight_evidence"](valid)
+    for mutate in (lambda e: e["dashboard"].update(root_status=301),
+                   lambda e: e["dashboard"].update(login_location_path_query="/dashboard/auth/login/"),
+                   lambda e: e["dashboard"].update(login_status=302)):
+        evidence = copy.deepcopy(valid); mutate(evidence)
+        with pytest.raises(ValueError):
+            namespace["validate_horizon_lightweight_evidence"](evidence)
