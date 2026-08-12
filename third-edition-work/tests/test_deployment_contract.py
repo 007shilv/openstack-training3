@@ -4024,7 +4024,7 @@ def test_cinder_disk_classifier_rejects_root_ancestor() -> None:
     with pytest.raises(ValueError, match="root ancestor"):
         classify(
             target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sdb"], pvs_ok=True,
-            pvs=[], wipefs_empty=True, blkid_rc=2,
+            pvs=[], wipefs_empty=True, blkid_rc=2, signatures=[],
         )
 
 
@@ -4035,17 +4035,22 @@ def test_cinder_disk_classifier_accepts_only_blank_or_exact_initialized_state() 
     exec(compile(ast.parse(source), "cinder-disk-contract", "exec"), namespace)
     classify = namespace["classify_cinder_disk_state"]
     assert classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
-                    pvs=[], wipefs_empty=True, blkid_rc=2) == "blank"
+                    pvs=[], wipefs_empty=True, blkid_rc=2, signatures=[]) == "blank"
     assert classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
-                    pvs=[("/dev/sdb", "cinder-volumes")], wipefs_empty=False, blkid_rc=0) == "initialized"
+                    pvs=[("/dev/sdb", "cinder-volumes")], wipefs_empty=False, blkid_rc=0,
+                    signatures=["LVM2_member"]) == "initialized"
+    with pytest.raises(ValueError, match="signature"):
+        classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
+                 pvs=[("/dev/sdb", "cinder-volumes")], wipefs_empty=False, blkid_rc=0,
+                 signatures=["LVM2_member", "ext4"])
     for rows in ([('/dev/sdb', '')], [('/dev/sdb', 'foreign-vg')],
                  [('/dev/sdb', 'cinder-volumes'), ('/dev/sdb', 'cinder-volumes')]):
         with pytest.raises(ValueError, match="PV"):
             classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
-                     pvs=rows, wipefs_empty=True, blkid_rc=2)
+                     pvs=rows, wipefs_empty=True, blkid_rc=2, signatures=[])
     with pytest.raises(ValueError, match="probe"):
         classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=False,
-                 pvs=[], wipefs_empty=True, blkid_rc=2)
+                 pvs=[], wipefs_empty=True, blkid_rc=2, signatures=[])
 
 
 def test_manual_cinder_records_are_manual_sanitized_and_disk_guarded() -> None:

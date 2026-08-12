@@ -32,21 +32,25 @@ while IFS='|' read -r pv_name vg_name; do
   [[ -z $pv_name ]] && continue
   [[ $pv_name == "$target" ]] && target_vgs+=("$vg_name")
 done <<<"$pv_rows"
+signatures=$(wipefs --no-act --noheadings --output TYPE "$target") || { echo 'cannot inspect signatures' >&2; exit 1; }
 if [[ ${#target_vgs[@]} -eq 0 ]]; then
   # Only a non-PV target may be tested for the blank first-initialization state.
-  signatures=$(wipefs --no-act --noheadings --output TYPE "$target") || { echo 'cannot inspect signatures' >&2; exit 1; }
   [[ -z $signatures ]] || { echo 'unexpected signature on /dev/sdb' >&2; exit 1; }
   if blkid -p "$target" >/dev/null 2>&1; then echo 'unexpected blkid signature on /dev/sdb' >&2; exit 1; else blkid_rc=$?; fi
   [[ $blkid_rc -eq 2 ]] || { echo 'blkid probe did not prove a blank disk' >&2; exit 1; }
   CINDER_DISK_STATE=blank
 elif [[ ${#target_vgs[@]} -eq 1 && ${target_vgs[0]} == cinder-volumes ]]; then
+  mapfile -t signature_types <<<"$signatures"
+  [[ ${#signature_types[@]} -eq 1 && ${signature_types[0]} == LVM2_member ]] || {
+    echo 'initialized /dev/sdb must have exactly one LVM2_member signature' >&2; exit 1;
+  }
   CINDER_DISK_STATE=initialized
 else
   echo 'refusing orphan, foreign, or duplicate PV state on /dev/sdb' >&2; exit 1
 fi
 ```
 
-上述只读命令出现两种且仅两种可继续状态：首次教学初始化时，`pvs` 对 `/dev/sdb` 没有记录，随后才要求 `wipefs` 为空且 `blkid -p` 返回 2；已经初始化时，`pvs` 对 `/dev/sdb` 必须恰有一条且 VG 精确为 `cinder-volumes`。后者是幂等续作状态，**不得**运行 `wipefs`、`pvcreate` 或 `vgcreate`。任何第三种状态（包括 PV 探针错误、外来签名、挂载、PV 无 VG、VG 名错误、重复 PV，或 `/dev/sda`/`/dev/sdc`）都停止处理。
+上述只读命令出现两种且仅两种可继续状态：首次教学初始化时，`pvs` 对 `/dev/sdb` 没有记录，随后要求 `wipefs` 的签名集合为空且 `blkid -p` 返回 2；已经初始化时，`pvs` 对 `/dev/sdb` 必须恰有一条且 VG 精确为 `cinder-volumes`，并且 `wipefs --output TYPE` 的规范化结果只能是唯一的 `LVM2_member`。后者是幂等续作状态，仍会只读检查该 LVM 签名，但**不得**运行 `pvcreate` 或 `vgcreate`。任何第三种状态（包括签名探针错误、空签名或第二种签名、外来签名、挂载、PV 无 VG、VG 名错误、重复 PV，或 `/dev/sda`/`/dev/sdc`）都停止处理。
 
 首次初始化前，学生必须明确确认：“我确认 compute 的 `/dev/sdb` 是 50 GiB 空白教学盘，根盘祖先为 `/dev/sda2,/dev/sda`，允许初始化为 `cinder-volumes`。”只有确认且上述检查通过后，才可执行下面两条 LVM 命令。
 
@@ -148,7 +152,7 @@ from __future__ import annotations
 
 def classify_cinder_disk_state(*, target: str, root_chain: list[str], pvs_ok: bool,
                                pvs: list[tuple[str, str]], wipefs_empty: bool,
-                               blkid_rc: int) -> str:
+                               blkid_rc: int, signatures: list[str]) -> str:
     """Pure focused-contract model; it never probes, writes, or connects to a host."""
     if target != "/dev/sdb":
         raise ValueError("unexpected Cinder target")
@@ -162,6 +166,8 @@ def classify_cinder_disk_state(*, target: str, root_chain: list[str], pvs_ok: bo
             raise ValueError("blank-disk probe failed")
         return "blank"
     if len(target_pvs) == 1 and target_pvs[0][1] == "cinder-volumes":
+        if signatures != ["LVM2_member"]:
+            raise ValueError("initialized-disk signature mismatch")
         return "initialized"
     raise ValueError("orphan, foreign, or duplicate PV state")
 
