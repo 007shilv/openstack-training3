@@ -17,5 +17,11 @@
     "end_heading": "第四章 原生OpenStack云平台的环境准备",
     "fragment": "fragments/ch03.md",
     "part_title": "第二部分 信创OpenStack云平台构建与应用"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第四章 原生OpenStack云平台的环境准备",
+    "end_heading": "第五章 MySQL数据库的安装及其配置",
+    "fragment": "fragments/ch04.md"
   }
 ]

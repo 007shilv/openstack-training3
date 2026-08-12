@@ -34,10 +34,15 @@ TASK3_FRAGMENTS = {
     2: FRAGMENTS_DIR / "ch02.md",
     3: FRAGMENTS_DIR / "ch03.md",
 }
+TASK4_FRAGMENT = FRAGMENTS_DIR / "ch04.md"
 
 
 def task3_fragment(chapter: int) -> str:
     return TASK3_FRAGMENTS[chapter].read_text(encoding="utf-8")
+
+
+def task4_fragment() -> str:
+    return TASK4_FRAGMENT.read_text(encoding="utf-8")
 
 
 def prose_paragraphs(markdown: str) -> list[str]:
@@ -1076,6 +1081,118 @@ def test_task3_text_has_no_source_dump_or_command_manual_language() -> None:
             assert re.search(pattern, text, re.I) is None, f"{path.name}: {pattern}"
 
 
+def test_task4_fragment_has_exact_structure_topology_and_manual_commands() -> None:
+    text = task4_fragment()
+    headings = [line.strip() for line in text.splitlines() if line.startswith("#")]
+
+    assert headings == [
+        "# 第四章 openEuler与信创OpenStack实验环境准备",
+        "## 4.1 openEuler与信创云平台",
+        "## 4.2 双节点实验环境与终端工具",
+        "## 4.3 实训项目1 openEuler云平台基本环境配置",
+    ]
+    for value in (
+        "192.168.234.151/24",
+        "192.168.234.150/24",
+        "192.168.234.2",
+        "ens33",
+        "ens34",
+        "/dev/sda",
+        "/dev/sdb",
+        "/dev/sdc",
+        "Cinder",
+        "Swift",
+        "50 GiB",
+    ):
+        assert value in text
+    terminal_paragraphs = [
+        paragraph
+        for paragraph in prose_paragraphs(text)
+        if any(tool in paragraph for tool in ("Xshell", "SecureCRT", "Windows PowerShell"))
+    ]
+    assert len(terminal_paragraphs) == 1
+    assert all(tool in terminal_paragraphs[0] for tool in ("Xshell", "SecureCRT", "Windows PowerShell"))
+
+    fenced_blocks = re.findall(r"```(?:command|config)\n(.*?)\n```", text, re.S)
+    assert fenced_blocks
+    for block in fenced_blocks:
+        lines = [line for line in block.splitlines() if line.strip()]
+        prompted = [line for line in lines if re.match(r"^\[root@(controller|compute) ~\]# ", line)]
+        if prompted:
+            assert len(prompted) == len(lines)
+        else:
+            assert not any(line.startswith("[root@") for line in lines)
+
+    required_configuration = {
+        "/etc/hosts": "192.168.234.151 controller",
+        "/etc/selinux/config": "SELINUX=permissive",
+        "/etc/yum.repos.d/openstack-local.repo": "[openstack-local]",
+        "/etc/vsftpd/vsftpd.conf": "anonymous_enable=YES",
+        "/etc/yum.repos.d/openstack-antelope.repo": "openEuler-24.03-LTS-SP2",
+    }
+    for path, body_line in required_configuration.items():
+        vi_position = text.index(f"# vi {path}")
+        body_position = text.index(body_line, vi_position)
+        assert vi_position < body_position
+        assert f"]# {body_line}" not in text
+
+
+def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> None:
+    text = task4_fragment()
+    forbidden = (
+        r"CentOS",
+        r"192\.168\.100\.",
+        r"\beth0\b",
+        r"\bpython3?\b",
+        r"\bparamiko\b",
+        r"\bsed\b",
+        r"\bcurl\b",
+        r"systemctl is-active",
+        r"chronyc (?:tracking|sources)",
+        r"cat\s*>",
+        r"\btee\b",
+        r'<<(?:\'|")?EOF',
+    )
+    for pattern in forbidden:
+        assert re.search(pattern, text, re.I) is None, pattern
+
+    def require_core_contract(candidate: str) -> None:
+        assert "192.168.234.151/24" in candidate
+        assert "192.168.234.150/24" in candidate
+        assert "ens34不配置IP地址" in candidate
+        assert "/dev/sdc用于Swift" in candidate
+        assert "CentOS" not in candidate
+        assert "\nsed " not in candidate
+        assert "python" not in candidate.lower()
+        assert "chronyc tracking" not in candidate
+        assert all(
+            not line.startswith("nmcli ")
+            for line in candidate.splitlines()
+        )
+        terminal_paragraphs = [
+            paragraph
+            for paragraph in prose_paragraphs(candidate)
+            if any(tool in paragraph for tool in ("Xshell", "SecureCRT", "Windows PowerShell"))
+        ]
+        assert len(terminal_paragraphs) == 1
+
+    require_core_contract(text)
+    corruptions = (
+        text.replace("192.168.234.151/24", "192.168.234.152/24"),
+        text.replace("ens34不配置IP地址", "ens34配置IP地址", 1),
+        text.replace("/dev/sdc用于Swift", "/dev/sdb用于Swift"),
+        text + "\nCentOS\n",
+        text + "\nXshell还可以独立学习。\n",
+        text.replace("[root@controller ~]# nmcli", "nmcli", 1),
+        text + "\nsed -i example\n",
+        text + "\npython3 example.py\n",
+        text + "\nchronyc tracking\n",
+    )
+    for corrupted in corruptions:
+        with pytest.raises(AssertionError):
+            require_core_contract(corrupted)
+
+
 def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None:
     mapping = json.loads((WORK_ROOT / "revision" / "revision-map.json").read_text(encoding="utf-8"))
 
@@ -1099,6 +1216,12 @@ def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None
             "fragment": "fragments/ch03.md",
             "part_title": "第二部分 信创OpenStack云平台构建与应用",
         },
+        {
+            "op": "replace",
+            "start_heading": "第四章 原生OpenStack云平台的环境准备",
+            "end_heading": "第五章 MySQL数据库的安装及其配置",
+            "fragment": "fragments/ch04.md",
+        },
     ]
 
 
@@ -1119,11 +1242,11 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
         "owner",
     }
     assert rows and set(rows[0]) == expected_columns
-    assert {row["chapter"] for row in rows} == {"1", "2", "3"}
-    assert len({row["second_edition_figure"] for row in rows if row["second_edition_figure"]}) == 36
+    assert {row["chapter"] for row in rows} == {"1", "2", "3", "4"}
+    assert len({row["second_edition_figure"] for row in rows if row["second_edition_figure"]}) >= 36
     assert {row["decision"] for row in rows} <= {"保留", "删除", "重绘", "重拍"}
     assert all(
-        not row["target_number"] or re.fullmatch(r"图[123]\.\d+", row["target_number"])
+        not row["target_number"] or re.fullmatch(r"图[1234]\.\d+", row["target_number"])
         for row in rows
     )
     assert all(row["target_number"] for row in rows if row["decision"] != "删除")
@@ -1131,3 +1254,18 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
     joined = "\n".join("|".join(row.values()) for row in rows)
     assert "占位" not in joined
     assert "假截图" not in joined
+
+    chapter4 = [row for row in rows if row["chapter"] == "4"]
+    target_numbers = [row["target_number"] for row in chapter4 if row["target_number"]]
+    assert target_numbers == [f"图4.{number}" for number in range(1, len(target_numbers) + 1)]
+    for title in (
+        "openEuler LTS与SP生命周期",
+        "双节点实验拓扑与存储分工",
+        "openEuler虚拟机创建与系统登录",
+        "固定管理网络配置",
+        "hosts文件配置",
+        "本地软件仓配置",
+        "Antelope SP2兼容仓配置",
+        "基础服务启动",
+    ):
+        assert any(row["proposed_title"] == title for row in chapter4)
