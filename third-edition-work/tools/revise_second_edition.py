@@ -8,30 +8,26 @@ from __future__ import annotations
 
 import argparse
 from copy import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from html import escape
 import hashlib
 import json
-import mimetypes
 import os
 from pathlib import Path
 import re
 import shutil
 import sys
 import tempfile
-from typing import Any
 from xml.etree import ElementTree as ET
 import zipfile
 
 
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 W = f"{{{WORD_NS}}}"
 NS = {"w": WORD_NS}
 ALLOWED_BLOCK_KINDS = frozenset(
-    {"body", "command", "config", "heading1", "heading2", "caption", "figure"}
+    {"body", "command", "config", "heading1", "heading2", "caption"}
 )
-TEXT_BLOCK_KINDS = ALLOWED_BLOCK_KINDS - {"figure"}
 OPERATION_FIELDS = {
     "replace": frozenset({"op", "start_heading", "end_heading", "fragment"}),
     "delete": frozenset({"op", "start_heading", "end_heading"}),
@@ -47,7 +43,9 @@ CAPTION_PATTERN = re.compile(r"^图\s*\d+(?:[.\-]\d+)+")
 COMMAND_PATTERN = re.compile(
     r"^(?:\[[^\]\r\n]+@[^\]]+\][#$]|MariaDB\s+\[[^\]]+\]>|[^\s]+@[^\s]+[$#])"
 )
-CONFIG_PATTERN = re.compile(r"^(?:\[[^\]\r\n]+\]|[A-Za-z0-9_.-]+\s*=)")
+CONFIG_PATTERN = re.compile(
+    r"^(?:\[[A-Za-z0-9_.:-]+\]\s*$|[A-Za-z][A-Za-z0-9_.-]*\s*=)"
+)
 IMAGE_MARKDOWN_PATTERN = re.compile(r"^!\[(?P<caption>[^]]*)\]\((?P<path>[^)]+)\)$")
 FENCE_PATTERN = re.compile(r"^```(?P<kind>command|config)\s*$")
 
@@ -65,33 +63,19 @@ class Block:
     """One explicitly typed fragment block inserted into the existing DOCX.
 
     ``body``, ``command``, ``config``, ``heading1``, ``heading2``, and
-    ``caption`` carry editable text.  ``figure`` carries an image path and an
-    optional width in centimetres.  Command text is intentionally stored as
+    ``caption`` carry editable text.  Figure insertion is deliberately deferred
+    to the later image-layout task.  Command text is intentionally stored as
     ordinary editable Word text; later content tasks enforce prompt syntax.
     """
 
     kind: str
     text: str = ""
-    image: Path | None = None
-    width_cm: float | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in ALLOWED_BLOCK_KINDS:
             raise ValueError(f"unknown block kind: {self.kind!r}")
-        if self.kind == "figure":
-            if self.image is None or not isinstance(self.image, Path):
-                raise ValueError("figure block requires an image Path")
-            if self.text:
-                raise ValueError("figure block cannot carry text")
-            if self.width_cm is not None and self.width_cm <= 0:
-                raise ValueError("figure width_cm must be positive")
-        else:
-            if self.image is not None:
-                raise ValueError(f"{self.kind} block cannot carry an image")
-            if self.width_cm is not None:
-                raise ValueError(f"{self.kind} block cannot carry width_cm")
-            if not isinstance(self.text, str) or not self.text.strip():
-                raise ValueError(f"{self.kind} block requires non-empty text")
+        if not isinstance(self.text, str) or not self.text.strip():
+            raise ValueError(f"{self.kind} block requires non-empty text")
 
 
 @dataclass
@@ -102,14 +86,17 @@ class DocxDocument:
     infos: list[zipfile.ZipInfo]
     payloads: dict[str, bytes]
     document_xml: bytes
-    new_members: list[str] = field(default_factory=list)
+    archive_comment: bytes
+    styles: ET.Element | None
 
     def set_payload(self, name: str, payload: bytes) -> None:
         self.payloads[name] = payload
         if name == "word/document.xml":
             self.document_xml = payload
-        if name not in {info.filename for info in self.infos} and name not in self.new_members:
-            self.new_members.append(name)
+        elif name == "word/styles.xml":
+            self.styles = ET.fromstring(payload)
+        if name not in {info.filename for info in self.infos}:
+            raise ValueError(f"cannot add a new package member in Task 2: {name}")
 
 
 def copy_source(source: Path, output: Path) -> None:
@@ -135,11 +122,13 @@ def load_docx(path: Path) -> DocxDocument:
     with zipfile.ZipFile(path) as archive:
         infos = [copy(info) for info in archive.infolist()]
         payloads = {info.filename: archive.read(info.filename) for info in infos}
+        archive_comment = archive.comment
     if "word/document.xml" not in payloads:
         raise ValueError("DOCX is missing word/document.xml")
     document_xml = payloads["word/document.xml"]
     ET.fromstring(document_xml)
-    return DocxDocument(path, infos, payloads, document_xml)
+    styles = ET.fromstring(payloads["word/styles.xml"]) if "word/styles.xml" in payloads else None
+    return DocxDocument(path, infos, payloads, document_xml, archive_comment, styles)
 
 
 def _document_root_attributes(xml: bytes) -> bytes:
@@ -215,6 +204,7 @@ def _unique_heading_index(document: DocxDocument, heading: str) -> int:
         index
         for index, child in enumerate(children)
         if _child_name(document.document_xml, child) == f"{W}p"
+        and _is_heading_paragraph(document, child)
         and _normalize_heading(_child_text(document.document_xml, child)) == normalized
     ]
     if len(matches) != 1:
@@ -230,6 +220,42 @@ def _paragraph_style(document_xml: bytes, paragraph: bytes) -> str | None:
     return None if style is None else style.get(f"{W}val")
 
 
+def _styles(document: DocxDocument) -> ET.Element | None:
+    return document.styles
+
+
+def _style_by_id(styles: ET.Element | None, style_id: str | None) -> ET.Element | None:
+    if styles is None or style_id is None:
+        return None
+    return next(
+        (style for style in styles.findall("w:style", NS) if style.get(f"{W}styleId") == style_id),
+        None,
+    )
+
+
+def _paragraph_outline_level(document: DocxDocument, paragraph: bytes) -> int | None:
+    element = _parse_child(document.document_xml, paragraph)
+    direct = element.find("w:pPr/w:outlineLvl", NS)
+    value = None if direct is None else direct.get(f"{W}val")
+    if value is None:
+        style = _style_by_id(_styles(document), _paragraph_style(document.document_xml, paragraph))
+        inherited = None if style is None else style.find("w:pPr/w:outlineLvl", NS)
+        value = None if inherited is None else inherited.get(f"{W}val")
+    return int(value) if value is not None and value.isdigit() else None
+
+
+def _is_heading_paragraph(document: DocxDocument, paragraph: bytes) -> bool:
+    style_id = _paragraph_style(document.document_xml, paragraph)
+    if style_id in {"1", "2", "Heading1", "Heading2", "heading1", "heading2"}:
+        return True
+    style = _style_by_id(_styles(document), style_id)
+    name = None if style is None else style.find("w:name", NS)
+    style_name = "" if name is None else (name.get(f"{W}val") or "").casefold().replace(" ", "")
+    if style_name in {"heading1", "heading2"}:
+        return True
+    return _paragraph_outline_level(document, paragraph) in {0, 1}
+
+
 def _paragraph_has_drawing(document_xml: bytes, paragraph: bytes) -> bool:
     element = _parse_child(document_xml, paragraph)
     return element.find(".//w:drawing", NS) is not None
@@ -238,6 +264,52 @@ def _paragraph_has_drawing(document_xml: bytes, paragraph: bytes) -> bool:
 def _paragraph_properties(paragraph: bytes) -> bytes:
     match = PPR_PATTERN.search(paragraph)
     return b"<w:pPr/>" if match is None else bytes(match.group(0))
+
+
+def _attribute(element: ET.Element | None, name: str) -> str | None:
+    return None if element is None else element.get(f"{W}{name}")
+
+
+def _normal_style(styles: ET.Element | None) -> ET.Element | None:
+    if styles is None:
+        return None
+    return next(
+        (
+            style
+            for style in styles.findall("w:style", NS)
+            if style.get(f"{W}type") == "paragraph" and style.get(f"{W}default") == "1"
+        ),
+        None,
+    )
+
+
+def _body_template_candidate(document: DocxDocument, paragraph: bytes) -> bool:
+    element = _parse_child(document.document_xml, paragraph)
+    properties = element.find("w:pPr", NS)
+    if properties is None:
+        return False
+    styles = _styles(document)
+    normal = _normal_style(styles)
+    normal_id = None if normal is None else normal.get(f"{W}styleId")
+    style_id = _paragraph_style(document.document_xml, paragraph)
+    if style_id not in {None, normal_id}:
+        return False
+    indentation = properties.find("w:ind", NS)
+    if _attribute(indentation, "firstLineChars") != "200":
+        return False
+    alignment = properties.find("w:jc", NS)
+    if alignment is None and normal is not None:
+        alignment = normal.find("w:pPr/w:jc", NS)
+    if _attribute(alignment, "val") != "both":
+        return False
+    paragraph_run = properties.find("w:rPr", NS)
+    fonts = None if paragraph_run is None else paragraph_run.find("w:rFonts", NS)
+    if _attribute(fonts, "eastAsia") != "宋体":
+        return False
+    size = None if paragraph_run is None else paragraph_run.find("w:sz", NS)
+    if size is None and styles is not None:
+        size = styles.find("w:docDefaults/w:rPrDefault/w:rPr/w:sz", NS)
+    return _attribute(size, "val") == "21"
 
 
 def _template_paragraph(document: DocxDocument, kind: str) -> bytes:
@@ -256,33 +328,35 @@ def _template_paragraph(document: DocxDocument, kind: str) -> bytes:
         for paragraph in paragraphs
     ]
     if kind in {"heading1", "heading2"}:
-        wanted = "1" if kind == "heading1" else "2"
+        wanted_outline = 0 if kind == "heading1" else 1
         candidates = [
             paragraph
             for paragraph, text, style in records
-            if text and style is not None and style.casefold() in {wanted, f"heading{wanted}"}
+            if text and _paragraph_outline_level(document, paragraph) == wanted_outline
         ]
     elif kind == "caption":
         candidates = [paragraph for paragraph, text, _ in records if CAPTION_PATTERN.match(text)]
     elif kind == "command":
         candidates = [paragraph for paragraph, text, _ in records if COMMAND_PATTERN.match(text)]
     elif kind == "config":
-        candidates = [paragraph for paragraph, text, _ in records if CONFIG_PATTERN.match(text)]
+        candidates = [
+            paragraph
+            for paragraph, text, _ in records
+            if CONFIG_PATTERN.match(text) and not COMMAND_PATTERN.match(text)
+        ]
     else:
         candidates = [
             paragraph
             for paragraph, text, style in records
             if text
-            and style is None
             and not CAPTION_PATTERN.match(text)
             and not COMMAND_PATTERN.match(text)
             and not CONFIG_PATTERN.match(text)
             and not _paragraph_has_drawing(document.document_xml, paragraph)
+            and _body_template_candidate(document, paragraph)
         ]
     if candidates:
         return candidates[0]
-    if kind in {"command", "config", "caption"}:
-        return _template_paragraph(document, "body")
     raise ValueError(f"source DOCX has no usable {kind} paragraph template")
 
 
@@ -306,90 +380,11 @@ def _caption_properties(properties: bytes) -> bytes:
     return properties.replace(b"</w:pPr>", b'<w:jc w:val="center"/></w:pPr>', 1)
 
 
-def _next_relationship_id(relationships: bytes) -> str:
-    existing = {match.decode("ascii") for match in re.findall(rb'\bId="([^"]+)"', relationships)}
-    number = 1
-    while f"rIdRevision{number}" in existing:
-        number += 1
-    return f"rIdRevision{number}"
-
-
-def _ensure_content_type(document: DocxDocument, extension: str, content_type: str) -> None:
-    name = "[Content_Types].xml"
-    payload = document.payloads.get(name)
-    if payload is None:
-        raise ValueError("DOCX is missing [Content_Types].xml")
-    if re.search(rb'Extension="' + re.escape(extension.encode()) + rb'"', payload, re.IGNORECASE):
-        return
-    default = f'<Default Extension="{escape(extension)}" ContentType="{escape(content_type)}"/>'.encode()
-    if b"</Types>" in payload:
-        payload = payload.replace(b"</Types>", default + b"</Types>", 1)
-    elif re.search(rb"<Types\b[^>]*/>", payload):
-        payload = re.sub(rb"<Types\b([^>]*)/>", rb"<Types\1>" + default + b"</Types>", payload, count=1)
-    else:
-        raise ValueError("[Content_Types].xml has no Types root")
-    document.set_payload(name, payload)
-
-
-def _add_figure(document: DocxDocument, block: Block) -> bytes:
-    assert block.image is not None
-    image = block.image
-    if not image.is_file():
-        raise FileNotFoundError(f"figure file does not exist: {image}")
-    extension = image.suffix.lower().lstrip(".")
-    if not extension:
-        raise ValueError(f"figure has no file extension: {image}")
-    media_number = 1
-    while f"word/media/revision-image-{media_number:03d}.{extension}" in document.payloads:
-        media_number += 1
-    media_name = f"word/media/revision-image-{media_number:03d}.{extension}"
-    document.set_payload(media_name, image.read_bytes())
-
-    relationships_name = "word/_rels/document.xml.rels"
-    relationships = document.payloads.get(relationships_name)
-    if relationships is None:
-        raise ValueError("DOCX is missing word/_rels/document.xml.rels")
-    relationship_id = _next_relationship_id(relationships)
-    relationship = (
-        f'<Relationship Id="{relationship_id}" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-        f'Target="media/{escape(Path(media_name).name)}"/>'
-    ).encode()
-    if b"</Relationships>" not in relationships:
-        raise ValueError("document relationships have no Relationships root")
-    document.set_payload(
-        relationships_name,
-        relationships.replace(b"</Relationships>", relationship + b"</Relationships>", 1),
-    )
-    content_type = mimetypes.types_map.get(f".{extension}", f"image/{extension}")
-    _ensure_content_type(document, extension, content_type)
-
-    all_ids = [int(value) for value in re.findall(rb'<wp:docPr\b[^>]*\bid="(\d+)"', document.document_xml)]
-    drawing_id = max(all_ids, default=0) + 1
-    extent = int(round((block.width_cm or 12.0) * 360000))
-    properties = _paragraph_properties(_template_paragraph(document, "body"))
-    return (
-        b"<w:p>" + properties + b"<w:r><w:drawing>"
-        + f'<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
-          f'<wp:extent cx="{extent}" cy="{extent}"/><wp:docPr id="{drawing_id}" name="Revision Figure {drawing_id}"/>'
-          '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-          '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-          '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-          '<pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
-          f'r:embed="{relationship_id}"/></pic:blipFill><pic:spPr/></pic:pic>'
-          '</a:graphicData></a:graphic></wp:inline>'.encode()
-        + b"</w:drawing></w:r></w:p>"
-    )
-
-
 def _render_blocks(document: DocxDocument, blocks: list[Block]) -> list[bytes]:
     rendered: list[bytes] = []
     for block in blocks:
         if not isinstance(block, Block):
             raise TypeError("blocks must contain Block values")
-        if block.kind == "figure":
-            rendered.append(_add_figure(document, block))
-            continue
         properties = _paragraph_properties(_template_paragraph(document, block.kind))
         if block.kind == "caption":
             properties = _caption_properties(properties)
@@ -435,6 +430,8 @@ def save_candidate(doc: DocxDocument, output: Path) -> None:
     output = Path(output)
     if output.resolve() == doc.source.resolve():
         raise ValueError("refusing to overwrite the source DOCX")
+    if output.exists():
+        raise FileExistsError(f"refusing to overwrite existing output: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
@@ -443,10 +440,9 @@ def save_candidate(doc: DocxDocument, output: Path) -> None:
     temporary = Path(temporary_name)
     try:
         with zipfile.ZipFile(temporary, "w") as archive:
+            archive.comment = doc.archive_comment
             for info in doc.infos:
                 archive.writestr(info, doc.payloads[info.filename])
-            for name in doc.new_members:
-                archive.writestr(name, doc.payloads[name], compress_type=zipfile.ZIP_DEFLATED)
         with zipfile.ZipFile(temporary) as archive:
             ET.fromstring(archive.read("word/document.xml"))
         os.replace(temporary, output)
@@ -516,11 +512,9 @@ def parse_fragment(path: Path) -> list[Block]:
             raise ValueError(f"unsupported fence at {path}:{line_number}; use command or config")
         image = IMAGE_MARKDOWN_PATTERN.match(line.strip())
         if image:
-            flush_paragraph()
-            image_path = (path.parent / image.group("path").strip()).resolve()
-            blocks.append(Block("figure", image=image_path))
-            if image.group("caption").strip():
-                blocks.append(Block("caption", image.group("caption").strip()))
+            raise ValueError(
+                f"figure blocks are deferred to the later image-layout task: {path}:{line_number}"
+            )
         elif line.startswith("## "):
             flush_paragraph()
             blocks.append(Block("heading2", line[3:].strip()))
@@ -537,6 +531,31 @@ def parse_fragment(path: Path) -> list[Block]:
     return blocks
 
 
+def _resolve_fragment_path(revision_map: Path, fragment: str) -> Path:
+    """Resolve a regular, non-symlink fragment strictly beneath the map directory."""
+    relative = Path(fragment)
+    if relative.is_absolute() or relative.drive or ".." in relative.parts:
+        raise ValueError(f"fragment path must stay beneath the revision-map directory: {fragment!r}")
+    base = revision_map.parent.resolve(strict=True)
+    lexical = revision_map.parent / relative
+    current = revision_map.parent
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink() or (hasattr(current, "is_junction") and current.is_junction()):
+            raise ValueError(f"fragment path must not contain a symlink: {fragment!r}")
+    try:
+        resolved = lexical.resolve(strict=True)
+    except OSError as error:
+        raise ValueError(f"fragment must be an existing regular file: {fragment!r}") from error
+    try:
+        resolved.relative_to(base)
+    except ValueError as error:
+        raise ValueError(f"fragment path escapes the revision-map directory: {fragment!r}") from error
+    if not resolved.is_file():
+        raise ValueError(f"fragment must be a regular file: {fragment!r}")
+    return resolved
+
+
 def apply_revision_map(source: Path, revision_map: Path, output: Path) -> None:
     """Apply a strict revision map, byte-copying the source when it is empty."""
     source = Path(source)
@@ -550,14 +569,14 @@ def apply_revision_map(source: Path, revision_map: Path, output: Path) -> None:
     for operation in operations:
         op = operation["op"]
         if op == "replace":
-            blocks = parse_fragment(revision_map.parent / operation["fragment"])
+            blocks = parse_fragment(_resolve_fragment_path(revision_map, operation["fragment"]))
             replace_between_headings(
                 document, operation["start_heading"], operation["end_heading"], blocks
             )
         elif op == "delete":
             delete_between_headings(document, operation["start_heading"], operation["end_heading"])
         elif op == "insert_before":
-            blocks = parse_fragment(revision_map.parent / operation["fragment"])
+            blocks = parse_fragment(_resolve_fragment_path(revision_map, operation["fragment"]))
             insert_before_heading(document, operation["heading"], blocks)
         else:  # load_revision_map makes this unreachable.
             raise AssertionError(f"unhandled operation: {op}")

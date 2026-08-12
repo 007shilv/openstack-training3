@@ -58,13 +58,25 @@ def sha256_bytes(path: Path) -> str:
 
 def fixture_paragraph(text: str, style: str | None = None, marker: str = "body") -> str:
     style_xml = f'<w:pStyle w:val="{style}"/>' if style else ""
+    body_xml = (
+        '<w:jc w:val="both"/><w:ind w:firstLine="420" w:firstLineChars="200"/>'
+        '<w:rPr><w:rFonts w:eastAsia="宋体"/></w:rPr>'
+        if marker == "body-template"
+        else ""
+    )
     return (
         f'<w:p data-marker="{marker}"><w:pPr>{style_xml}'
-        f'<w:spacing w:after="{len(marker)}"/></w:pPr><w:r><w:t>{text}</w:t></w:r></w:p>'
+        f'<w:spacing w:after="{len(marker)}"/>{body_xml}</w:pPr>'
+        f'<w:r><w:t>{text}</w:t></w:r></w:p>'
     )
 
 
-def write_bounded_fixture(path: Path, middle: list[str] | None = None) -> None:
+def write_bounded_fixture(
+    path: Path,
+    middle: list[str] | None = None,
+    *,
+    start_style: str | None = "1",
+) -> None:
     middle = middle or [fixture_paragraph("old section text", marker="old")]
     document_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -75,7 +87,7 @@ def write_bounded_fixture(path: Path, middle: list[str] | None = None) -> None:
         + fixture_paragraph("[root@controller ~]# true", marker="command-template")
         + fixture_paragraph("[DEFAULT] enabled=true", marker="config-template")
         + fixture_paragraph("图1.1.1 示例", marker="caption-template")
-        + fixture_paragraph("Start   Heading", style="1", marker="start-heading")
+        + fixture_paragraph("Start   Heading", style=start_style, marker="start-heading")
         + "".join(middle)
         + fixture_paragraph("End Heading", style="1", marker="end-heading")
         + fixture_paragraph("outside untouched", marker="outside")
@@ -93,10 +105,28 @@ def write_bounded_fixture(path: Path, middle: list[str] | None = None) -> None:
         'Target="media/image1.png"/></Relationships>'
     ).encode("utf-8")
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.comment = b"fixture archive comment"
         archive.writestr("[Content_Types].xml", b"<Types/>")
         archive.writestr("word/document.xml", document_xml)
+        archive.writestr(
+            "word/styles.xml",
+            (
+                '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                '<w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val="21"/></w:rPr>'
+                '</w:rPrDefault></w:docDefaults>'
+                '<w:style w:type="paragraph" w:default="1" w:styleId="a">'
+                '<w:name w:val="Normal"/><w:pPr><w:jc w:val="both"/></w:pPr></w:style>'
+                '<w:style w:type="paragraph" w:styleId="1"><w:name w:val="heading 1"/>'
+                '<w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style>'
+                '<w:style w:type="paragraph" w:styleId="2"><w:name w:val="heading 2"/>'
+                '<w:pPr><w:outlineLvl w:val="1"/></w:pPr></w:style></w:styles>'
+            ).encode("utf-8"),
+        )
         archive.writestr("word/_rels/document.xml.rels", relationships)
-        archive.writestr("word/footer1.xml", b"<footer>frozen footer</footer>")
+        footer = zipfile.ZipInfo("word/footer1.xml")
+        footer.comment = b"fixture member comment"
+        footer.extra = b"\x99\x99\x00\x00"
+        archive.writestr(footer, b"<footer>frozen footer</footer>")
         archive.writestr("word/media/image1.png", b"not-a-real-png-but-byte-stable")
 
 
@@ -346,6 +376,7 @@ def test_bounded_replace_preserves_everything_outside_heading_range(tmp_path: Pa
     revision.save_candidate(document, candidate)
 
     with zipfile.ZipFile(source) as before, zipfile.ZipFile(candidate) as after:
+        assert after.comment == before.comment
         before_xml = before.read("word/document.xml")
         after_xml = after.read("word/document.xml")
         assert b"old section text" not in after_xml
@@ -358,6 +389,10 @@ def test_bounded_replace_preserves_everything_outside_heading_range(tmp_path: Pa
             "word/media/image1.png",
         ):
             assert after.read(member) == before.read(member)
+        before_footer = before.getinfo("word/footer1.xml")
+        after_footer = after.getinfo("word/footer1.xml")
+        assert after_footer.comment == before_footer.comment
+        assert after_footer.extra == before_footer.extra
 
 
 def test_bounded_replace_fails_closed_for_duplicate_normalized_heading(tmp_path: Path) -> None:
@@ -390,6 +425,44 @@ def test_heading_mutations_fail_for_missing_or_reverse_ranges(tmp_path: Path) ->
         revision.delete_between_headings(
             revision.load_docx(source), "Missing Heading", "End Heading"
         )
+
+
+def test_heading_boundary_rejects_an_ordinary_paragraph_with_the_same_text(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "ordinary-heading.docx"
+    write_bounded_fixture(source, start_style=None)
+
+    with pytest.raises(ValueError, match="heading"):
+        revision.replace_between_headings(
+            revision.load_docx(source),
+            "Start Heading",
+            "End Heading",
+            [revision.Block(kind="body", text="must not be inserted")],
+        )
+
+
+def test_ordinary_same_named_paragraph_does_not_make_a_real_heading_ambiguous(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "ordinary-duplicate.docx"
+    write_bounded_fixture(
+        source,
+        [
+            fixture_paragraph("Start Heading", marker="ordinary-duplicate"),
+            fixture_paragraph("old section text", marker="old"),
+        ],
+    )
+
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "Start Heading",
+        "End Heading",
+        [revision.Block(kind="body", text="replacement")],
+    )
+
+    assert b"replacement" in document.document_xml
     with pytest.raises(ValueError, match="order"):
         revision.delete_between_headings(
             revision.load_docx(source), "End Heading", "Start Heading"
@@ -442,9 +515,254 @@ def test_empty_revision_map_is_an_exact_byte_copy(tmp_path: Path) -> None:
     assert sha256_bytes(output) == sha256_bytes(source)
 
 
-def test_block_schema_rejects_unknown_kind_and_invalid_figure_payload(tmp_path: Path) -> None:
+def test_nonempty_save_refuses_an_existing_output_and_preserves_its_sentinel(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    output = tmp_path / "existing.docx"
+    write_bounded_fixture(source)
+    output.write_bytes(b"do not overwrite this sentinel")
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "Start Heading",
+        "End Heading",
+        [revision.Block(kind="body", text="replacement")],
+    )
+
+    with pytest.raises(FileExistsError, match="existing"):
+        revision.save_candidate(document, output)
+
+    assert output.read_bytes() == b"do not overwrite this sentinel"
+
+
+@pytest.mark.parametrize("fragment", ["../outside.md", "C:/absolute/fragment.md"])
+def test_fragment_path_rejects_parent_escape_and_absolute_paths(
+    tmp_path: Path, fragment: str
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    revision_dir = tmp_path / "revision"
+    revision_dir.mkdir()
+    write_bounded_fixture(source)
+    (tmp_path / "outside.md").write_text("outside", encoding="utf-8")
+    revision_map = revision_dir / "revision-map.json"
+    revision_map.write_text(
+        json.dumps(
+            [
+                {
+                    "op": "replace",
+                    "start_heading": "Start Heading",
+                    "end_heading": "End Heading",
+                    "fragment": fragment,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="fragment"):
+        revision.apply_revision_map(source, revision_map, tmp_path / "candidate.docx")
+
+
+def test_fragment_path_rejects_a_symlink_even_when_its_target_is_regular(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    revision_dir = tmp_path / "revision"
+    revision_dir.mkdir()
+    write_bounded_fixture(source)
+    target = revision_dir / "target.md"
+    target.write_text("target", encoding="utf-8")
+    link = revision_dir / "fragment.md"
+    try:
+        link.symlink_to(target)
+        fragment = link.name
+    except OSError:
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "target.md").write_text("target", encoding="utf-8")
+        junction = revision_dir / "fragment-link"
+        result = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(junction), str(outside)],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            pytest.skip("neither file symlinks nor directory junctions are available")
+        fragment = "fragment-link/target.md"
+    revision_map = revision_dir / "revision-map.json"
+    revision_map.write_text(
+        json.dumps(
+            [
+                {
+                    "op": "replace",
+                    "start_heading": "Start Heading",
+                    "end_heading": "End Heading",
+                    "fragment": fragment,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="symlink"):
+        revision.apply_revision_map(source, revision_map, tmp_path / "candidate.docx")
+
+
+def test_fragment_path_accepts_only_a_regular_file_beneath_the_map_directory(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    revision_dir = tmp_path / "revision"
+    fragments = revision_dir / "fragments"
+    fragments.mkdir(parents=True)
+    write_bounded_fixture(source)
+    (fragments / "bounded.md").write_text("safe bounded text", encoding="utf-8")
+    revision_map = revision_dir / "revision-map.json"
+    revision_map.write_text(
+        json.dumps(
+            [
+                {
+                    "op": "replace",
+                    "start_heading": "Start Heading",
+                    "end_heading": "End Heading",
+                    "fragment": "fragments/bounded.md",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "candidate.docx"
+
+    revision.apply_revision_map(source, revision_map, output)
+
+    with zipfile.ZipFile(output) as archive:
+        assert b"safe bounded text" in archive.read("word/document.xml")
+
+
+def test_block_schema_rejects_unknown_kind_and_defers_figures_to_a_later_task(
+    tmp_path: Path,
+) -> None:
     revision = load_bounded_revision_module()
     with pytest.raises(ValueError, match="kind"):
         revision.Block(kind="quote", text="unsupported")
-    with pytest.raises(ValueError, match="image"):
-        revision.Block(kind="figure", text="not a path")
+    with pytest.raises(ValueError, match="kind"):
+        revision.Block(kind="figure", text="figure.png")
+
+
+def test_fragment_parser_rejects_markdown_images_until_figure_support_is_implemented(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    fragment = tmp_path / "fragment.md"
+    fragment.write_text("![图1.1.1 示例](figure.png)\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="figure"):
+        revision.parse_fragment(fragment)
+
+
+def test_real_second_edition_templates_have_the_required_measured_properties() -> None:
+    revision = load_bounded_revision_module()
+    document = revision.load_docx(find_source_docx())
+    styles = ET.fromstring(document.payloads["word/styles.xml"])
+    default_run = styles.find("w:docDefaults/w:rPrDefault/w:rPr", NS)
+    assert default_run is not None
+    default_size = default_run.find("w:sz", NS)
+    assert default_size is not None and default_size.get(f"{W}val") == "21"
+
+    templates = {
+        kind: revision._template_paragraph(document, kind)
+        for kind in ("body", "command", "config", "heading1", "heading2", "caption")
+    }
+    elements = {
+        kind: revision._parse_child(document.document_xml, paragraph)
+        for kind, paragraph in templates.items()
+    }
+
+    body = elements["body"]
+    body_properties = body.find("w:pPr", NS)
+    assert body_properties is not None
+    body_alignment = body_properties.find("w:jc", NS)
+    if body_alignment is None:
+        normal_style = next(
+            style
+            for style in styles.findall("w:style", NS)
+            if style.get(f"{W}type") == "paragraph" and style.get(f"{W}default") == "1"
+        )
+        body_alignment = normal_style.find("w:pPr/w:jc", NS)
+    assert body_alignment is not None and body_alignment.get(f"{W}val") == "both"
+    indentation = body_properties.find("w:ind", NS)
+    assert indentation is not None
+    assert indentation.get(f"{W}firstLineChars") == "200"
+    paragraph_run = body_properties.find("w:rPr", NS)
+    assert paragraph_run is not None
+    fonts = paragraph_run.find("w:rFonts", NS)
+    assert fonts is not None and fonts.get(f"{W}eastAsia") == "宋体"
+    assert paragraph_run.find("w:sz", NS) is None
+
+    command_text = revision._child_text(document.document_xml, templates["command"]).strip()
+    config_text = revision._child_text(document.document_xml, templates["config"]).strip()
+    assert revision.COMMAND_PATTERN.match(command_text)
+    assert not revision.COMMAND_PATTERN.match(config_text)
+    assert revision.CONFIG_PATTERN.match(config_text)
+    assert command_text != config_text
+    command_properties = elements["command"].find("w:pPr", NS)
+    config_properties = elements["config"].find("w:pPr", NS)
+    assert command_properties is not None and config_properties is not None
+    assert command_properties.find("w:jc", NS).get(f"{W}val") == "left"
+    assert config_properties.find("w:jc", NS).get(f"{W}val") == "left"
+    for properties in (command_properties, config_properties):
+        fonts = properties.find("w:rPr/w:rFonts", NS)
+        assert fonts is not None and fonts.get(f"{W}eastAsia") == "宋体"
+    assert command_properties.find("w:ind", NS) is None
+    assert config_properties.find("w:ind", NS).get(f"{W}firstLineChars") == "202"
+
+    assert revision._paragraph_style(document.document_xml, templates["heading1"]) == "1"
+    assert revision._paragraph_style(document.document_xml, templates["heading2"]) == "2"
+    heading_styles = {
+        style.get(f"{W}styleId"): style
+        for style in styles.findall("w:style", NS)
+        if style.get(f"{W}styleId") in {"1", "2"}
+    }
+    assert heading_styles["1"].find("w:pPr/w:outlineLvl", NS).get(f"{W}val") == "0"
+    assert heading_styles["1"].find("w:rPr/w:sz", NS).get(f"{W}val") == "44"
+    assert heading_styles["2"].find("w:pPr/w:outlineLvl", NS).get(f"{W}val") == "1"
+    assert heading_styles["2"].find("w:rPr/w:sz", NS).get(f"{W}val") == "32"
+    caption = elements["caption"]
+    caption_properties = caption.find("w:pPr", NS)
+    assert caption_properties is not None
+    assert caption_properties.find("w:jc", NS).get(f"{W}val") == "center"
+    caption_run = caption_properties.find("w:rPr", NS)
+    assert caption_run is not None
+    assert caption_run.find("w:b", NS) is not None
+    assert caption_run.find("w:sz", NS).get(f"{W}val") == "18"
+
+
+@pytest.mark.parametrize(
+    "kind,template_text",
+    [("command", "[root@controller ~]# true"), ("config", "[DEFAULT] enabled=true")],
+)
+def test_command_and_config_templates_do_not_fall_back_to_body(
+    tmp_path: Path, kind: str, template_text: str
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    without_template = tmp_path / "without-template.docx"
+    write_bounded_fixture(source)
+
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(without_template, "w") as changed:
+        changed.comment = original.comment
+        for member in original.infolist():
+            payload = original.read(member.filename)
+            if member.filename == "word/document.xml":
+                needle = template_text.encode("utf-8")
+                assert payload.count(needle) == 1
+                payload = payload.replace(
+                    needle, b"ordinary paragraph without a special template", 1
+                )
+            changed.writestr(member, payload)
+
+    with pytest.raises(ValueError, match=kind):
+        revision._template_paragraph(revision.load_docx(without_template), kind)
