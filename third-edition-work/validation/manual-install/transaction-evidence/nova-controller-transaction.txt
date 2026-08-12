@@ -1,0 +1,415 @@
+{
+  "current_rpm": [
+    "abseil-cpp-20230802.1-6.oe2403sp3.x86_64",
+    "dpdk-23.11-39.oe2403sp3.x86_64",
+    "grpc-1.60.0-5.oe2403sp3.x86_64",
+    "libgfortran-12.3.1-105.oe2403sp3.x86_64",
+    "libibverbs-50.0-44.oe2403sp3.x86_64",
+    "libquadmath-12.3.1-105.oe2403sp3.x86_64",
+    "libsodium-1.0.19-2.oe2403sp3.x86_64",
+    "novnc-1.2.0-2.oe2403sp3.noarch",
+    "openblas-0.3.25-7.oe2403sp3.x86_64",
+    "openstack-nova-api-27.3.0-1.oe2403sp2.noarch",
+    "openstack-nova-common-27.3.0-1.oe2403sp2.noarch",
+    "openstack-nova-conductor-27.3.0-1.oe2403sp2.noarch",
+    "openstack-nova-novncproxy-27.3.0-1.oe2403sp2.noarch",
+    "openstack-nova-scheduler-27.3.0-1.oe2403sp2.noarch",
+    "openvswitch-3.2.1-1.oe2403sp2.x86_64",
+    "openvswitch-dpdk-3.2.1-1.oe2403sp2.x86_64",
+    "protobuf-25.1-10.oe2403sp2.x86_64",
+    "protobuf-compiler-25.1-10.oe2403sp2.x86_64",
+    "python3-boto-2.49.0-5.oe2403sp3.noarch",
+    "python3-dataclasses-0.8-2.oe2403sp3.noarch",
+    "python3-etcd3-0.12.0-1.oe2403sp3.noarch",
+    "python3-glanceclient-4.3.0-1.oe2403sp2.noarch",
+    "python3-grpcio-1.60.0-5.oe2403sp3.x86_64",
+    "python3-nova-27.3.0-1.oe2403sp2.noarch",
+    "python3-numpy-1:1.23.3-1.oe2403sp2.x86_64",
+    "python3-openvswitch-3.2.1-1.oe2403sp2.x86_64",
+    "python3-os-vif-3.1.1-1.oe2403sp2.noarch",
+    "python3-oslo-versionedobjects-3.1.0-1.oe2403sp2.noarch",
+    "python3-ovsdbapp-2.2.1-1.oe2403sp2.noarch",
+    "python3-paramiko-2.11.0-1.oe2403sp2.noarch",
+    "python3-protobuf-25.1-10.oe2403sp2.noarch",
+    "python3-pynacl-1.5.0-1.oe2403sp3.x86_64",
+    "python3-pyroute2-0.7.3-2.oe2403sp2.noarch",
+    "python3-rsa-4.8-1.oe2403sp2.noarch",
+    "python3-sortedcontainers-2.4.0-3.oe2403sp3.noarch",
+    "python3-sysv-ipc-1.1.0-2.oe2403sp3.x86_64",
+    "python3-tooz-3.2.0-1.oe2403sp2.noarch",
+    "python3-warlock-2.0.1-1.oe2403sp2.noarch",
+    "python3-websockify-0.10.0-1.oe2403sp3.noarch",
+    "re2-20240201-1.oe2403sp3.x86_64"
+  ],
+  "history_new": [
+    {
+      "action": "Install",
+      "nevra": "abseil-cpp-20230802.1-6.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "dpdk-23.11-39.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "grpc-1.60.0-5.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "libgfortran-12.3.1-105.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "libibverbs-50.0-44.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "libquadmath-12.3.1-105.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "libsodium-1.0.19-2.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "novnc-1.2.0-2.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openblas-0.3.25-7.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openstack-nova-api-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openstack-nova-common-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openstack-nova-conductor-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openstack-nova-novncproxy-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openstack-nova-scheduler-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openvswitch-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "openvswitch-dpdk-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "protobuf-25.1-10.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "protobuf-compiler-25.1-10.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-boto-2.49.0-5.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-dataclasses-0.8-2.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-etcd3-0.12.0-1.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-glanceclient-4.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-grpcio-1.60.0-5.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-nova-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-numpy-1:1.23.3-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-openvswitch-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-os-vif-3.1.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-oslo-versionedobjects-3.1.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-ovsdbapp-2.2.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-paramiko-2.11.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-protobuf-25.1-10.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-pynacl-1.5.0-1.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-pyroute2-0.7.3-2.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-rsa-4.8-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-sortedcontainers-2.4.0-3.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-sysv-ipc-1.1.0-2.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-tooz-3.2.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-warlock-2.0.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "python3-websockify-0.10.0-1.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "action": "Install",
+      "nevra": "re2-20240201-1.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    }
+  ],
+  "history_old": [],
+  "history_rc": 0,
+  "node": "controller",
+  "repoquery_rc": 0,
+  "repository_metadata": [
+    {
+      "nevra": "abseil-cpp-20230802.1-6.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "dpdk-23.11-39.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "grpc-1.60.0-5.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "libgfortran-12.3.1-105.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "libibverbs-50.0-44.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "libquadmath-12.3.1-105.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "libsodium-1.0.19-2.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "novnc-1.2.0-2.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openblas-0.3.25-7.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openstack-nova-api-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openstack-nova-common-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openstack-nova-conductor-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openstack-nova-novncproxy-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openstack-nova-scheduler-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openvswitch-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "openvswitch-dpdk-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "protobuf-25.1-10.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "protobuf-compiler-25.1-10.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-boto-2.49.0-5.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-dataclasses-0.8-2.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-etcd3-0.12.0-1.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-glanceclient-4.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-grpcio-1.60.0-5.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-nova-27.3.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-numpy-1:1.23.3-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-openvswitch-3.2.1-1.oe2403sp2.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-os-vif-3.1.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-oslo-versionedobjects-3.1.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-ovsdbapp-2.2.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-paramiko-2.11.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-protobuf-25.1-10.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-pynacl-1.5.0-1.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-pyroute2-0.7.3-2.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-rsa-4.8-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-sortedcontainers-2.4.0-3.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-sysv-ipc-1.1.0-2.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-tooz-3.2.0-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-warlock-2.0.1-1.oe2403sp2.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "python3-websockify-0.10.0-1.oe2403sp3.noarch",
+      "repo": "openstack-local"
+    },
+    {
+      "nevra": "re2-20240201-1.oe2403sp3.x86_64",
+      "repo": "openstack-local"
+    }
+  ],
+  "rpm_rc": 0,
+  "transaction_id": 8,
+  "unsafe_actions": []
+}
