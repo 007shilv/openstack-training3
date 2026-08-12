@@ -30,6 +30,9 @@ ALLOWED_BLOCK_KINDS = frozenset(
 )
 OPERATION_FIELDS = {
     "replace": frozenset({"op", "start_heading", "end_heading", "fragment"}),
+    "replace_with_part_opener": frozenset(
+        {"op", "start_heading", "end_heading", "fragment", "part_title"}
+    ),
     "delete": frozenset({"op", "start_heading", "end_heading"}),
     "insert_before": frozenset({"op", "heading", "fragment"}),
 }
@@ -37,9 +40,11 @@ TAG_PATTERN = re.compile(
     rb"<(?P<close>/)?(?P<name>[A-Za-z_][\w:.-]*)(?P<attrs>[^<>]*?)(?P<self>/)?>"
 )
 PPR_PATTERN = re.compile(rb"<w:pPr\b[^>]*(?:/>|>.*?</w:pPr>)", re.DOTALL)
+TEXT_NODE_PATTERN = re.compile(rb"(?P<open><w:t\b[^>]*>).*?(?P<close></w:t>)", re.DOTALL)
 ROOT_PATTERN = re.compile(rb"<w:document\b(?P<attrs>[^>]*)>")
 BODY_PATTERN = re.compile(rb"<w:body\b[^>]*>")
 CAPTION_PATTERN = re.compile(r"^图\s*\d+(?:[.\-]\d+)+")
+PART_OPENER_PATTERN = re.compile(r"^第[〇零一二三四五六七八九十百]+部分(?:\s|$)")
 COMMAND_PATTERN = re.compile(
     r"^(?:\[[^\]\r\n]+@[^\]]+\][#$]|MariaDB\s+\[[^\]]+\]>|[^\s]+@[^\s]+[$#])"
 )
@@ -261,6 +266,78 @@ def _paragraph_has_drawing(document_xml: bytes, paragraph: bytes) -> bool:
     return element.find(".//w:drawing", NS) is not None
 
 
+def _is_empty_layout_break_paragraph(document_xml: bytes, paragraph: bytes) -> bool:
+    element = _parse_child(document_xml, paragraph)
+    if element.tag != f"{W}p" or _child_text(document_xml, paragraph).strip():
+        return False
+    if element.find("w:pPr/w:sectPr", NS) is not None:
+        return True
+    return any(
+        line_break.get(f"{W}type") == "page"
+        for line_break in element.findall(".//w:br", NS)
+    )
+
+
+def _is_part_opener(document_xml: bytes, paragraph: bytes) -> bool:
+    return (
+        _child_name(document_xml, paragraph) == f"{W}p"
+        and PART_OPENER_PATTERN.match(_child_text(document_xml, paragraph).strip()) is not None
+    )
+
+
+def _replace_text_preserving_paragraph_xml(paragraph: bytes, text: str) -> bytes:
+    matches = list(TEXT_NODE_PATTERN.finditer(paragraph))
+    if not matches:
+        raise ValueError("part opener paragraph has no editable text")
+    escaped = escape(text).encode("utf-8")
+    rewritten: list[bytes] = []
+    cursor = 0
+    for index, match in enumerate(matches):
+        rewritten.append(paragraph[cursor:match.start()])
+        rewritten.append(match.group("open"))
+        if index == 0:
+            rewritten.append(escaped)
+        rewritten.append(match.group("close"))
+        cursor = match.end()
+    rewritten.append(paragraph[cursor:])
+    return b"".join(rewritten)
+
+
+def _trailing_layout_transition(
+    document: DocxDocument,
+    children: list[bytes],
+    start_index: int,
+    end_index: int,
+    part_title: str | None,
+) -> list[bytes]:
+    """Keep a source chapter's trailing section/page transition byte-for-byte."""
+    tail_start = end_index
+    part_index: int | None = None
+    candidate = end_index - 1
+    if (
+        candidate > start_index
+        and _is_part_opener(document.document_xml, children[candidate])
+        and candidate - 1 > start_index
+        and _is_empty_layout_break_paragraph(
+            document.document_xml, children[candidate - 1]
+        )
+    ):
+        part_index = candidate
+        tail_start = candidate
+    while tail_start - 1 > start_index and _is_empty_layout_break_paragraph(
+        document.document_xml, children[tail_start - 1]
+    ):
+        tail_start -= 1
+    transition = list(children[tail_start:end_index])
+    if part_title is not None:
+        if part_index is None:
+            raise ValueError("replace_with_part_opener requires a trailing source part opener")
+        transition[part_index - tail_start] = _replace_text_preserving_paragraph_xml(
+            children[part_index], part_title
+        )
+    return transition
+
+
 def _paragraph_properties(paragraph: bytes) -> bytes:
     match = PPR_PATTERN.search(paragraph)
     return b"<w:pPr/>" if match is None else bytes(match.group(0))
@@ -400,16 +477,27 @@ def _write_children(document: DocxDocument, children: list[bytes]) -> None:
 
 
 def replace_between_headings(
-    doc: DocxDocument, start: str, end: str, blocks: list[Block]
+    doc: DocxDocument,
+    start: str,
+    end: str,
+    blocks: list[Block],
+    *,
+    part_title: str | None = None,
 ) -> None:
-    """Replace top-level body elements strictly between two unique headings."""
+    """Replace chapter content while retaining its trailing layout transition."""
     start_index = _unique_heading_index(doc, start)
     end_index = _unique_heading_index(doc, end)
     if start_index >= end_index:
         raise ValueError("heading order is invalid: start must occur before end")
     _, children, _ = _body_parts(doc.document_xml)
     replacement = _render_blocks(doc, blocks)
-    _write_children(doc, children[: start_index + 1] + replacement + children[end_index:])
+    transition = _trailing_layout_transition(
+        doc, children, start_index, end_index, part_title
+    )
+    _write_children(
+        doc,
+        children[: start_index + 1] + replacement + transition + children[end_index:],
+    )
 
 
 def delete_between_headings(doc: DocxDocument, start: str, end: str) -> None:
@@ -568,10 +656,14 @@ def apply_revision_map(source: Path, revision_map: Path, output: Path) -> None:
     document = load_docx(source)
     for operation in operations:
         op = operation["op"]
-        if op == "replace":
+        if op in {"replace", "replace_with_part_opener"}:
             blocks = parse_fragment(_resolve_fragment_path(revision_map, operation["fragment"]))
             replace_between_headings(
-                document, operation["start_heading"], operation["end_heading"], blocks
+                document,
+                operation["start_heading"],
+                operation["end_heading"],
+                blocks,
+                part_title=operation.get("part_title"),
             )
         elif op == "delete":
             delete_between_headings(document, operation["start_heading"], operation["end_heading"])

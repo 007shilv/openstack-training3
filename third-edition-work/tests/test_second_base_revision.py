@@ -96,6 +96,31 @@ def fixture_paragraph(text: str, style: str | None = None, marker: str = "body")
     )
 
 
+def fixture_section_break(marker: str = "section-break") -> str:
+    return (
+        f'<w:p data-marker="{marker}"><w:pPr><w:sectPr>'
+        '<w:pgSz w:w="10432" w:h="14740"/>'
+        '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>'
+        '</w:sectPr></w:pPr></w:p>'
+    )
+
+
+def fixture_page_break(marker: str = "page-break") -> str:
+    return (
+        f'<w:p data-marker="{marker}"><w:pPr><w:jc w:val="left"/></w:pPr>'
+        '<w:r><w:br w:type="page"/></w:r></w:p>'
+    )
+
+
+def fixture_part_opener(marker: str = "part-opener") -> str:
+    return (
+        f'<w:p data-marker="{marker}"><w:pPr><w:jc w:val="center"/>'
+        '<w:rPr><w:rFonts w:eastAsia="宋体"/><w:sz w:val="52"/></w:rPr></w:pPr>'
+        '<w:r><w:lastRenderedPageBreak/><w:t>第二部分 原生OpenStack云平台基础环境的构建</w:t>'
+        '</w:r></w:p>'
+    )
+
+
 def write_bounded_fixture(
     path: Path,
     middle: list[str] | None = None,
@@ -418,6 +443,97 @@ def test_bounded_replace_preserves_everything_outside_heading_range(tmp_path: Pa
         after_footer = after.getinfo("word/footer1.xml")
         assert after_footer.comment == before_footer.comment
         assert after_footer.extra == before_footer.extra
+
+
+def test_bounded_replace_preserves_a_trailing_section_break(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    candidate = tmp_path / "candidate.docx"
+    write_bounded_fixture(
+        source,
+        [
+            fixture_paragraph("old chapter text", marker="old-chapter"),
+            fixture_section_break(),
+        ],
+    )
+
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "Start Heading",
+        "End Heading",
+        [revision.Block(kind="body", text="new chapter text")],
+    )
+    revision.save_candidate(document, candidate)
+
+    with zipfile.ZipFile(source) as before, zipfile.ZipFile(candidate) as after:
+        before_xml = before.read("word/document.xml")
+        after_xml = after.read("word/document.xml")
+        assert b"old chapter text" not in after_xml
+        assert b"new chapter text" in after_xml
+        assert before_xml.count(b"<w:sectPr") == 2
+        assert after_xml.count(b"<w:sectPr") == 2
+        assert raw_marked_element(after_xml, "section-break") == raw_marked_element(
+            before_xml, "section-break"
+        )
+
+
+def test_task3_replace_preserves_page_break_and_retitles_the_part_opener(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    revision_dir = tmp_path / "revision"
+    fragments = revision_dir / "fragments"
+    fragments.mkdir(parents=True)
+    write_bounded_fixture(
+        source,
+        [
+            fixture_paragraph("old chapter text", marker="old-chapter"),
+            fixture_page_break(),
+            fixture_part_opener(),
+        ],
+    )
+    (fragments / "chapter.md").write_text("new chapter text\n", encoding="utf-8")
+    revision_map = revision_dir / "revision-map.json"
+    revision_map.write_text(
+        json.dumps(
+            [
+                {
+                    "op": "replace_with_part_opener",
+                    "start_heading": "Start Heading",
+                    "end_heading": "End Heading",
+                    "fragment": "fragments/chapter.md",
+                    "part_title": "第二部分 信创OpenStack云平台构建与应用",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    candidate = tmp_path / "candidate.docx"
+
+    revision.apply_revision_map(source, revision_map, candidate)
+
+    with zipfile.ZipFile(source) as before, zipfile.ZipFile(candidate) as after:
+        before_xml = before.read("word/document.xml")
+        after_xml = after.read("word/document.xml")
+        assert b"old chapter text" not in after_xml
+        assert b"new chapter text" in after_xml
+        assert raw_marked_element(after_xml, "page-break") == raw_marked_element(
+            before_xml, "page-break"
+        )
+        before_opener = raw_marked_element(before_xml, "part-opener")
+        after_opener = raw_marked_element(after_xml, "part-opener")
+        assert revision._paragraph_properties(after_opener) == revision._paragraph_properties(
+            before_opener
+        )
+        assert "第二部分 信创OpenStack云平台构建与应用" in revision._child_text(
+            after_xml, after_opener
+        )
+        assert "第二部分 原生OpenStack云平台基础环境的构建" not in revision._child_text(
+            after_xml, after_opener
+        )
 
 
 def test_bounded_replace_fails_closed_for_duplicate_normalized_heading(tmp_path: Path) -> None:
@@ -977,10 +1093,11 @@ def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None
             "fragment": "fragments/ch02.md",
         },
         {
-            "op": "replace",
+            "op": "replace_with_part_opener",
             "start_heading": "第三章 原生OpenStack云平台",
             "end_heading": "第四章 原生OpenStack云平台的环境准备",
             "fragment": "fragments/ch03.md",
+            "part_title": "第二部分 信创OpenStack云平台构建与应用",
         },
     ]
 
