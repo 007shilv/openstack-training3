@@ -225,9 +225,17 @@ def build(chapter_paths: list[Path], output: Path) -> None:
         append_markdown(doc, path)
         if position + 1 < len(chapter_paths):
             doc.add_section(WD_SECTION.NEW_PAGE)
+    normalize_figure_placeholders(doc)
     configure_sections(doc)
     output.parent.mkdir(parents=True, exist_ok=True)
     doc.save(output)
+
+
+def normalize_figure_placeholders(doc: Document) -> None:
+    for paragraph in doc.paragraphs:
+        text = paragraph.text.strip()
+        if text.startswith("[绘图建议：") or text.startswith("[截图待采集："):
+            paragraph.style = doc.styles["Figure Caption"]
 
 
 def main() -> None:
