@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -10,10 +12,13 @@ import sys
 from xml.etree import ElementTree as ET
 import zipfile
 
+import pytest
+
 
 WORK_ROOT = Path(__file__).resolve().parents[1]
 BASELINE_JSON = WORK_ROOT / "revision" / "second-edition-style-baseline.json"
 AUDIT_TOOL = WORK_ROOT / "tools" / "audit_second_base_docx.py"
+REVISION_TOOL = WORK_ROOT / "tools" / "revise_second_edition.py"
 SOURCE_FILENAME = "云计算基础架构平台构建与应用（第二版初稿）.docx"
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 DRAWING_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
@@ -36,6 +41,72 @@ def load_revision_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_bounded_revision_module():
+    spec = importlib.util.spec_from_file_location("bounded_second_base_revision", REVISION_TOOL)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def sha256_bytes(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def fixture_paragraph(text: str, style: str | None = None, marker: str = "body") -> str:
+    style_xml = f'<w:pStyle w:val="{style}"/>' if style else ""
+    return (
+        f'<w:p data-marker="{marker}"><w:pPr>{style_xml}'
+        f'<w:spacing w:after="{len(marker)}"/></w:pPr><w:r><w:t>{text}</w:t></w:r></w:p>'
+    )
+
+
+def write_bounded_fixture(path: Path, middle: list[str] | None = None) -> None:
+    middle = middle or [fixture_paragraph("old section text", marker="old")]
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<w:body>'
+        + fixture_paragraph("ordinary template", marker="body-template")
+        + fixture_paragraph("[root@controller ~]# true", marker="command-template")
+        + fixture_paragraph("[DEFAULT] enabled=true", marker="config-template")
+        + fixture_paragraph("图1.1.1 示例", marker="caption-template")
+        + fixture_paragraph("Start   Heading", style="1", marker="start-heading")
+        + "".join(middle)
+        + fixture_paragraph("End Heading", style="1", marker="end-heading")
+        + fixture_paragraph("outside untouched", marker="outside")
+        + '<w:p data-marker="image"><w:pPr/><w:r><w:drawing><w:object r:id="rIdImage1"/>'
+          '</w:drawing></w:r></w:p>'
+        + '<w:sectPr data-marker="section"><w:pgSz w:w="10432" w:h="14740"/>'
+          '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>'
+          '</w:sectPr></w:body></w:document>'
+    ).encode("utf-8")
+    relationships = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rIdImage1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+        'Target="media/image1.png"/></Relationships>'
+    ).encode("utf-8")
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+        archive.writestr("word/document.xml", document_xml)
+        archive.writestr("word/_rels/document.xml.rels", relationships)
+        archive.writestr("word/footer1.xml", b"<footer>frozen footer</footer>")
+        archive.writestr("word/media/image1.png", b"not-a-real-png-but-byte-stable")
+
+
+def raw_marked_element(xml: bytes, marker: str) -> bytes:
+    match = re.search(
+        rb'<w:(?:p|sectPr) data-marker="' + re.escape(marker.encode()) + rb'".*?</w:(?:p|sectPr)>',
+        xml,
+    )
+    assert match is not None
+    return match.group(0)
 
 
 def write_mutated_docx(source: Path, candidate: Path, mutate) -> None:
@@ -257,3 +328,123 @@ def test_cli_checks_source_hash_before_opening_an_untrusted_docx(tmp_path: Path)
     assert result.returncode == 1
     assert "source_sha256" in stderr
     assert "Traceback" not in stderr
+
+
+def test_bounded_replace_preserves_everything_outside_heading_range(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    candidate = tmp_path / "candidate.docx"
+    write_bounded_fixture(source)
+
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "  Start Heading ",
+        "End\tHeading",
+        [revision.Block(kind="body", text="new bounded text")],
+    )
+    revision.save_candidate(document, candidate)
+
+    with zipfile.ZipFile(source) as before, zipfile.ZipFile(candidate) as after:
+        before_xml = before.read("word/document.xml")
+        after_xml = after.read("word/document.xml")
+        assert b"old section text" not in after_xml
+        assert b"new bounded text" in after_xml
+        for marker in ("start-heading", "end-heading", "outside", "image", "section"):
+            assert raw_marked_element(after_xml, marker) == raw_marked_element(before_xml, marker)
+        for member in (
+            "word/_rels/document.xml.rels",
+            "word/footer1.xml",
+            "word/media/image1.png",
+        ):
+            assert after.read(member) == before.read(member)
+
+
+def test_bounded_replace_fails_closed_for_duplicate_normalized_heading(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "duplicate.docx"
+    write_bounded_fixture(
+        source,
+        [
+            fixture_paragraph("inside", marker="inside"),
+            fixture_paragraph("Start Heading", style="2", marker="duplicate-start"),
+        ],
+    )
+
+    document = revision.load_docx(source)
+    with pytest.raises(ValueError, match="unique"):
+        revision.replace_between_headings(
+            document,
+            "Start Heading",
+            "End Heading",
+            [revision.Block(kind="body", text="replacement")],
+        )
+
+
+def test_heading_mutations_fail_for_missing_or_reverse_ranges(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    write_bounded_fixture(source)
+
+    with pytest.raises(ValueError, match="unique"):
+        revision.delete_between_headings(
+            revision.load_docx(source), "Missing Heading", "End Heading"
+        )
+    with pytest.raises(ValueError, match="order"):
+        revision.delete_between_headings(
+            revision.load_docx(source), "End Heading", "Start Heading"
+        )
+    with pytest.raises(ValueError, match="unique"):
+        revision.insert_before_heading(
+            revision.load_docx(source),
+            "Missing Heading",
+            [revision.Block(kind="body", text="never inserted")],
+        )
+
+
+@pytest.mark.parametrize(
+    "mapping,error",
+    [
+        ([{"op": "rename", "heading": "End Heading"}], "unknown op"),
+        (
+            [{"op": "delete", "start_heading": "Start Heading", "end_heading": "End Heading", "extra": 1}],
+            "unknown fields",
+        ),
+        (
+            [{"op": "replace", "start_heading": "Start Heading", "end_heading": "End Heading"}],
+            "missing fields",
+        ),
+        ([{"op": "insert_before", "heading": "End Heading"}], "missing fields"),
+    ],
+)
+def test_revision_map_schema_rejects_unknown_or_incomplete_operations(
+    tmp_path: Path, mapping: object, error: str
+) -> None:
+    revision = load_bounded_revision_module()
+    path = tmp_path / "revision-map.json"
+    path.write_text(json.dumps(mapping), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=error):
+        revision.load_revision_map(path)
+
+
+def test_empty_revision_map_is_an_exact_byte_copy(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    output = tmp_path / "copy.docx"
+    mapping = tmp_path / "revision-map.json"
+    write_bounded_fixture(source)
+    mapping.write_text("[]\n", encoding="utf-8")
+
+    revision.apply_revision_map(source, mapping, output)
+
+    assert output.read_bytes() == source.read_bytes()
+    assert sha256_bytes(output) == sha256_bytes(source)
+
+
+def test_block_schema_rejects_unknown_kind_and_invalid_figure_payload(tmp_path: Path) -> None:
+    revision = load_bounded_revision_module()
+    with pytest.raises(ValueError, match="kind"):
+        revision.Block(kind="quote", text="unsupported")
+    with pytest.raises(ValueError, match="image"):
+        revision.Block(kind="figure", text="not a path")
