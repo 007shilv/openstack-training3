@@ -21,7 +21,8 @@ WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 DRAWING_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 NS = {"w": WORD_NS, "wp": DRAWING_NS}
 W = f"{{{WORD_NS}}}"
-CAPTION_PATTERN = re.compile(r"^图\d+\.\d+\.\d+")
+BASELINE_PATH = Path(__file__).resolve().parents[1] / "revision" / "second-edition-style-baseline.json"
+CAPTION_PATTERN = re.compile(r"^图(?P<chapter>\d+)(?P<separator_1>[^\d])(?P<section>\d+)(?P<separator_2>[^\d])(?P<sequence>\d+)")
 
 
 def sha256(path: Path) -> str:
@@ -62,6 +63,11 @@ def _text(paragraph: ET.Element) -> str:
     return "".join(node.text or "" for node in paragraph.findall(".//w:t", NS)).strip()
 
 
+def _canonical_sha256(value: object) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _run_properties(paragraph: ET.Element) -> ET.Element:
     properties = paragraph.find(".//w:rPr", NS)
     if properties is None:
@@ -79,6 +85,86 @@ def _font_name(properties: ET.Element) -> str:
 def _body_paragraph_count(body: ET.Element) -> int:
     """Count top-level body paragraphs, matching Word's main-text structure."""
     return len(body.findall("w:p", NS))
+
+
+def _caption_record(paragraph: ET.Element) -> dict[str, Any] | None:
+    """Parse a real figure caption and record its actual separators and format."""
+    match = CAPTION_PATTERN.match(_text(paragraph))
+    if match is None:
+        return None
+    properties = _run_properties(paragraph)
+    size = properties.find("w:sz", NS)
+    alignment = paragraph.find("w:pPr/w:jc", NS)
+    return {
+        "numbering": {
+            "prefix": "图",
+            "separators": [match.group("separator_1"), match.group("separator_2")],
+        },
+        "font": _font_name(properties),
+        "size_pt": _points(_attribute(size, "val")),
+        "bold": properties.find("w:b", NS) is not None,
+        "alignment": _attribute(alignment, "val", "<missing>"),
+    }
+
+
+def _figure_caption_records(body: ET.Element) -> list[dict[str, Any] | None]:
+    """Return one adjacency-aware caption record for each inline picture paragraph."""
+    paragraphs = body.findall("w:p", NS)
+    records: list[dict[str, Any] | None] = []
+    for index, paragraph in enumerate(paragraphs):
+        inline_count = len(paragraph.findall(".//wp:inline", NS))
+        if not inline_count:
+            continue
+        if inline_count != 1:
+            raise ValueError("source has an inline-picture paragraph with more than one image")
+        records.append(_caption_record(paragraphs[index + 1]) if index + 1 < len(paragraphs) else None)
+    return records
+
+
+def _inline_widths_emu(document: ET.Element) -> list[int]:
+    widths: list[int] = []
+    for inline in document.findall(".//wp:inline", NS):
+        extent = inline.find("wp:extent", NS)
+        if extent is None or "cx" not in extent.attrib:
+            raise ValueError("inline picture is missing an extent width")
+        widths.append(int(extent.attrib["cx"]))
+    return widths
+
+
+def _figure_caption_records_from_docx(path: Path) -> list[dict[str, Any] | None]:
+    with zipfile.ZipFile(path) as archive:
+        document = ET.fromstring(archive.read("word/document.xml"))
+    body = document.find("w:body", NS)
+    if body is None:
+        raise ValueError("DOCX has no document body")
+    return _figure_caption_records(body)
+
+
+def _body_direct_run_formats(body: ET.Element) -> list[dict[str, Any]]:
+    """Capture direct font/size formatting on body text runs, excluding figure captions."""
+    records: list[dict[str, Any]] = []
+    for paragraph_index, paragraph in enumerate(body.findall("w:p", NS)):
+        if _caption_record(paragraph) is not None:
+            continue
+        for run_index, run in enumerate(paragraph.findall("w:r", NS)):
+            if not _text(run):
+                continue
+            properties = run.find("w:rPr", NS)
+            if properties is None:
+                continue
+            fonts = properties.find("w:rFonts", NS)
+            size = properties.find("w:sz", NS)
+            if fonts is None and size is None:
+                continue
+            records.append(
+                {
+                    "paragraph": paragraph_index,
+                    "run": run_index,
+                    "font": _font_name(properties),
+                    "size_pt": _points(_attribute(size, "val")),
+                }
+            )
+    return records
 
 
 def _style_properties(styles: ET.Element, style_id: str) -> ET.Element:
@@ -127,32 +213,26 @@ def measure_docx(path: Path) -> dict[str, Any]:
         for number in (1, 2, 3)
     }
 
-    caption: ET.Element | None = None
-    for paragraph in document.findall(".//w:p", NS):
-        if CAPTION_PATTERN.match(_text(paragraph)):
-            caption = paragraph
-            break
+    caption: ET.Element | None = next(
+        (paragraph for paragraph in document.findall(".//w:p", NS) if CAPTION_PATTERN.match(_text(paragraph))),
+        None,
+    )
     if caption is None:
         caption_format: dict[str, Any] = {
             "font": "<missing>", "size_pt": "<missing>", "bold": False,
             "alignment": "<missing>", "numbering": "<missing>",
         }
     else:
-        caption_properties = _run_properties(caption)
-        caption_size = caption_properties.find("w:sz", NS)
-        caption_alignment = caption.find("w:pPr/w:jc", NS)
-        caption_format = {
-            "font": _font_name(caption_properties),
-            "size_pt": _points(_attribute(caption_size, "val")),
-            "bold": caption_properties.find("w:b", NS) is not None,
-            "alignment": _attribute(caption_alignment, "val", "<missing>"),
-            "numbering": "图<chapter>.<section>.<sequence>",
-        }
+        caption_format = _caption_record(caption)
+        assert caption_format is not None
 
     body = document.find("w:body", NS)
     if body is None:
         raise ValueError("DOCX has no document body")
     first = sections[0]
+    caption_records = _figure_caption_records(body)
+    inline_widths = _inline_widths_emu(document)
+    direct_run_formats = _body_direct_run_formats(body)
     return {
         "section_count": len(sections),
         "sections": sections,
@@ -164,34 +244,82 @@ def measure_docx(path: Path) -> dict[str, Any]:
         "body_size_pt": _points(_attribute(default_size, "val")),
         "heading_sizes_pt": heading_sizes,
         "caption_format": caption_format,
+        "caption_count": sum(record is not None for record in caption_records),
+        "caption_records_sha256": _canonical_sha256(caption_records),
+        "inline_widths_emu": {
+            "count": len(inline_widths),
+            "min": min(inline_widths),
+            "max": max(inline_widths),
+            "sequence_sha256": _canonical_sha256(inline_widths),
+        },
+        "body_run_direct_format_sha256": _canonical_sha256(direct_run_formats),
         "paragraph_count": _body_paragraph_count(body),
         "inline_shape_count": len(document.findall(".//wp:inline", NS)),
         "table_count": len(document.findall(".//w:tbl", NS)),
     }
 
 
-def audit_docx(source: Path, candidate: Path) -> list[str]:
-    """Return style-contract violations between a reference and candidate DOCX.
+def audit_docx(source: Path, candidate: Path, baseline_path: Path = BASELINE_PATH) -> list[str]:
+    """Return frozen-style-contract violations for a candidate DOCX.
 
     Text, table, and picture totals are reported by ``measure_docx`` but are not
     enforced here: targeted textbook edits are expected to change them.
     """
+    baseline = load_baseline(baseline_path)
+    actual_source_sha256 = sha256(source)
+    if actual_source_sha256 != baseline["source_sha256"]:
+        return [
+            "source_sha256 differs: "
+            f"baseline={baseline['source_sha256']!r}, supplied={actual_source_sha256!r}"
+        ]
+
     reference = measure_docx(source)
     measured = measure_docx(candidate)
     errors: list[str] = []
     for field in (
+        "section_count", "body_font", "body_size_pt", "heading_sizes_pt",
+        "caption_format", "caption_count", "caption_records_sha256", "inline_widths_emu",
+        "body_run_direct_format_sha256", "paragraph_count", "inline_shape_count", "table_count",
+    ):
+        if reference[field] != baseline[field]:
+            errors.append(f"baseline.{field} differs from frozen source: baseline={baseline[field]!r}, source={reference[field]!r}")
+    if reference["sections"] != baseline["sections"]:
+        errors.append("baseline.sections differs from frozen source")
+
+    for index, expected_section in enumerate(baseline["sections"]):
+        if index >= len(measured["sections"]):
+            break
+        actual_section = measured["sections"][index]
+        for field in ("page_cm", "margins_cm", "header_cm", "footer_cm"):
+            if actual_section[field] != expected_section[field]:
+                errors.append(
+                    f"sections[{index}].{field} differs: "
+                    f"baseline={expected_section[field]!r}, candidate={actual_section[field]!r}"
+                )
+    for field in (
         "section_count",
-        "page_cm",
-        "margins_cm",
-        "header_cm",
-        "footer_cm",
         "body_font",
         "body_size_pt",
         "heading_sizes_pt",
-        "caption_format",
+        "caption_count",
+        "inline_widths_emu",
+        "body_run_direct_format_sha256",
     ):
-        if measured[field] != reference[field]:
-            errors.append(f"{field} differs: source={reference[field]!r}, candidate={measured[field]!r}")
+        if measured[field] != baseline[field]:
+            errors.append(f"{field} differs: baseline={baseline[field]!r}, candidate={measured[field]!r}")
+    source_captions = _figure_caption_records_from_docx(source)
+    candidate_captions = _figure_caption_records_from_docx(candidate)
+    for index, (expected, actual) in enumerate(zip(source_captions, candidate_captions)):
+        if expected is None and actual is None:
+            continue
+        if expected is None or actual is None:
+            errors.append(f"caption[{index}].adjacency differs: source={expected!r}, candidate={actual!r}")
+            continue
+        for field in ("numbering", "font", "size_pt", "bold", "alignment"):
+            if expected[field] != actual[field]:
+                errors.append(f"caption[{index}].{field} differs: source={expected[field]!r}, candidate={actual[field]!r}")
+    if len(source_captions) != len(candidate_captions):
+        errors.append(f"caption adjacency count differs: source={len(source_captions)}, candidate={len(candidate_captions)}")
     return errors
 
 
@@ -201,8 +329,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--candidate", type=Path, required=True, help="DOCX to audit")
     arguments = parser.parse_args(argv)
 
+    errors = audit_docx(arguments.source, arguments.candidate)
+    source_hash = sha256(arguments.source)
+    print(f"source SHA-256: {source_hash}")
+    if any(error.startswith("source_sha256") for error in errors):
+        for error in errors:
+            print(f"FAIL: {error}", file=sys.stderr)
+        return 1
+
     source_measurement = measure_docx(arguments.source)
-    print(f"source SHA-256: {sha256(arguments.source)}")
     for index, section in enumerate(source_measurement["sections"], start=1):
         print(
             f"section {index}: {section['page_cm'][0]}×{section['page_cm'][1]} cm; "
@@ -214,7 +349,6 @@ def main(argv: list[str] | None = None) -> int:
         f"inline_shapes={source_measurement['inline_shape_count']}, "
         f"tables={source_measurement['table_count']}"
     )
-    errors = audit_docx(arguments.source, arguments.candidate)
     if errors:
         for error in errors:
             print(f"FAIL: {error}", file=sys.stderr)

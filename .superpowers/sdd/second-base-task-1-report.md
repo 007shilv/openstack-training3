@@ -44,7 +44,7 @@ Results:
 
 ## Commit
 
-`a3795f73b531deeaaadf1f82eada6481dd7900f2` — `test: freeze second edition textbook baseline`
+Initial freeze: `b0727960b66e6184d63967055b10f8af0666fa0e` — `test: freeze second edition textbook baseline`.
 
 ## Risks and follow-up
 
@@ -53,3 +53,46 @@ intended: it has a different section count, Letter-sized page geometry,
 different margins and missing frozen style details.  It is reference material,
 not an approved third-edition base.  Future work should copy the second-edition
 source before making targeted edits and use the audit tool against that copy.
+
+## Review remediation: frozen-source and complete style audit
+
+Review mutations exposed that the original audit compared a caller-provided
+source against itself, checked only the first section, and did not freeze
+per-caption, image-width, or direct-run formatting invariants.  The repair
+now loads the committed baseline internally and fails before opening the DOCX
+when the supplied source SHA-256 is not the frozen value.
+
+### RED
+
+```powershell
+python -m pytest third-edition-work/tests/test_second_base_revision.py -v
+```
+
+Result before the repair: 5 new mutation cases failed.  They covered a
+non-frozen source hash, a second-section margin change, a later caption's
+delimiter/font change, an inline-image width change, a body run's direct font
+change, and CLI behavior from an arbitrary current directory.
+
+### GREEN and verification
+
+```powershell
+python -m pytest third-edition-work/tests/test_second_base_revision.py -v
+python -m pytest third-edition-work/tests/test_deployment_contract.py -q
+git diff --check
+```
+
+The repaired audit freezes all five section records; parses every caption that
+is immediately adjacent to an inline picture; compares its real numbering
+separators, font, size, boldness, and alignment; freezes the complete inline
+width sequence via a UTF-8 canonical SHA-256; and freezes direct body-run
+font/size formatting via a canonical signature.  It also validates the
+effective Normal and Heading 1–3 style values.
+
+The CLI was executed from a separate temporary working directory.  It passed
+for the frozen second edition (exit 0) and rejected the old third-edition draft
+(exit 1) before parsing it, reporting its actual non-frozen source hash
+`51112be7edb3bf190be8cece9f7d1911b781d317be1403cc5c81c5f47b5e0c4e`.
+
+The follow-up commit covers this review remediation and the evidence above;
+its immutable Git hash is supplied after commit creation rather than being
+prewritten here.

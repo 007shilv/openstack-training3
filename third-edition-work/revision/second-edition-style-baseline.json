@@ -2,6 +2,13 @@
   "source_filename": "云计算基础架构平台构建与应用（第二版初稿）.docx",
   "source_sha256": "96bcad5246cc56574f5f38f4b210b8f0ed71363a1794fac9beb877332d2ae5d6",
   "section_count": 5,
+  "sections": [
+    {"page_cm": [18.4, 26.0], "margins_cm": [2.0, 2.0, 2.0, 2.0], "header_cm": 1.5, "footer_cm": 1.75},
+    {"page_cm": [18.4, 26.0], "margins_cm": [2.0, 2.0, 2.0, 2.0], "header_cm": 1.5, "footer_cm": 1.75},
+    {"page_cm": [18.4, 26.0], "margins_cm": [2.0, 2.0, 2.0, 2.0], "header_cm": 1.5, "footer_cm": 1.75},
+    {"page_cm": [18.4, 26.0], "margins_cm": [2.0, 2.0, 2.0, 2.0], "header_cm": 1.5, "footer_cm": 1.75},
+    {"page_cm": [18.4, 26.0], "margins_cm": [2.0, 2.0, 2.0, 2.0], "header_cm": 1.5, "footer_cm": 1.75}
+  ],
   "page_cm": [18.4, 26.0],
   "margins_cm": [2.0, 2.0, 2.0, 2.0],
   "header_cm": 1.5,
@@ -14,12 +21,24 @@
     "heading_3": 16.0
   },
   "caption_format": {
+    "numbering": {
+      "prefix": "图",
+      "separators": [".", "."]
+    },
     "font": "宋体",
     "size_pt": 9.0,
     "bold": true,
-    "alignment": "center",
-    "numbering": "图<chapter>.<section>.<sequence>"
+    "alignment": "center"
   },
+  "caption_count": 516,
+  "caption_records_sha256": "c28874121c14e00c6f9a224a761f5ab7103970e791fd79596607ad9f53445494",
+  "inline_widths_emu": {
+    "count": 522,
+    "min": 1704975,
+    "max": 5276850,
+    "sequence_sha256": "417fee8e9b57c6486756adb5427537c8b048ae295dc23ae9c7b805f7db7f3e31"
+  },
+  "body_run_direct_format_sha256": "4ba74b92d46b5447aaeed89015a57ce05ad55b9a0c45f0bea53d0ec8af6ad7cb",
   "paragraph_count": 5202,
   "inline_shape_count": 522,
   "table_count": 3
