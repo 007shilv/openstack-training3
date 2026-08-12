@@ -4301,3 +4301,28 @@ def test_review_nova_collectors_and_post_write_validators_are_real_and_fail_clos
                    lambda e: e["cells"]["rows"].pop(), lambda e: e["upgrade"].update(successes=6)):
         evidence = copy.deepcopy(good_schema); mutate(evidence)
         with pytest.raises((RuntimeError, ValueError)): schema_ns["validate_nova_controller_schema"](evidence)
+
+
+def test_manual_horizon_record_is_manual_sanitized_and_login_ready() -> None:
+    record = manual_markdown("14-horizon-controller.md")
+    shell = manual_shell_text("14-horizon-controller.md")
+    for token in (
+        "17-controller-horizon.sh", "严禁执行", "--disablerepo='*' --enablerepo=openstack-local",
+        "dnf -y --disablerepo='*' --enablerepo=openstack-local", "openstack-dashboard",
+        "vi /etc/openstack-dashboard/local_settings", "OPENSTACK_KEYSTONE_URL = 'http://%s:5000/v3'",
+        "OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True", "OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = 'Default'",
+        "OPENSTACK_KEYSTONE_DEFAULT_ROLE = 'member'", "WEBROOT = '/dashboard/'",
+        "LOGIN_URL = '/dashboard/auth/login/'", "LOGOUT_URL = '/dashboard/auth/logout/'",
+        "TIME_ZONE = 'Asia/Shanghai'", "PyMemcacheCache", "controller:11211",
+        "httpd -t", "manage.py check", "systemctl enable httpd", "systemctl restart httpd",
+        "/dashboard/auth/login/", "csrfmiddlewaretoken", "手工浏览器验收",
+    ):
+        assert token in record
+    assert "17-controller-horizon.sh" not in shell
+    snapshots = MANUAL_INSTALL_DIR / "config-snapshots"
+    required = {"controller-horizon-local_settings.sanitized", "controller-apache-dashboard.conf.sanitized"}
+    assert required <= {path.name for path in snapshots.iterdir()}
+    snapshot_text = "\n".join((snapshots / name).read_text(encoding="utf-8") for name in required)
+    assert "<PACKAGE_GENERATED_SECRET_KEY>" in snapshot_text
+    assert "SECRET_KEY='" not in snapshot_text
+    assert "guosai@205" not in record + snapshot_text

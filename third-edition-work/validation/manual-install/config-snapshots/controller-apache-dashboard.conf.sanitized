@@ -1,0 +1,29 @@
+<VirtualHost *:80>
+    ServerName openstack-dashboard.example.com
+    ErrorLog /var/log/httpd/openstack-dashboard-error_log
+    TransferLog /var/log/httpd/openstack-dashboard-access_log
+
+    WSGIScriptAlias /dashboard /usr/share/openstack-dashboard/openstack_dashboard/wsgi.py
+    WSGIDaemonProcess horizon user=apache group=apache processes=3 threads=10
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIProcessGroup horizon
+    SetEnv APACHE_RUN_USER apache
+    SetEnv APACHE_RUN_GROUP apache
+
+    DocumentRoot /usr/share/openstack-dashboard/
+    Alias /dashboard/media /usr/share/openstack-dashboard/openstack_dashboard/static
+    Alias /dashboard/static /usr/share/openstack-dashboard/static
+
+    <Location /dashboard/static>
+        SetOutputFilter DEFLATE
+        ExpiresActive On
+        ExpiresDefault "access plus 1 month"
+        Require all granted
+    </Location>
+
+    <Directory /usr/share/openstack-dashboard/>
+        Options FollowSymLinks MultiViews
+        AllowOverride None
+        Require all granted
+    </Directory>
+</VirtualHost>
