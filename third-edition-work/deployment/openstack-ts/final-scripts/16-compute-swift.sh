@@ -74,7 +74,7 @@ dnf_makecache_prefer_local() {
 
 SWIFT_DEVICE="/dev/sdc"
 SWIFT_MOUNT="/srv/node/sdc"
-SWIFT_LABEL="openstack-swift-data"
+SWIFT_LABEL="swift-data"
 SWIFT_STORAGE_IP="192.168.234.150"
 SWIFT_DEVICE_NAME="sdc"
 SWIFT_HASH_PREFIX="${OPENSTACK_DEPLOY_PASSWORD}-swift-prefix"

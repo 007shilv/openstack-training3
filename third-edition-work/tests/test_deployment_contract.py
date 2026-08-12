@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import hashlib
 import json
 import os
 import re
@@ -4111,6 +4112,84 @@ def test_focused_swift_contract_accepts_only_the_clean_lightweight_result() -> N
         bad = copy.deepcopy(good); bad[key] = value
         with pytest.raises(ValueError):
             namespace["validate_swift_lightweight_evidence"](bad)
+
+
+def test_manual_swift_records_are_complete_manual_and_disk_guarded() -> None:
+    controller = manual_markdown("12-swift-controller.md")
+    compute = manual_markdown("13-swift-compute.md")
+    controller_shell = manual_shell_text("12-swift-controller.md")
+    compute_shell = manual_shell_text("13-swift-compute.md")
+    for token in (
+        "--disablerepo='*' --enablerepo=openstack-local",
+        "openstack user create --domain Default --password-prompt swift",
+        "openstack role assignment list --project service --user swift --role admin --names",
+        "openstack service create --name swift", "openstack endpoint list --service swift",
+        "vi /etc/swift/swift.conf", "vi /etc/swift/proxy-server.conf",
+        "pipeline = catch_errors gatekeeper healthcheck proxy-logging cache authtoken keystoneauth",
+        "swift-ring-builder account.builder create 10 1 1",
+        "swift-ring-builder object.builder add --region 1 --zone 1 --ip 192.168.234.150 --port 6200 --device sdc",
+        "swift-ring-builder object.builder rebalance", "swift-ring-builder object.builder search",
+        "StrictHostKeyChecking=yes", "sha256sum account.ring.gz container.ring.gz object.ring.gz",
+        "cmp -s /etc/swift/swift.conf /tmp/compute-swift.conf",
+        "systemctl is-enabled --quiet openstack-swift-proxy",
+        "openstack object save", "openstack object delete", "openstack container delete",
+    ):
+        assert token in controller
+    for token in (
+        "--disablerepo='*' --enablerepo=openstack-local", "SWIFT_DEVICE=/dev/sdc",
+        "[[ $SWIFT_DEVICE != /dev/sda && $SWIFT_DEVICE != /dev/sdb ]]",
+        "[[ $size_bytes == 53687091200 ]]", "root_source=$(findmnt -nro SOURCE /) || die",
+        "root_chain=$(lsblk -s -nrpo NAME", "canonical_node=$(readlink -f \"$node\") || die",
+        "device_tree=$(lsblk -nrpo NAME,TYPE,MOUNTPOINT", "command -v pvs",
+        "signature_rows=$(wipefs --no-act", "blkid_rc=$?", "SWIFT_DISK_STATE=blank",
+        "SWIFT_DISK_STATE=initialized", "read -r -p", "[[ $confirmation == YES ]]",
+        "mkfs.xfs -f -L \"$SWIFT_LABEL\" \"$SWIFT_DEVICE\"",
+        "echo 'verified exact initialized Swift state; skipping mkfs.xfs'",
+        "vi /etc/fstab", "findmnt -nro SOURCE --target \"$SWIFT_MOUNT\"",
+        "vi /etc/rsyncd.conf", "vi /etc/swift/account-server.conf",
+        "vi /etc/swift/container-server.conf", "vi /etc/swift/object-server.conf",
+        "pipeline = healthcheck recon account-server", "recon_cache_path = /var/cache/swift",
+        "systemctl is-enabled --quiet \"$service\"", "sdb_rows -eq 1 && $sdc_rows -eq 0",
+    ):
+        assert token in compute
+    assert compute_shell.index("root_source=$(findmnt -nro SOURCE /) || die") < compute_shell.index(
+        'mkfs.xfs -f -L "$SWIFT_LABEL" "$SWIFT_DEVICE"'
+    )
+    assert "! lsblk -s -nrpo NAME" not in compute_shell
+    assert "mkfs.xfs" not in controller_shell
+    assert "mkfs.xfs -f -L swift-data /dev/sdc" not in compute_shell
+    assert "sha256sum swift.conf" not in controller_shell + compute_shell
+    assert "15-controller-swift.sh" in controller and "严禁执行" in controller
+    assert "16-compute-swift.sh" in compute and "严禁执行" in compute
+    snapshots = MANUAL_INSTALL_DIR / "config-snapshots"
+    required = {
+        "controller-swift.conf.sanitized", "controller-proxy-server.conf.sanitized",
+        "compute-swift.conf.sanitized", "compute-rsyncd.conf", "compute-account-server.conf",
+        "compute-container-server.conf", "compute-object-server.conf", "compute-fstab.sanitized",
+        "compute-swift-storage-state.txt", "swift-ring-summary.txt",
+    }
+    assert required <= {path.name for path in snapshots.iterdir()}
+    snapshot_text = "\n".join((snapshots / name).read_text(encoding="utf-8") for name in required)
+    assert "<SERVICE_PASSWORD>" in snapshot_text
+    assert "<RUNTIME_UUID>" in snapshot_text
+    assert "label=swift-data" in snapshot_text
+    assert "openstack-swift-data" not in snapshot_text
+    assert not re.search(r"UUID=[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}", snapshot_text)
+
+
+def test_safe_script_checkpoint_matches_current_files() -> None:
+    manifest = WORK_ROOT / "checkpoints" / "safe-scripts.sha256"
+    rows = [line.split(maxsplit=1) for line in manifest.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(rows) == 19
+    for expected, relative_name in rows:
+        path = WORK_ROOT.parent / relative_name
+        assert path.is_file(), relative_name
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, relative_name
+    assert 'SWIFT_LABEL="swift-data"' in script_text("16-compute-swift.sh")
+    assert "openstack-swift-data" not in script_text("16-compute-swift.sh")
+    install_guide = (WORK_ROOT / "deployment" / "openstack-ts" / "openstack-antelope-openeuler-install.md").read_text(encoding="utf-8")
+    assert "标签为 `swift-data`" in install_guide
+    assert "openstack-swift-data" not in install_guide
 
 
 def test_review_nova_student_path_is_explicit_manual_commands_in_fixed_order_not_the_validation_model() -> None:

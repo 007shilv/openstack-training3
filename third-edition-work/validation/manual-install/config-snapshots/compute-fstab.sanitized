@@ -1,0 +1,1 @@
+UUID=<RUNTIME_UUID> /srv/node/sdc xfs defaults,noatime,nodiratime 0 0

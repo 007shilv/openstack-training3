@@ -49,7 +49,7 @@
 
 - `sdc`
   - 仅供 `Swift` 使用
-  - 脚本会把整块磁盘格式化为标签为 `openstack-swift-data` 的 `XFS`
+  - 脚本会把整块磁盘格式化为标签为 `swift-data` 的 `XFS`（XFS 标签最多 12 个字符）
   - 挂载点为 `/srv/node/sdc`
   - 不要提前在 `sdc` 上创建分区或文件系统
 

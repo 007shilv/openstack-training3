@@ -1,0 +1,7 @@
+[swift-hash]
+swift_hash_path_prefix = <SAME_RUNTIME_SECRET_AS_CONTROLLER>
+swift_hash_path_suffix = <SAME_RUNTIME_SECRET_AS_CONTROLLER>
+
+[storage-policy:0]
+name = Policy-0
+default = yes
