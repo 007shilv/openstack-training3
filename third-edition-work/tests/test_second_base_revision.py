@@ -483,6 +483,37 @@ def test_bounded_replace_preserves_a_trailing_section_break(tmp_path: Path) -> N
         )
 
 
+def test_bounded_replace_uses_a_leading_fragment_h1_to_replace_the_old_h1(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    candidate = tmp_path / "candidate.docx"
+    write_bounded_fixture(source)
+
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "Start Heading",
+        "End Heading",
+        [
+            revision.Block(kind="heading1", text="Replacement Heading"),
+            revision.Block(kind="body", text="replacement body"),
+        ],
+    )
+    revision.save_candidate(document, candidate)
+
+    revised = revision.load_docx(candidate)
+    _, children, _ = revision._body_parts(revised.document_xml)
+    texts = [
+        revision._normalize_heading(revision._child_text(revised.document_xml, child))
+        for child in children
+    ]
+    assert "Start Heading" not in texts
+    assert texts.count("Replacement Heading") == 1
+    assert texts.count("End Heading") == 1
+
+
 def test_task3_replace_preserves_page_break_and_retitles_the_part_opener(
     tmp_path: Path,
 ) -> None:
@@ -1136,6 +1167,9 @@ def test_task4_fragment_has_exact_structure_topology_and_manual_commands() -> No
         assert vi_position < body_position
         assert f"]# {body_line}" not in text
 
+    assert "保留文件中原有内容，只在文件末尾追加后两行" in text
+    assert "::1         localhost localhost.localdomain localhost6 localhost6.localdomain6" in text
+
 
 def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> None:
     text = task4_fragment()
@@ -1157,16 +1191,23 @@ def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> N
         assert re.search(pattern, text, re.I) is None, pattern
 
     def require_core_contract(candidate: str) -> None:
-        assert "192.168.234.151/24" in candidate
-        assert "192.168.234.150/24" in candidate
+        assert "controller管理地址为192.168.234.151/24" in candidate
+        assert "compute管理地址为192.168.234.150/24" in candidate
         assert "ens34不配置IP地址" in candidate
+        assert "/dev/sdb用于Cinder" in candidate
         assert "/dev/sdc用于Swift" in candidate
         assert "CentOS" not in candidate
         assert "\nsed " not in candidate
         assert "python" not in candidate.lower()
         assert "chronyc tracking" not in candidate
+        assert "dnf history" not in candidate
+        assert re.search(r"(?m)^\s*ss\b", candidate) is None
         assert all(
-            not line.startswith("nmcli ")
+            re.match(
+                r"^(?:hostnamectl|nmcli|vi|setenforce|systemctl|dnf|ss|curl)\b",
+                line.strip(),
+            )
+            is None
             for line in candidate.splitlines()
         )
         terminal_paragraphs = [
@@ -1177,13 +1218,27 @@ def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> N
         assert len(terminal_paragraphs) == 1
 
     require_core_contract(text)
+    swapped_nodes = text.replace(
+        "controller管理地址为192.168.234.151/24",
+        "controller管理地址为192.168.234.150/24",
+        1,
+    ).replace(
+        "compute管理地址为192.168.234.150/24",
+        "compute管理地址为192.168.234.151/24",
+        1,
+    )
     corruptions = (
         text.replace("192.168.234.151/24", "192.168.234.152/24"),
+        swapped_nodes,
         text.replace("ens34不配置IP地址", "ens34配置IP地址", 1),
         text.replace("/dev/sdc用于Swift", "/dev/sdb用于Swift"),
+        text.replace("/dev/sdb用于Cinder", "/dev/sdb用于Swift", 1),
         text + "\nCentOS\n",
         text + "\nXshell还可以独立学习。\n",
         text.replace("[root@controller ~]# nmcli", "nmcli", 1),
+        text + "\nsystemctl restart chronyd\n",
+        text + "\nss -lnt\n",
+        text + "\ndnf history\n",
         text + "\nsed -i example\n",
         text + "\npython3 example.py\n",
         text + "\nchronyc tracking\n",
@@ -1256,6 +1311,11 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
     assert "假截图" not in joined
 
     chapter4 = [row for row in rows if row["chapter"] == "4"]
+    chapter4_sources = {row["second_edition_figure"] for row in chapter4}
+    assert "图4.1.3—图4.1.26、图4.1.46 旧虚拟机创建与系统安装截图" in chapter4_sources
+    assert "图4.3.2—图4.3.7、图4.3.10、图4.3.13—图4.3.14 旧基础配置与检查截图" in chapter4_sources
+    assert "图4.1.3—图4.1.46 旧虚拟机创建与系统安装截图" not in chapter4_sources
+    assert "图4.3.2—图4.3.14 旧基础配置与检查截图" not in chapter4_sources
     target_numbers = [row["target_number"] for row in chapter4 if row["target_number"]]
     assert target_numbers == [f"图4.{number}" for number in range(1, len(target_numbers) + 1)]
     for title in (

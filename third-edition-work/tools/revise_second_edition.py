@@ -459,10 +459,13 @@ def _caption_properties(properties: bytes) -> bytes:
 
 def _render_blocks(document: DocxDocument, blocks: list[Block]) -> list[bytes]:
     rendered: list[bytes] = []
+    templates: dict[str, bytes] = {}
     for block in blocks:
         if not isinstance(block, Block):
             raise TypeError("blocks must contain Block values")
-        properties = _paragraph_properties(_template_paragraph(document, block.kind))
+        if block.kind not in templates:
+            templates[block.kind] = _template_paragraph(document, block.kind)
+        properties = _paragraph_properties(templates[block.kind])
         if block.kind == "caption":
             properties = _caption_properties(properties)
         rendered.append(
@@ -494,9 +497,11 @@ def replace_between_headings(
     transition = _trailing_layout_transition(
         doc, children, start_index, end_index, part_title
     )
+    retains_start_heading = not blocks or blocks[0].kind != "heading1"
+    prefix_end = start_index + 1 if retains_start_heading else start_index
     _write_children(
         doc,
-        children[: start_index + 1] + replacement + transition + children[end_index:],
+        children[:prefix_end] + replacement + transition + children[end_index:],
     )
 
 

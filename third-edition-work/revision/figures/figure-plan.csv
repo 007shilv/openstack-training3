@@ -44,7 +44,7 @@ chapter,second_edition_figure,decision,target_number,proposed_title,width_cm,sou
 3,,重绘,图3.3,OpenStack发布节奏与SLURP版本边界,13.5,OpenStack Release Team冻结日事实与官方研究底稿,OpenStack围绕约六个月周期进行协调发布,并列Gazpacho Hibiscus Antelope状态且区分已发布计划与教学用途,Task13真实绘图与插入
 4,图4.1.1 原生OpenStack云平台最小化逻辑架构,重绘,图4.1,openEuler LTS与SP生命周期,13.5,openEuler官方生命周期与版本表冻结事实,openEuler 24.03 LTS是一个长期支持版本族,区分LTS版本族与大小SP维护周期并标明SP3位置,Task13真实绘图与插入
 4,,重绘,图4.2,双节点实验拓扑与存储分工,14.0,本章固定地址网卡与磁盘参数,本书采用controller与compute两个节点,呈现ens33管理网ens34 Provider网及compute三块磁盘角色,Task13真实绘图与插入
-4,图4.1.3—图4.1.46 旧虚拟机创建与系统安装截图,重拍,图4.3,openEuler虚拟机创建与系统登录,13.5,隔离教学环境中的openEuler SP3真实界面,准备两台已经安装openEuler 24.03 LTS SP3的虚拟机,合并保留创建与登录关键观察点并删除旧系统逐屏截图,Task13真实截图与插入
+4,图4.1.3—图4.1.26、图4.1.46 旧虚拟机创建与系统安装截图,重拍,图4.3,openEuler虚拟机创建与系统登录,13.5,隔离教学环境中的openEuler SP3真实界面,准备两台已经安装openEuler 24.03 LTS SP3的虚拟机,合并保留创建与登录关键观察点并删除旧系统逐屏截图,Task13真实截图与插入
 4,图4.1.47—图4.1.50 旧网络配置截图,重拍,图4.4,固定管理网络配置,13.5,双节点openEuler SP3 NetworkManager真实界面,ens33使用手工IPv4配置,重拍固定地址结果并体现ens34无地址边界,Task13真实截图与插入
 4,图4.1.51、图4.3.1 hosts配置截图,重拍,图4.5,hosts文件配置,12.5,双节点真实hosts文件脱敏截图,后续服务配置会反复使用controller和compute名称,保留主机名映射教学观察且使用新地址,Task13真实截图与插入
 4,图4.3.8、图4.3.11 旧yum仓截图,重拍,图4.6,本地软件仓配置,13.5,controller文件仓与compute FTP仓真实配置,controller直接读取/opt/openstack_repo中的仓数据,并列两个节点同一仓标识与不同baseurl,Task13真实截图与插入
@@ -52,4 +52,4 @@ chapter,second_edition_figure,decision,target_number,proposed_title,width_cm,sou
 4,图4.3.9、图4.3.12 旧基础服务截图,重拍,图4.8,基础服务启动,13.5,隔离教学环境中vsftpd与chronyd启动过程,配置保存后，先设置vsftpd随系统启动,只呈现安装与启动过程不伪造状态检查,Task13真实截图与插入
 4,图4.1.2、图4.1.27—图4.1.45 旧系统介质与安装截图,删除,,,12.0,第二版旧操作系统介质与逐屏安装图片,删除且不设放置锚点,旧系统和高密度逐屏流程由图4.3的openEuler关键画面替代,Task4文字收口
 4,图4.2.1—图4.2.55 SecureCRT与Xshell独立教程截图,删除,,,12.0,第二版终端工具界面图片,删除且不设放置锚点,终端工具只保留一段选型说明不再展开界面教程,Task4文字收口
-4,图4.3.2—图4.3.14 旧基础配置与检查截图,删除,,,12.0,第二版旧SELinux仓服务与检查图片,删除且不设放置锚点,新版只保留必要真实重拍并且章节操作到服务启动为止,Task4文字收口
+4,图4.3.2—图4.3.7、图4.3.10、图4.3.13—图4.3.14 旧基础配置与检查截图,删除,,,12.0,第二版旧SELinux仓服务与检查图片,删除且不设放置锚点,新版只保留必要真实重拍并且章节操作到服务启动为止,Task4文字收口
