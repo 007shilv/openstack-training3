@@ -1,0 +1,9 @@
+device=/dev/sdb
+type=disk
+size_bytes=53687091200
+pv=/dev/sdb
+volume_group=cinder-volumes
+target_helper=lioadm
+target_ip_address=192.168.234.150
+protected_device=/dev/sda
+untouched_swift_device=/dev/sdc

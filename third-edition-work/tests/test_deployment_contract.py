@@ -3986,6 +3986,74 @@ def test_focused_neutron_contract_accepts_only_a_clean_lightweight_result() -> N
             validate(evidence)
 
 
+def test_focused_cinder_contract_accepts_only_the_small_authorized_lifecycle() -> None:
+    candidates = markdown_fenced_blocks("11-cinder-compute.md", "python")
+    source = next(block for block in candidates if "def validate_cinder_lightweight_evidence" in block)
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.parse(source), "cinder-contract", "exec"), namespace)
+    validate = namespace["validate_cinder_lightweight_evidence"]
+    good = {
+        "services": {
+            "controller": ["openstack-cinder-api", "openstack-cinder-scheduler"],
+            "compute": ["targetclid", "openstack-cinder-volume"],
+        },
+        "api_cli": {"api_reachable": True, "authenticated_cli": True},
+        "backend": {"name": "compute@lvm#LVM-ISCSI", "up": True, "volume_type": "lvm"},
+        "volume_lifecycle": {"size_gib": 1, "created": True, "available": True, "deleted_exact_id": True, "absent_after_delete": True},
+        "disk": {"device": "/dev/sdb", "vg": "cinder-volumes", "initialized": True, "sda_touched": False, "sdc_touched": False},
+        "boundaries": {"attachments": [], "snapshots": [], "swift": False, "horizon": False},
+    }
+    validate(good)
+    for mutate in (
+        lambda item: item["backend"].update(up=False),
+        lambda item: item["volume_lifecycle"].update(size_gib=2),
+        lambda item: item["disk"].update(device="/dev/sdc"),
+        lambda item: item["boundaries"]["attachments"].append("forbidden"),
+    ):
+        evidence = copy.deepcopy(good); mutate(evidence)
+        with pytest.raises(ValueError):
+            validate(evidence)
+
+
+def test_manual_cinder_records_are_manual_sanitized_and_disk_guarded() -> None:
+    controller = manual_markdown("10-cinder-controller.md")
+    compute = manual_markdown("11-cinder-compute.md")
+    combined = controller + compute
+    controller_steps = (
+        "CREATE DATABASE cinder", "CREATE USER 'cinder'@'localhost'",
+        "CREATE USER 'cinder'@'127.0.0.1'", "CREATE USER 'cinder'@'%'",
+        "openstack user create --domain Default --password", "openstack role add --project service --user cinder admin",
+        "openstack service create --name cinderv3", "openstack endpoint create --region RegionOne volumev3 public",
+        "vi /etc/cinder/cinder.conf", "cinder-manage db sync",
+        "systemctl enable --now openstack-cinder-api openstack-cinder-scheduler",
+        "os_region_name = RegionOne", "openstack volume type set --property volume_backend_name=LVM-ISCSI lvm",
+    )
+    assert [controller.index(step) for step in controller_steps] == sorted(controller.index(step) for step in controller_steps)
+    for token in (
+        "openstack-local", "vi /etc/cinder/cinder.conf", "pvcreate /dev/sdb", "vgcreate cinder-volumes /dev/sdb",
+        "target_helper = lioadm", "target_ip_address = 192.168.234.150",
+        "systemctl enable --now targetclid", "systemctl enable --now openstack-cinder-volume",
+        "openstack volume create --size 1 --type lvm", "openstack volume delete \"$volume_id\"",
+        "paramiko.RejectPolicy()", "known_hosts", "53687091200",
+    ):
+        assert token in combined
+    assert "pvcreate /dev/sda" not in manual_shell_text("11-cinder-compute.md")
+    assert "pvcreate /dev/sdc" not in manual_shell_text("11-cinder-compute.md")
+    assert "openstack server add volume" not in manual_shell_text("11-cinder-compute.md")
+    snapshots = MANUAL_INSTALL_DIR / "config-snapshots"
+    required = {"controller-cinder.conf", "compute-cinder.conf", "controller-nova-cinder.conf", "compute-cinder-storage-state.txt"}
+    assert required <= {path.name for path in snapshots.iterdir()}
+    payloads = {name: (snapshots / name).read_text(encoding="utf-8") for name in required}
+    combined_snapshots = "\n".join(payloads.values())
+    assert "<SERVICE_PASSWORD>" in combined_snapshots and "<URL_ENCODED_PASSWORD>" in combined_snapshots
+    assert "rabbit://openstack:@" not in combined_snapshots
+    assert "my_ip = 192.168.234.151" in payloads["controller-cinder.conf"]
+    assert "my_ip = 192.168.234.150" in payloads["compute-cinder.conf"]
+    assert "volume_group = cinder-volumes" in payloads["compute-cinder.conf"]
+    assert "protected_device=/dev/sda" in payloads["compute-cinder-storage-state.txt"]
+    assert "untouched_swift_device=/dev/sdc" in payloads["compute-cinder-storage-state.txt"]
+
+
 def test_review_nova_student_path_is_explicit_manual_commands_in_fixed_order_not_the_validation_model() -> None:
     controller = manual_markdown("06-nova-controller.md")
     compute = manual_markdown("07-nova-compute.md")
