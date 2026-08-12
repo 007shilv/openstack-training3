@@ -13,6 +13,7 @@
 - 写入前确认 compute 身份为 `192.168.234.150`；根盘祖先为 `/dev/sda2,/dev/sda`，不含 `/dev/sdb`。
 - `/dev/sdb` 是无分区、无挂载、无签名、无 PV 的精确 53,687,091,200-byte 整盘；已依授权初始化为唯一 `cinder-volumes` PV/VG。
 - 未写入 `/dev/sda` 或 `/dev/sdc`；终态 `/dev/sdc` 仍是无签名 50 GiB 整盘。未创建或恢复快照，未附加卷，未进入 Swift/Horizon。
+- 后续本地复审修正了教材的防护表达：根盘祖先链先检查命令返回值和非空性，再逐项规范化比较；磁盘先精确读取 PV，只有无 PV 时才检查空白签名。唯一 `/dev/sdb`→`cinder-volumes` PV 视为幂等状态并跳过 `wipefs`/`pvcreate`/`vgcreate`；孤立、外来或重复 PV 以及探针失败均拒绝。本次修订没有连接或变更虚拟机。
 
 ## 验收结果
 

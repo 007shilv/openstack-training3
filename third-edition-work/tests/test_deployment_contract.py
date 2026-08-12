@@ -4015,6 +4015,39 @@ def test_focused_cinder_contract_accepts_only_the_small_authorized_lifecycle() -
             validate(evidence)
 
 
+def test_cinder_disk_classifier_rejects_root_ancestor() -> None:
+    candidates = markdown_fenced_blocks("11-cinder-compute.md", "python")
+    source = next(block for block in candidates if "def validate_cinder_lightweight_evidence" in block)
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.parse(source), "cinder-disk-contract", "exec"), namespace)
+    classify = namespace["classify_cinder_disk_state"]
+    with pytest.raises(ValueError, match="root ancestor"):
+        classify(
+            target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sdb"], pvs_ok=True,
+            pvs=[], wipefs_empty=True, blkid_rc=2,
+        )
+
+
+def test_cinder_disk_classifier_accepts_only_blank_or_exact_initialized_state() -> None:
+    candidates = markdown_fenced_blocks("11-cinder-compute.md", "python")
+    source = next(block for block in candidates if "def validate_cinder_lightweight_evidence" in block)
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.parse(source), "cinder-disk-contract", "exec"), namespace)
+    classify = namespace["classify_cinder_disk_state"]
+    assert classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
+                    pvs=[], wipefs_empty=True, blkid_rc=2) == "blank"
+    assert classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
+                    pvs=[("/dev/sdb", "cinder-volumes")], wipefs_empty=False, blkid_rc=0) == "initialized"
+    for rows in ([('/dev/sdb', '')], [('/dev/sdb', 'foreign-vg')],
+                 [('/dev/sdb', 'cinder-volumes'), ('/dev/sdb', 'cinder-volumes')]):
+        with pytest.raises(ValueError, match="PV"):
+            classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=True,
+                     pvs=rows, wipefs_empty=True, blkid_rc=2)
+    with pytest.raises(ValueError, match="probe"):
+        classify(target="/dev/sdb", root_chain=["/dev/sda2", "/dev/sda"], pvs_ok=False,
+                 pvs=[], wipefs_empty=True, blkid_rc=2)
+
+
 def test_manual_cinder_records_are_manual_sanitized_and_disk_guarded() -> None:
     controller = manual_markdown("10-cinder-controller.md")
     compute = manual_markdown("11-cinder-compute.md")
@@ -4034,9 +4067,12 @@ def test_manual_cinder_records_are_manual_sanitized_and_disk_guarded() -> None:
         "target_helper = lioadm", "target_ip_address = 192.168.234.150",
         "systemctl enable --now targetclid", "systemctl enable --now openstack-cinder-volume",
         "openstack volume create --size 1 --type lvm", "openstack volume delete \"$volume_id\"",
-        "paramiko.RejectPolicy()", "known_hosts", "53687091200",
+        "paramiko.RejectPolicy()", "known_hosts", "53687091200", "root_chain=$(lsblk -s -nrpo NAME \"$root\")",
+        "pv_rows=$(pvs --noheadings --readonly", "if [[ ${#target_vgs[@]} -eq 0 ]]; then",
+        "elif [[ ${#target_vgs[@]} -eq 1 && ${target_vgs[0]} == cinder-volumes ]]; then",
     ):
         assert token in combined
+    assert "! lsblk -s -nrpo NAME \"$root\" | while" not in compute
     assert "pvcreate /dev/sda" not in manual_shell_text("11-cinder-compute.md")
     assert "pvcreate /dev/sdc" not in manual_shell_text("11-cinder-compute.md")
     assert "openstack server add volume" not in manual_shell_text("11-cinder-compute.md")

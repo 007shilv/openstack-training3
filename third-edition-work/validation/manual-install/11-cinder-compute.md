@@ -13,17 +13,40 @@ ip -4 -o addr show ens33 | grep -Fq '192.168.234.150/24'
 target=/dev/sdb
 [[ $target == /dev/sdb && -b $target && $(readlink -f "$target") == /dev/sdb ]]
 [[ $(lsblk -dnro TYPE "$target") == disk && $(blockdev --getsize64 "$target") == 53687091200 ]]
-root=$(readlink -f "$(findmnt -nro SOURCE /)")
-! lsblk -s -nrpo NAME "$root" | while read -r node; do [[ $(readlink -f "$node") == /dev/sdb ]] && exit 1; done
+root_source=$(findmnt -nro SOURCE /) || { echo 'cannot determine root source' >&2; exit 1; }
+[[ -n $root_source ]]
+root=$(readlink -f "$root_source") || { echo 'cannot canonicalize root source' >&2; exit 1; }
+root_chain=$(lsblk -s -nrpo NAME "$root") || { echo 'cannot resolve root ancestry' >&2; exit 1; }
+[[ -n $root_chain ]]
+while IFS= read -r node; do
+  canonical_node=$(readlink -f "$node") || { echo 'cannot canonicalize root ancestor' >&2; exit 1; }
+  if [[ $canonical_node == "$target" ]]; then echo 'refusing root ancestor /dev/sdb' >&2; exit 1; fi
+done <<<"$root_chain"
 [[ $(lsblk -nrpo NAME "$target" | sed '/^$/d' | wc -l) -eq 1 ]]
 [[ -z $(lsblk -nrpo NAME,MOUNTPOINT "$target" | awk 'NF > 1 && $2 != "" {print}') ]]
 [[ -z $(lsblk -nrpo TYPE "$target" | awk '$1 == "part" {print}') ]]
-[[ -z $(wipefs --no-act --noheadings --output TYPE "$target") ]]
-blkid -p "$target" >/dev/null 2>&1 && exit 1 || [[ $? -eq 2 ]]
-pvs --noheadings --readonly -o pv_name,vg_name
+pv_rows=$(pvs --noheadings --readonly --separator '|' -o pv_name,vg_name 2>/dev/null) || { echo 'cannot inspect LVM PVs' >&2; exit 1; }
+target_vgs=()
+while IFS='|' read -r pv_name vg_name; do
+  pv_name=${pv_name//[[:space:]]/}; vg_name=${vg_name//[[:space:]]/}
+  [[ -z $pv_name ]] && continue
+  [[ $pv_name == "$target" ]] && target_vgs+=("$vg_name")
+done <<<"$pv_rows"
+if [[ ${#target_vgs[@]} -eq 0 ]]; then
+  # Only a non-PV target may be tested for the blank first-initialization state.
+  signatures=$(wipefs --no-act --noheadings --output TYPE "$target") || { echo 'cannot inspect signatures' >&2; exit 1; }
+  [[ -z $signatures ]] || { echo 'unexpected signature on /dev/sdb' >&2; exit 1; }
+  if blkid -p "$target" >/dev/null 2>&1; then echo 'unexpected blkid signature on /dev/sdb' >&2; exit 1; else blkid_rc=$?; fi
+  [[ $blkid_rc -eq 2 ]] || { echo 'blkid probe did not prove a blank disk' >&2; exit 1; }
+  CINDER_DISK_STATE=blank
+elif [[ ${#target_vgs[@]} -eq 1 && ${target_vgs[0]} == cinder-volumes ]]; then
+  CINDER_DISK_STATE=initialized
+else
+  echo 'refusing orphan, foreign, or duplicate PV state on /dev/sdb' >&2; exit 1
+fi
 ```
 
-上述只读命令出现两种且仅两种可继续状态：首次教学初始化时，`/dev/sdb` 没有任何签名或 PV；已经初始化时，`pvs` 必须只显示 `/dev/sdb cinder-volumes`，且不得有孤立 PV、其他 VG 或分区。后者是幂等续作状态，**不得**再次运行 `pvcreate` 或 `vgcreate`，也不得先执行 `wipefs`。任何第三种状态（包括外来签名、挂载、PV 无 VG、VG 名错误，或 `/dev/sda`/`/dev/sdc`）都停止处理。
+上述只读命令出现两种且仅两种可继续状态：首次教学初始化时，`pvs` 对 `/dev/sdb` 没有记录，随后才要求 `wipefs` 为空且 `blkid -p` 返回 2；已经初始化时，`pvs` 对 `/dev/sdb` 必须恰有一条且 VG 精确为 `cinder-volumes`。后者是幂等续作状态，**不得**运行 `wipefs`、`pvcreate` 或 `vgcreate`。任何第三种状态（包括 PV 探针错误、外来签名、挂载、PV 无 VG、VG 名错误、重复 PV，或 `/dev/sda`/`/dev/sdc`）都停止处理。
 
 首次初始化前，学生必须明确确认：“我确认 compute 的 `/dev/sdb` 是 50 GiB 空白教学盘，根盘祖先为 `/dev/sda2,/dev/sda`，允许初始化为 `cinder-volumes`。”只有确认且上述检查通过后，才可执行下面两条 LVM 命令。
 
@@ -37,9 +60,16 @@ dnf history info "$(dnf history | awk 'NR==3 {print $1}')"
 rpm -V lvm2 targetcli openstack-cinder-volume
 umask 077; backup=/root/openstack-lab-backups/task-5g-<UTC>; install -d -m 700 "$backup"
 cp -a /etc/cinder/cinder.conf "$backup"/
-# 仅首次初始化：
-pvcreate /dev/sdb
-vgcreate cinder-volumes /dev/sdb
+if [[ $CINDER_DISK_STATE == blank ]]; then
+  read -r -p '已确认 /dev/sdb 是空白 50 GiB 教学盘；输入 YES 初始化：' confirmation
+  [[ $confirmation == YES ]] || { echo 'no explicit disk-initialization confirmation' >&2; exit 1; }
+  pvcreate /dev/sdb
+  vgcreate cinder-volumes /dev/sdb
+elif [[ $CINDER_DISK_STATE == initialized ]]; then
+  echo 'verified existing /dev/sdb PV in cinder-volumes; skipping pvcreate/vgcreate'
+else
+  echo 'unexpected Cinder disk state' >&2; exit 1
+fi
 ```
 
 DNF 不得使用外部源、`--allowerasing` 或 `--skip-broken`；事务中的移除/替换/降级均停止。
@@ -115,6 +145,25 @@ openstack volume list --name "$name"
 
 ```python
 from __future__ import annotations
+
+def classify_cinder_disk_state(*, target: str, root_chain: list[str], pvs_ok: bool,
+                               pvs: list[tuple[str, str]], wipefs_empty: bool,
+                               blkid_rc: int) -> str:
+    """Pure focused-contract model; it never probes, writes, or connects to a host."""
+    if target != "/dev/sdb":
+        raise ValueError("unexpected Cinder target")
+    if target in root_chain:
+        raise ValueError("Cinder target is a root ancestor")
+    if not pvs_ok:
+        raise ValueError("PV probe failed")
+    target_pvs = [(name, vg) for name, vg in pvs if name == target]
+    if not target_pvs:
+        if not wipefs_empty or blkid_rc != 2:
+            raise ValueError("blank-disk probe failed")
+        return "blank"
+    if len(target_pvs) == 1 and target_pvs[0][1] == "cinder-volumes":
+        return "initialized"
+    raise ValueError("orphan, foreign, or duplicate PV state")
 
 def validate_cinder_lightweight_evidence(evidence: dict[str, object]) -> None:
     expected = {"controller": {"openstack-cinder-api", "openstack-cinder-scheduler"}, "compute": {"targetclid", "openstack-cinder-volume"}}
