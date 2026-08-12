@@ -1,21 +1,50 @@
-figure_no,chapter,caption,type,source_url,access_date,local_path,status
+﻿figure_no,chapter,caption,type,source_url,access_date,local_path,status
 图1.1,1,从大型机到智算云的计算模式演进,redraw,,2026-07-31,第三版教材图片/图1.1.png,planned
 图3.1,3,OpenStack双节点逻辑架构与API调用链,redraw,https://docs.openstack.org/2026.1/,2026-08-12,第三版教材图片/图3.1.png,planned
-图4.1,4,openEuler双节点实验网络与存储拓扑,redraw,https://www.openeuler.org/en/download/,2026-08-12,第三版教材图片/图4.1.png,planned
-图12.1,12,智能体感知规划执行与反馈闭环,redraw,,2026-07-31,第三版教材图片/图12.1.png,planned
-图12.2,12,TRAE官方下载页面,official-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.2.png,pending-capture
-图12.3,12,TRAE安装向导,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.3.png,pending-capture
-图12.4,12,TRAE首次启动与工作区,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.4.png,pending-capture
-图12.5,12,TRAE模型设置入口,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.5.png,pending-capture
-图12.6,12,DeepSeek模型接入参数,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.6.png,pending-capture
-图12.7,12,DeepSeek连通性验证,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.7.png,pending-capture
-图12.8,12,Claude Code官方界面,official-screenshot,https://docs.anthropic.com/en/docs/claude-code,2026-08-12,第三版教材图片/图12.8.png,pending-capture
-图12.9,12,OpenAI Codex官方界面,official-screenshot,https://openai.com/codex/,2026-08-12,第三版教材图片/图12.9.png,pending-capture
-图12.10,12,OpenClaw项目界面,official-screenshot,,2026-08-12,第三版教材图片/图12.10.png,pending-source
-图12.11,12,Hermes Agent项目界面,official-screenshot,,2026-08-12,第三版教材图片/图12.11.png,pending-source
-图13.1,13,智能体一次性部署任务与人工确认边界,redraw,,2026-07-31,第三版教材图片/图13.1.png,planned
-图13.2,13,智能体读取openstack-ts项目,real-screenshot,,2026-08-12,第三版教材图片/图13.2.png,pending-capture
-图13.3,13,智能体生成部署计划,real-screenshot,,2026-08-12,第三版教材图片/图13.3.png,pending-capture
-图13.4,13,磁盘与主机安全确认,real-screenshot,,2026-08-12,第三版教材图片/图13.4.png,pending-capture
-图13.5,13,OpenStack部署里程碑,real-screenshot,,2026-08-12,第三版教材图片/图13.5.png,pending-capture
-图13.6,13,服务与API验收结果,real-screenshot,,2026-08-12,第三版教材图片/图13.6.png,pending-capture
+图4.1,4,双节点网络与存储拓扑,redraw,https://www.openeuler.org/en/download/,2026-08-12,第三版教材图片/图4.1.png,planned
+图5.1,5,OpenStack Antelope 双节点手工构建顺序（建议自绘流程图）,redraw,,2026-08-12,第三版教材图片/图5.1.png,draft-redraw
+图6.1,6,Keystone认证、令牌与服务目录流程（建议自绘）,redraw,,2026-08-12,第三版教材图片/图6.1.png,draft-redraw
+图12.1,12,智能体与大语言模型、聊天助手和工作流的关系,redraw,,2026-07-31,第三版教材图片/图12.1.png,planned
+图12.2,12,云平台智能体“计划—执行—观察—修正”闭环,official-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.2.png,pending-capture
+图12.3,12,TRAE 国内版官方网站与下载入口,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.3.png,pending-capture
+图12.4,12,DeepSeek 开放平台与 API 文档入口,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.4.png,pending-capture
+图12.5,12,Claude Code 官方文档中的终端工作界面,real-screenshot,https://www.trae.cn/,2026-08-12,第三版教材图片/图12.5.png,pending-capture
+图12.6,12,OpenAI Codex 官方应用界面,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.6.png,pending-capture
+图12.7,12,OpenClaw 官方项目首页与体系结构,real-screenshot,https://api-docs.deepseek.com/,2026-08-12,第三版教材图片/图12.7.png,pending-capture
+图12.8,12,Hermes Agent 官方项目页或桌面界面,official-screenshot,https://docs.anthropic.com/en/docs/claude-code,2026-08-12,第三版教材图片/图12.8.png,pending-capture
+图12.9,12,TRAE 安装包下载与版本信息,official-screenshot,https://openai.com/codex/,2026-08-12,第三版教材图片/图12.9.png,pending-capture
+图12.10,12,TRAE 安装向导,official-screenshot,,2026-08-12,第三版教材图片/图12.10.png,pending-source
+图12.11,12,TRAE 首次启动与登录界面,official-screenshot,,2026-08-12,第三版教材图片/图12.11.png,pending-source
+图12.12,12,TRAE 中打开 openstack-ts 工作区,real-screenshot,,2026-08-12,第三版教材图片/图12.12.png,placeholder-needs-capture
+图12.13,12,DeepSeek API 密钥创建入口,real-screenshot,,2026-08-12,第三版教材图片/图12.13.png,placeholder-needs-capture
+图12.14,12,TRAE 自定义模型与 DeepSeek 参数,real-screenshot,,2026-08-12,第三版教材图片/图12.14.png,placeholder-needs-capture
+图12.15,12,DeepSeek 模型连通性测试结果,real-screenshot,,2026-08-12,第三版教材图片/图12.15.png,placeholder-needs-capture
+图12.16,12,OpenStack 专用智能体的角色和工具设置,real-screenshot,,2026-08-12,第三版教材图片/图12.16.png,placeholder-needs-capture
+图13.1,13,智能体读取项目并生成部署前事实清单,redraw,,2026-07-31,第三版教材图片/图13.1.png,planned
+图13.2,13,智能体标记磁盘风险与人工确认点,real-screenshot,,2026-08-12,第三版教材图片/图13.2.png,pending-capture
+图13.3,13,17阶段双节点部署时序图,real-screenshot,,2026-08-12,第三版教材图片/图13.3.png,pending-capture
+图13.4,13,TRAE 中的一次性部署任务与批准后的计划,real-screenshot,,2026-08-12,第三版教材图片/图13.4.png,pending-capture
+图13.5,13,controller 基础服务与 Keystone 里程碑,real-screenshot,,2026-08-12,第三版教材图片/图13.5.png,pending-capture
+图13.6,13,Nova 与 Neutron 双节点里程碑,real-screenshot,,2026-08-12,第三版教材图片/图13.6.png,pending-capture
+图13.7,13,Cinder `/dev/sdb` 初始化前的人工确认,real-screenshot,,2026-08-12,第三版教材图片/图13.7.png,placeholder-needs-capture
+图13.8,13,Swift `/dev/sdc` 初始化前的人工确认,real-screenshot,,2026-08-12,第三版教材图片/图13.8.png,placeholder-needs-capture
+图13.9,13,智能体生成的部署验收报告,real-screenshot,,2026-08-12,第三版教材图片/图13.9.png,placeholder-needs-capture
+图13.10,13,智能体生成的平台巡检摘要,real-screenshot,,2026-08-12,第三版教材图片/图13.10.png,placeholder-needs-capture
+图13.11,13,项目、用户、角色与配额结果,real-screenshot,,2026-08-12,第三版教材图片/图13.11.png,placeholder-needs-capture
+图13.12,13,两个教学镜像处于 active 状态,real-screenshot,,2026-08-12,第三版教材图片/图13.12.png,placeholder-needs-capture
+图13.13,13,教学实例规格列表,real-screenshot,,2026-08-12,第三版教材图片/图13.13.png,placeholder-needs-capture
+图13.14,13,Provider 网络和地址池,real-screenshot,,2026-08-12,第三版教材图片/图13.14.png,placeholder-needs-capture
+图13.15,13,租户网络与路由器拓扑,real-screenshot,,2026-08-12,第三版教材图片/图13.15.png,placeholder-needs-capture
+图13.16,13,安全组规则与密钥对元数据,real-screenshot,,2026-08-12,第三版教材图片/图13.16.png,placeholder-needs-capture
+图13.17,13,book-vm01 实例进入 ACTIVE,real-screenshot,,2026-08-12,第三版教材图片/图13.17.png,placeholder-needs-capture
+图13.18,13,浮动 IP 绑定与连通性测试,real-screenshot,,2026-08-12,第三版教材图片/图13.18.png,placeholder-needs-capture
+图13.19,13,Cinder 卷附加到实例,real-screenshot,,2026-08-12,第三版教材图片/图13.19.png,placeholder-needs-capture
+图13.20,13,Swift 对象上传、下载与摘要一致,real-screenshot,,2026-08-12,第三版教材图片/图13.20.png,placeholder-needs-capture
+图13.21,13,从实例快照启动 book-vm02,real-screenshot,,2026-08-12,第三版教材图片/图13.21.png,placeholder-needs-capture
+图13.22,13,实例规格调整前后对比,real-screenshot,,2026-08-12,第三版教材图片/图13.22.png,placeholder-needs-capture
+图13.23,13,智能体生成的分层健康报告,real-screenshot,,2026-08-12,第三版教材图片/图13.23.png,placeholder-needs-capture
+图13.24,13,实例启动失败的调度与资源证据链,real-screenshot,,2026-08-12,第三版教材图片/图13.24.png,placeholder-needs-capture
+图13.25,13,网络故障的证据链与根因定位,real-screenshot,,2026-08-12,第三版教材图片/图13.25.png,placeholder-needs-capture
+图13.26,13,neutron-server 受控恢复过程,real-screenshot,,2026-08-12,第三版教材图片/图13.26.png,placeholder-needs-capture
+图13.27,13,容量分析、日志摘要和脱敏备份清单,real-screenshot,,2026-08-12,第三版教材图片/图13.27.png,placeholder-needs-capture
+图13.28,13,清理计划与零残留验证,real-screenshot,,2026-08-12,第三版教材图片/图13.28.png,placeholder-needs-capture
