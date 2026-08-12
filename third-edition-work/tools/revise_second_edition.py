@@ -278,6 +278,20 @@ def _is_empty_layout_break_paragraph(document_xml: bytes, paragraph: bytes) -> b
     )
 
 
+def _has_section_break(document_xml: bytes, paragraph: bytes) -> bool:
+    element = _parse_child(document_xml, paragraph)
+    return element.tag == f"{W}p" and element.find("w:pPr/w:sectPr", NS) is not None
+
+
+def _strip_text_from_section_break_paragraph(paragraph: bytes) -> bytes:
+    """Keep a paragraph's exact pPr/sectPr while removing obsolete chapter text."""
+    properties = PPR_PATTERN.search(paragraph)
+    opening_end = paragraph.find(b">")
+    if properties is None or opening_end < 0:
+        raise ValueError("section-break paragraph has no preservable paragraph properties")
+    return paragraph[: opening_end + 1] + properties.group(0) + b"</w:p>"
+
+
 def _is_part_opener(document_xml: bytes, paragraph: bytes) -> bool:
     return (
         _child_name(document_xml, paragraph) == f"{W}p"
@@ -324,11 +338,22 @@ def _trailing_layout_transition(
     ):
         part_index = candidate
         tail_start = candidate
-    while tail_start - 1 > start_index and _is_empty_layout_break_paragraph(
-        document.document_xml, children[tail_start - 1]
-    ):
+    while tail_start - 1 > start_index:
+        candidate_paragraph = children[tail_start - 1]
+        if not (
+            _is_empty_layout_break_paragraph(document.document_xml, candidate_paragraph)
+            or _has_section_break(document.document_xml, candidate_paragraph)
+        ):
+            break
         tail_start -= 1
     transition = list(children[tail_start:end_index])
+    transition = [
+        _strip_text_from_section_break_paragraph(paragraph)
+        if _has_section_break(document.document_xml, paragraph)
+        and _child_text(document.document_xml, paragraph).strip()
+        else paragraph
+        for paragraph in transition
+    ]
     if part_title is not None:
         if part_index is None:
             raise ValueError("replace_with_part_opener requires a trailing source part opener")

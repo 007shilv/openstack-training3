@@ -35,5 +35,17 @@
     "start_heading": "第六章 Keystone的安装及其配置",
     "end_heading": "第七章 Glance的安装及其配置",
     "fragment": "fragments/ch06.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第七章 Glance的安装及其配置",
+    "end_heading": "第八章 Placement的安装及其配置",
+    "fragment": "fragments/ch07.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第八章 Placement的安装及其配置",
+    "end_heading": "第九章 Nova的安装及其配置",
+    "fragment": "fragments/ch08.md"
   }
 ]

@@ -39,6 +39,10 @@ TASK5_FRAGMENTS = {
     5: FRAGMENTS_DIR / "ch05.md",
     6: FRAGMENTS_DIR / "ch06.md",
 }
+TASK6_FRAGMENTS = {
+    7: FRAGMENTS_DIR / "ch07.md",
+    8: FRAGMENTS_DIR / "ch08.md",
+}
 
 
 def task3_fragment(chapter: int) -> str:
@@ -51,6 +55,10 @@ def task4_fragment() -> str:
 
 def task5_fragment(chapter: int) -> str:
     return TASK5_FRAGMENTS[chapter].read_text(encoding="utf-8")
+
+
+def task6_fragment(chapter: int) -> str:
+    return TASK6_FRAGMENTS[chapter].read_text(encoding="utf-8")
 
 
 def prose_paragraphs(markdown: str) -> list[str]:
@@ -115,6 +123,18 @@ def fixture_section_break(marker: str = "section-break") -> str:
         '<w:pgSz w:w="10432" w:h="14740"/>'
         '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>'
         '</w:sectPr></w:pPr></w:p>'
+    )
+
+
+def fixture_text_section_break(
+    text: str = "obsolete chapter text carrying a section break",
+    marker: str = "text-section-break",
+) -> str:
+    return (
+        f'<w:p data-marker="{marker}"><w:pPr><w:sectPr>'
+        '<w:pgSz w:w="10432" w:h="14740"/>'
+        '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>'
+        f'</w:sectPr></w:pPr><w:r><w:t>{text}</w:t></w:r></w:p>'
     )
 
 
@@ -489,6 +509,35 @@ def test_bounded_replace_preserves_a_trailing_section_break(tmp_path: Path) -> N
         assert raw_marked_element(after_xml, "section-break") == raw_marked_element(
             before_xml, "section-break"
         )
+
+
+def test_bounded_replace_keeps_a_trailing_section_break_but_drops_its_old_text(
+    tmp_path: Path,
+) -> None:
+    revision = load_bounded_revision_module()
+    source = tmp_path / "source.docx"
+    candidate = tmp_path / "candidate.docx"
+    write_bounded_fixture(
+        source,
+        [
+            fixture_paragraph("old chapter text", marker="old-chapter"),
+            fixture_text_section_break(),
+        ],
+    )
+
+    document = revision.load_docx(source)
+    revision.replace_between_headings(
+        document,
+        "Start Heading",
+        "End Heading",
+        [revision.Block(kind="body", text="new chapter text")],
+    )
+    revision.save_candidate(document, candidate)
+
+    with zipfile.ZipFile(candidate) as after:
+        after_xml = after.read("word/document.xml")
+        assert b"obsolete chapter text carrying a section break" not in after_xml
+        assert after_xml.count(b"<w:sectPr") == 2
 
 
 def test_bounded_replace_uses_a_leading_fragment_h1_to_replace_the_old_h1(
@@ -1375,6 +1424,133 @@ def test_task5_chapters_stop_after_deployment_without_automation_or_validation()
     assert "第二版" not in combined and "第三版" not in combined
 
 
+def test_task6_chapters_are_textbook_shaped_manual_deployment_records() -> None:
+    expected_headings = {
+        7: [
+            "# 第七章 Glance的安装及其配置",
+            "## 7.1 Glance功能简介",
+            "## 7.2 Glance后端与调用过程",
+            "## 7.3 实训项目4 Glance的手工安装与配置",
+        ],
+        8: [
+            "# 第八章 Placement的安装及其配置",
+            "## 8.1 Placement功能简介",
+            "## 8.2 Allocation、Consumer与调度协作",
+            "## 8.3 实训项目5 Placement的手工安装与配置",
+        ],
+    }
+    for chapter, expected in expected_headings.items():
+        text = task6_fragment(chapter)
+        assert [line for line in text.splitlines() if line.startswith("#")] == expected
+        assert 9_000 <= compact_length(text) <= 13_500
+        assert "本章导读" in text
+        for heading in (
+            "一．实训前提环境：",
+            "二．实训涉及节点：",
+            "三．实训目标：",
+            "四．实训步骤及其详解：",
+        ):
+            assert heading in text
+        for kind, body in re.findall(r"```(command|config)\n(.*?)\n```", text, re.S):
+            lines = [line for line in body.splitlines() if line.strip()]
+            if kind == "command":
+                assert all(
+                    re.match(r"^\[root@controller ~\]# ", line)
+                    or re.match(r"^MariaDB \[\(none\)\]> ", line)
+                    or re.match(r"^\s+-> ", line)
+                    for line in lines
+                )
+            else:
+                assert all("]# " not in line for line in lines)
+
+
+def test_task6_chapters_keep_component_objects_configuration_and_order() -> None:
+    ch7 = task6_fragment(7)
+    ch8 = task6_fragment(8)
+    ch7_commands = "\n".join(re.findall(r"```command\n(.*?)\n```", ch7, re.S))
+    ch8_commands = "\n".join(re.findall(r"```command\n(.*?)\n```", ch8, re.S))
+
+    glance_steps = (
+        "CREATE DATABASE glance;",
+        "openstack user create --domain default --password qwer1234 glance",
+        "openstack role add --project service --user glance admin",
+        'openstack service create --name glance --description "OpenStack Image" image',
+        "openstack endpoint create --region RegionOne image public http://controller:9292",
+        "install openstack-glance",
+        "vi /etc/glance/glance-api.conf",
+        "glance-manage db_sync",
+        "systemctl start openstack-glance-api.service",
+    )
+    assert [ch7_commands.index(step) for step in glance_steps] == sorted(
+        ch7_commands.index(step) for step in glance_steps
+    )
+    for value in (
+        "enabled_backends = file:file",
+        "connection = mysql+pymysql://glance:qwer1234@127.0.0.1/glance",
+        "default_backend = file",
+        "filesystem_store_datadir = /var/lib/glance/images/",
+        "queued",
+        "active",
+        "qcow2",
+    ):
+        assert value in ch7
+
+    placement_steps = (
+        "CREATE DATABASE placement;",
+        "openstack user create --domain default --password qwer1234 placement",
+        "openstack role add --project service --user placement admin",
+        'openstack service create --name placement --description "Placement API" placement',
+        "openstack endpoint create --region RegionOne placement public http://controller:8778",
+        "install openstack-placement-api",
+        "vi /etc/placement/placement.conf",
+        "oslopolicy-convert-json-to-yaml",
+        "placement-manage db sync",
+        "vi /etc/httpd/conf.d/00-placement-api.conf",
+        "systemctl restart httpd.service",
+    )
+    assert [ch8_commands.index(step) for step in placement_steps] == sorted(
+        ch8_commands.index(step) for step in placement_steps
+    )
+    for value in (
+        "Resource Provider",
+        "Resource Class",
+        "Inventory",
+        "Trait",
+        "Allocation",
+        "Consumer",
+        "Allocation Candidate",
+        "connection = mysql+pymysql://placement:qwer1234@127.0.0.1/placement",
+        "policy_file = policy.yaml",
+        "Listen 8778",
+        "WSGIScriptAlias / /usr/bin/placement-api",
+    ):
+        assert value in ch8
+
+
+def test_task6_chapters_have_no_editor_voice_automation_or_post_install_validation() -> None:
+    combined = "\n".join(task6_fragment(chapter) for chapter in (7, 8))
+    forbidden = (
+        r"第二版",
+        r"第三版",
+        r"```python",
+        r"\bpython3?\s+-[cEm]",
+        r"\bcurl\b",
+        r"(?m)^\s*ss\b",
+        r"dnf history",
+        r"systemctl (?:status|is-active)",
+        r"openstack image (?:create|list|show)",
+        r"openstack resource provider",
+        r"门禁",
+        r"验收",
+        r"自动化部署",
+        r"一键安装",
+    )
+    for pattern in forbidden:
+        assert re.search(pattern, combined, re.I) is None, pattern
+    assert "qwer1234" in combined
+    assert "隔离" in combined and "生产" in combined
+
+
 def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None:
     mapping = json.loads((WORK_ROOT / "revision" / "revision-map.json").read_text(encoding="utf-8"))
 
@@ -1415,6 +1591,18 @@ def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None
             "start_heading": "第六章 Keystone的安装及其配置",
             "end_heading": "第七章 Glance的安装及其配置",
             "fragment": "fragments/ch06.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第七章 Glance的安装及其配置",
+            "end_heading": "第八章 Placement的安装及其配置",
+            "fragment": "fragments/ch07.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第八章 Placement的安装及其配置",
+            "end_heading": "第九章 Nova的安装及其配置",
+            "fragment": "fragments/ch08.md",
         },
     ]
 
