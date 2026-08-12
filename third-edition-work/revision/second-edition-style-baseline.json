@@ -28,10 +28,16 @@
     "font": "宋体",
     "size_pt": 9.0,
     "bold": true,
-    "alignment": "center"
+    "alignment": "center",
+    "text_runs": [
+      {"font": "宋体", "size_pt": 9.0, "bold": true},
+      {"font": "宋体", "size_pt": 9.0, "bold": true},
+      {"font": "宋体", "size_pt": 9.0, "bold": true},
+      {"font": "宋体", "size_pt": 9.0, "bold": true}
+    ]
   },
   "caption_count": 516,
-  "caption_records_sha256": "c28874121c14e00c6f9a224a761f5ab7103970e791fd79596607ad9f53445494",
+  "caption_records_sha256": "97eedc8119ca03a9da3a18bf1943d34283aee6bfbfff3c0a47a6694581639d8d",
   "inline_widths_emu": {
     "count": 522,
     "min": 1704975,

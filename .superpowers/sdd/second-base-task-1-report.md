@@ -23,7 +23,7 @@ Commands:
 ```powershell
 python -m pytest third-edition-work/tests/test_second_base_revision.py -v
 python -m pytest third-edition-work/tests/test_deployment_contract.py -q
-python third-edition-work/tools/audit_second_base_docx.py --source "D:\codex\云计算教材更新\云计算基础架构平台构建与应用（第二版初稿）.docx" --candidate "D:\codex\云计算教材更新\云计算基础架构平台构建与应用（第二版初稿）.docx"
+python third-edition-work/tools/audit_second_base_docx.py --source "D:\codex\云计算教材更新\云计算基础架构平台构建与应用（第二版初稿）.docx" --candidate "D:\codex\云计算教材更新\云计算基础架构平台构建与应用（第三版初稿）.docx"
 git diff --check
 ```
 
@@ -35,6 +35,8 @@ Results:
 - All five source sections measure 18.4 × 26.0 cm with 2.0 cm page margins.
 - Open XML totals are 5,202 main-body paragraphs, 522 inline shapes, and 3 tables.
 - `git diff --check` passed.
+- The real old third-edition candidate audit exited 1, confirming it is not an
+  eligible second-edition-based source.
 
 ## Files
 
@@ -96,3 +98,14 @@ for the frozen second edition (exit 0) and rejected the old third-edition draft
 The follow-up commit covers this review remediation and the evidence above;
 its immutable Git hash is supplied after commit creation rather than being
 prewritten here.
+
+## Final review remediation: all figure-caption text runs
+
+The caption auditor initially inspected only the first run properties.  A
+further RED mutation changed the second visible text run of the second
+multi-run, image-adjacent caption to Arial; the focused test failed because
+the change was invisible to the auditor.  The repair resolves each visible
+caption run through direct properties, run/paragraph styles, style inheritance,
+and document defaults, then compares every run's effective font, size, and
+bold value at its caption/run index.  The source has 475 multi-run captions.
+The new focused mutation test passes after the repair.

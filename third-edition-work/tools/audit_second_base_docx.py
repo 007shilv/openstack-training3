@@ -68,13 +68,6 @@ def _canonical_sha256(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _run_properties(paragraph: ET.Element) -> ET.Element:
-    properties = paragraph.find(".//w:rPr", NS)
-    if properties is None:
-        raise ValueError("caption has no direct run properties")
-    return properties
-
-
 def _font_name(properties: ET.Element) -> str:
     fonts = properties.find("w:rFonts", NS)
     if fonts is None:
@@ -87,27 +80,99 @@ def _body_paragraph_count(body: ET.Element) -> int:
     return len(body.findall("w:p", NS))
 
 
-def _caption_record(paragraph: ET.Element) -> dict[str, Any] | None:
-    """Parse a real figure caption and record its actual separators and format."""
+def _style_run_properties(styles: ET.Element, style_id: str, seen: set[str] | None = None) -> list[ET.Element]:
+    """Return inherited-to-local run properties for a named paragraph/run style."""
+    seen = set() if seen is None else seen
+    if style_id in seen:
+        return []
+    seen.add(style_id)
+    for style in styles.findall("w:style", NS):
+        if _attribute(style, "styleId") != style_id:
+            continue
+        inherited: list[ET.Element] = []
+        based_on = style.find("w:basedOn", NS)
+        parent_id = _attribute(based_on, "val")
+        if parent_id:
+            inherited.extend(_style_run_properties(styles, parent_id, seen))
+        properties = style.find("w:rPr", NS)
+        if properties is not None:
+            inherited.append(properties)
+        return inherited
+    return []
+
+
+def _bold_value(properties: ET.Element) -> bool:
+    value = _attribute(properties.find("w:b", NS), "val")
+    return value not in {"0", "false", "off"}
+
+
+def _effective_text_run_format(
+    paragraph: ET.Element,
+    run: ET.Element,
+    styles: ET.Element,
+    defaults: ET.Element,
+) -> dict[str, Any]:
+    """Resolve the font/size/bold chain for one visible text run."""
+    properties_chain = [defaults]
+    paragraph_style = _attribute(paragraph.find("w:pPr/w:pStyle", NS), "val")
+    if paragraph_style:
+        properties_chain.extend(_style_run_properties(styles, paragraph_style))
+    paragraph_properties = paragraph.find("w:pPr/w:rPr", NS)
+    if paragraph_properties is not None:
+        properties_chain.append(paragraph_properties)
+    run_properties = run.find("w:rPr", NS)
+    run_style = _attribute(run_properties.find("w:rStyle", NS) if run_properties is not None else None, "val")
+    if run_style:
+        properties_chain.extend(_style_run_properties(styles, run_style))
+    if run_properties is not None:
+        properties_chain.append(run_properties)
+
+    east_asia: str | None = None
+    ascii_font: str | None = None
+    size: str | None = None
+    bold = False
+    for properties in properties_chain:
+        fonts = properties.find("w:rFonts", NS)
+        if fonts is not None:
+            east_asia = _attribute(fonts, "eastAsia", east_asia)
+            ascii_font = _attribute(fonts, "ascii", ascii_font)
+        size = _attribute(properties.find("w:sz", NS), "val", size)
+        if properties.find("w:b", NS) is not None:
+            bold = _bold_value(properties)
+    return {
+        "font": east_asia or ascii_font or "<missing>",
+        "size_pt": _points(size),
+        "bold": bold,
+    }
+
+
+def _caption_record(paragraph: ET.Element, styles: ET.Element, defaults: ET.Element) -> dict[str, Any] | None:
+    """Parse an adjacent figure caption and every visible text run's effective format."""
     match = CAPTION_PATTERN.match(_text(paragraph))
     if match is None:
         return None
-    properties = _run_properties(paragraph)
-    size = properties.find("w:sz", NS)
     alignment = paragraph.find("w:pPr/w:jc", NS)
+    text_runs = [run for run in paragraph.findall(".//w:r", NS) if _text(run)]
+    if not text_runs:
+        raise ValueError("caption has no visible text runs")
+    effective_runs = [
+        _effective_text_run_format(paragraph, run, styles, defaults)
+        for run in text_runs
+    ]
     return {
         "numbering": {
             "prefix": "图",
             "separators": [match.group("separator_1"), match.group("separator_2")],
         },
-        "font": _font_name(properties),
-        "size_pt": _points(_attribute(size, "val")),
-        "bold": properties.find("w:b", NS) is not None,
+        "font": effective_runs[0]["font"],
+        "size_pt": effective_runs[0]["size_pt"],
+        "bold": effective_runs[0]["bold"],
         "alignment": _attribute(alignment, "val", "<missing>"),
+        "text_runs": effective_runs,
     }
 
 
-def _figure_caption_records(body: ET.Element) -> list[dict[str, Any] | None]:
+def _figure_caption_records(body: ET.Element, styles: ET.Element, defaults: ET.Element) -> list[dict[str, Any] | None]:
     """Return one adjacency-aware caption record for each inline picture paragraph."""
     paragraphs = body.findall("w:p", NS)
     records: list[dict[str, Any] | None] = []
@@ -117,7 +182,7 @@ def _figure_caption_records(body: ET.Element) -> list[dict[str, Any] | None]:
             continue
         if inline_count != 1:
             raise ValueError("source has an inline-picture paragraph with more than one image")
-        records.append(_caption_record(paragraphs[index + 1]) if index + 1 < len(paragraphs) else None)
+        records.append(_caption_record(paragraphs[index + 1], styles, defaults) if index + 1 < len(paragraphs) else None)
     return records
 
 
@@ -134,17 +199,19 @@ def _inline_widths_emu(document: ET.Element) -> list[int]:
 def _figure_caption_records_from_docx(path: Path) -> list[dict[str, Any] | None]:
     with zipfile.ZipFile(path) as archive:
         document = ET.fromstring(archive.read("word/document.xml"))
+        styles = ET.fromstring(archive.read("word/styles.xml"))
     body = document.find("w:body", NS)
-    if body is None:
+    defaults = styles.find("w:docDefaults/w:rPrDefault/w:rPr", NS)
+    if body is None or defaults is None:
         raise ValueError("DOCX has no document body")
-    return _figure_caption_records(body)
+    return _figure_caption_records(body, styles, defaults)
 
 
 def _body_direct_run_formats(body: ET.Element) -> list[dict[str, Any]]:
     """Capture direct font/size formatting on body text runs, excluding figure captions."""
     records: list[dict[str, Any]] = []
     for paragraph_index, paragraph in enumerate(body.findall("w:p", NS)):
-        if _caption_record(paragraph) is not None:
+        if CAPTION_PATTERN.match(_text(paragraph)):
             continue
         for run_index, run in enumerate(paragraph.findall("w:r", NS)):
             if not _text(run):
@@ -223,14 +290,14 @@ def measure_docx(path: Path) -> dict[str, Any]:
             "alignment": "<missing>", "numbering": "<missing>",
         }
     else:
-        caption_format = _caption_record(caption)
+        caption_format = _caption_record(caption, styles, defaults)
         assert caption_format is not None
 
     body = document.find("w:body", NS)
     if body is None:
         raise ValueError("DOCX has no document body")
     first = sections[0]
-    caption_records = _figure_caption_records(body)
+    caption_records = _figure_caption_records(body, styles, defaults)
     inline_widths = _inline_widths_emu(document)
     direct_run_formats = _body_direct_run_formats(body)
     return {
@@ -318,6 +385,19 @@ def audit_docx(source: Path, candidate: Path, baseline_path: Path = BASELINE_PAT
         for field in ("numbering", "font", "size_pt", "bold", "alignment"):
             if expected[field] != actual[field]:
                 errors.append(f"caption[{index}].{field} differs: source={expected[field]!r}, candidate={actual[field]!r}")
+        if len(expected["text_runs"]) != len(actual["text_runs"]):
+            errors.append(
+                f"caption[{index}].text_runs count differs: "
+                f"source={len(expected['text_runs'])}, candidate={len(actual['text_runs'])}"
+            )
+            continue
+        for run_index, (expected_run, actual_run) in enumerate(zip(expected["text_runs"], actual["text_runs"])):
+            for field in ("font", "size_pt", "bold"):
+                if expected_run[field] != actual_run[field]:
+                    errors.append(
+                        f"caption[{index}].text_runs[{run_index}].{field} differs: "
+                        f"source={expected_run[field]!r}, candidate={actual_run[field]!r}"
+                    )
     if len(source_captions) != len(candidate_captions):
         errors.append(f"caption adjacency count differs: source={len(source_captions)}, candidate={len(candidate_captions)}")
     return errors

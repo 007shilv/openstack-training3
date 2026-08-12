@@ -164,7 +164,32 @@ def test_audit_reports_later_caption_style_and_numbering_mutations(tmp_path: Pat
 
     errors = revision.audit_docx(source, candidate)
     assert any("caption[1].numbering" in error for error in errors)
-    assert any("caption[1].font" in error for error in errors)
+
+
+def test_audit_reports_the_second_text_run_of_a_later_multi_run_caption(tmp_path: Path) -> None:
+    revision = load_revision_module()
+    source = find_source_docx()
+    candidate = tmp_path / "changed-second-caption-text-run.docx"
+
+    def mutate(document: ET.Element) -> None:
+        multi_run_captions = []
+        for caption in figure_caption_paragraphs(document):
+            text_runs = [run for run in caption.findall("w:r", NS) if run.findall(".//w:t", NS)]
+            if len(text_runs) > 1:
+                multi_run_captions.append(text_runs)
+        assert len(multi_run_captions) >= 2
+        second_text_run = multi_run_captions[1][1]
+        properties = second_text_run.find("w:rPr", NS)
+        if properties is None:
+            properties = ET.SubElement(second_text_run, f"{W}rPr")
+        fonts = properties.find("w:rFonts", NS)
+        if fonts is None:
+            fonts = ET.SubElement(properties, f"{W}rFonts")
+        fonts.set(f"{W}eastAsia", "Arial")
+
+    write_mutated_docx(source, candidate, mutate)
+
+    assert any("caption[1].text_runs[1].font" in error for error in revision.audit_docx(source, candidate))
 
 
 def test_audit_reports_inline_width_and_body_run_direct_format_mutations(tmp_path: Path) -> None:
