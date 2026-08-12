@@ -1,0 +1,9 @@
+replicas=1
+region=1
+zone=1
+storage_ip=192.168.234.150
+device=sdc
+account_port=6202
+container_port=6201
+object_port=6200
+binary_ring_files=not_tracked

@@ -1,0 +1,10 @@
+[DEFAULT]
+bind_port = 8080
+user = swift
+swift_dir = /etc/swift
+[pipeline:main]
+pipeline = catch_errors gatekeeper healthcheck proxy-logging cache authtoken keystoneauth proxy-logging proxy-server
+[filter:cache]
+memcache_servers = controller:11211
+[filter:authtoken]
+password = <SERVICE_PASSWORD>

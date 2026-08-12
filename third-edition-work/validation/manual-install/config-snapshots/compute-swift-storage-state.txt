@@ -1,0 +1,8 @@
+device=/dev/sdc
+filesystem=xfs
+label=swift-data
+mountpoint=/srv/node/sdc
+fstab_source=UUID=<RUNTIME_UUID>
+protected_system_device=/dev/sda
+protected_cinder_device=/dev/sdb
+lvm_pv_on_sdc=false

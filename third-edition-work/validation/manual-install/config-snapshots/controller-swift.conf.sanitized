@@ -1,0 +1,7 @@
+[swift-hash]
+swift_hash_path_prefix = <RUNTIME_SECRET>
+swift_hash_path_suffix = <RUNTIME_SECRET>
+
+[storage-policy:0]
+name = Policy-0
+default = yes

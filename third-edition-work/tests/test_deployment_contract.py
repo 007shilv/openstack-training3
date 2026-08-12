@@ -4095,6 +4095,24 @@ def test_manual_cinder_records_are_manual_sanitized_and_disk_guarded() -> None:
     assert "untouched_swift_device=/dev/sdc" in payloads["compute-cinder-storage-state.txt"]
 
 
+def test_focused_swift_contract_accepts_only_the_clean_lightweight_result() -> None:
+    candidates = markdown_fenced_blocks("13-swift-compute.md", "python")
+    source = next(block for block in candidates if "validate_swift_lightweight_evidence" in block)
+    namespace: dict[str, object] = {"__name__": "test"}
+    exec(compile(ast.parse(source), "swift-contract", "exec"), namespace)
+    good = {
+        "services": {"controller": {"openstack-swift-proxy"}, "compute": {"rsyncd", "openstack-swift-account", "openstack-swift-container", "openstack-swift-object"}},
+        "rings": {"replicas": 1, "ip": "192.168.234.150", "device": "sdc"},
+        "disk": {"device": "/dev/sdc", "filesystem": "xfs", "label": "swift-data", "mounted": True, "cinder_untouched": True},
+        "lifecycle": {"api": True, "authenticated_cli": True, "one_object": True, "digest_matches": True, "deleted_exactly": True, "no_residue": True},
+    }
+    namespace["validate_swift_lightweight_evidence"](good)
+    for key, value in (("rings", {"replicas": 2}), ("disk", {"device": "/dev/sdb"}), ("lifecycle", {"api": False})):
+        bad = copy.deepcopy(good); bad[key] = value
+        with pytest.raises(ValueError):
+            namespace["validate_swift_lightweight_evidence"](bad)
+
+
 def test_review_nova_student_path_is_explicit_manual_commands_in_fixed_order_not_the_validation_model() -> None:
     controller = manual_markdown("06-nova-controller.md")
     compute = manual_markdown("07-nova-compute.md")
