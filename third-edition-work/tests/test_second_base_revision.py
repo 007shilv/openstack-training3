@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import hashlib
 import json
 from pathlib import Path
 import re
+import statistics
 import subprocess
 import sys
 from xml.etree import ElementTree as ET
@@ -25,6 +27,29 @@ DRAWING_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDra
 NS = {"w": WORD_NS, "wp": DRAWING_NS}
 W = f"{{{WORD_NS}}}"
 FIGURE_CAPTION = re.compile(r"^图\d+\.\d+\.\d+")
+FRAGMENTS_DIR = WORK_ROOT / "revision" / "fragments"
+FIGURE_PLAN = WORK_ROOT / "revision" / "figures" / "figure-plan.csv"
+TASK3_FRAGMENTS = {
+    1: FRAGMENTS_DIR / "ch01.md",
+    2: FRAGMENTS_DIR / "ch02.md",
+    3: FRAGMENTS_DIR / "ch03.md",
+}
+
+
+def task3_fragment(chapter: int) -> str:
+    return TASK3_FRAGMENTS[chapter].read_text(encoding="utf-8")
+
+
+def prose_paragraphs(markdown: str) -> list[str]:
+    return [
+        " ".join(line.strip() for line in block.splitlines())
+        for block in re.split(r"\n\s*\n", markdown)
+        if block.strip() and not block.lstrip().startswith("#")
+    ]
+
+
+def compact_length(value: str) -> int:
+    return len(re.sub(r"\s+", "", value))
 
 
 def find_source_docx() -> Path:
@@ -766,3 +791,226 @@ def test_command_and_config_templates_do_not_fall_back_to_body(
 
     with pytest.raises(ValueError, match=kind):
         revision._template_paragraph(revision.load_docx(without_template), kind)
+
+
+def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> None:
+    expected_sections = {
+        1: [
+            "## 1.1 计算模式的演变",
+            "## 1.2 云计算的定义",
+            "## 1.3 云计算的层次以及分类",
+            "## 1.4 国内外云计算产业现状",
+        ],
+        2: [
+            "## 2.1 云产品的比较方法",
+            "## 2.2 国际代表性云产品",
+            "## 2.3 国内代表性云产品",
+            "## 2.4 产品选择与教学活动",
+        ],
+        3: [
+            "## 3.1 OpenStack技术简介",
+            "## 3.2 体验原生OpenStack云平台",
+        ],
+    }
+    minimum_characters = {1: 6_500, 2: 5_500, 3: 6_400}
+
+    for chapter, expected in expected_sections.items():
+        text = task3_fragment(chapter)
+        headings = [line.strip() for line in text.splitlines() if line.startswith("#")]
+        paragraphs = prose_paragraphs(text)
+        lengths = [compact_length(paragraph) for paragraph in paragraphs]
+
+        assert headings == expected
+        assert not any(line.startswith("###") for line in text.splitlines())
+        assert paragraphs[0].startswith("本章导读：")
+        assert "教学活动" in text
+        assert sum(lengths) >= minimum_characters[chapter]
+        assert max(lengths) <= 240
+        assert statistics.median(lengths) >= 80
+        assert sum(length < 45 for length in lengths) <= max(1, len(lengths) // 8)
+
+
+def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None:
+    text = task3_fragment(1)
+    evolution = text.split("## 1.1 计算模式的演变", 1)[1].split("## 1.2 云计算的定义", 1)[0]
+    definition = text.split("## 1.2 云计算的定义", 1)[1].split(
+        "## 1.3 云计算的层次以及分类", 1
+    )[0]
+    layers = text.split("## 1.3 云计算的层次以及分类", 1)[1].split(
+        "## 1.4 国内外云计算产业现状", 1
+    )[0]
+    evolution_topics = [
+        "字符哑终端—主机",
+        "客户—服务器",
+        "集群计算",
+        "云计算",
+    ]
+    definition_topics = [
+        "美国国家标准与技术研究院",
+        "按需自助服务",
+        "广泛网络访问",
+        "资源池化",
+        "快速弹性",
+        "可计量服务",
+    ]
+    layer_topics = [
+        "IaaS",
+        "PaaS",
+        "SaaS",
+        "公有云",
+        "私有云",
+        "混合云",
+    ]
+
+    for section, ordered_topics in (
+        (evolution, evolution_topics),
+        (definition, definition_topics),
+        (layers, layer_topics),
+    ):
+        positions = [section.index(topic) for topic in ordered_topics]
+        assert positions == sorted(positions)
+    for topic in ("云原生", "边缘云", "AI云", "FinOps", "绿色云", "主权云", "可信云"):
+        assert topic in text
+    for actual in ("8,288亿元", "34.4%", "6,216亿元", "36.6%", "2,072亿元", "29.3%"):
+        assert actual in text
+    assert "2024年" in text
+    assert "2025E" not in text
+    assert "10,857" not in text
+
+
+def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> None:
+    text = task3_fragment(2)
+
+    for dimension in ("定位", "服务能力", "生态", "部署形态", "锁定风险", "教学场景"):
+        assert dimension in text
+    for product in (
+        "AWS Outposts",
+        "Azure Arc",
+        "GKE Enterprise",
+        "Apsara Stack",
+        "华为云 Stack",
+    ):
+        assert product in text
+    for stale_walkthrough in ("单击", "点击", "登录控制台", "菜单栏", "市场份额"):
+        assert stale_walkthrough not in text
+
+
+def test_chapter_3_states_governance_architecture_and_release_boundaries() -> None:
+    text = task3_fragment(3)
+
+    for topic in (
+        "NASA",
+        "Rackspace",
+        "开放源代码",
+        "开放设计",
+        "开放开发",
+        "开放社区",
+        "OpenInfra Foundation",
+        "技术委员会",
+        "Keystone",
+        "Glance",
+        "Placement",
+        "Nova",
+        "Neutron",
+        "Cinder",
+        "Swift",
+        "Horizon",
+        "SLURP",
+    ):
+        assert topic in text
+    assert re.search(
+        r"2026\.1 Gazpacho.{0,80}2026年4月1日.{0,100}Maintained.{0,50}SLURP",
+        text,
+        re.S,
+    )
+    assert re.search(
+        r"2026\.2 Hibiscus.{0,100}开发中.{0,100}计划于2026年9月30日",
+        text,
+        re.S,
+    )
+    assert re.search(
+        r"2023\.1 Antelope.{0,80}2023年3月22日.{0,100}Unmaintained.{0,100}隔离教学环境",
+        text,
+        re.S,
+    )
+    assert re.search(r"Antelope.{0,220}不.{0,20}生产", text, re.S)
+
+
+def test_task3_text_has_no_source_dump_or_command_manual_language() -> None:
+    forbidden = (
+        r"https?://",
+        r"\[[^\]]*来源[^\]]*\]",
+        r"参考文献",
+        r"访问日期",
+        r"置信度",
+        r"```",
+        r"\[(?:root|\w+)@[^\]]+\]#",
+        r"\bdnf\b",
+        r"\bsystemctl\b",
+        r"\bpython3?\b",
+        r"门禁",
+        r"失败即停",
+        r"验收",
+        r"验证",
+    )
+
+    for path in TASK3_FRAGMENTS.values():
+        text = path.read_text(encoding="utf-8")
+        for pattern in forbidden:
+            assert re.search(pattern, text, re.I) is None, f"{path.name}: {pattern}"
+
+
+def test_task3_revision_map_uses_the_real_second_edition_h1_boundaries() -> None:
+    mapping = json.loads((WORK_ROOT / "revision" / "revision-map.json").read_text(encoding="utf-8"))
+
+    assert mapping == [
+        {
+            "op": "replace",
+            "start_heading": "第一章 云计算基本概念",
+            "end_heading": "第二章 云计算知名厂商及其产品",
+            "fragment": "fragments/ch01.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第二章 云计算知名厂商及其产品",
+            "end_heading": "第三章 原生OpenStack云平台",
+            "fragment": "fragments/ch02.md",
+        },
+        {
+            "op": "replace",
+            "start_heading": "第三章 原生OpenStack云平台",
+            "end_heading": "第四章 原生OpenStack云平台的环境准备",
+            "fragment": "fragments/ch03.md",
+        },
+    ]
+
+
+def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> None:
+    with FIGURE_PLAN.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+
+    expected_columns = {
+        "chapter",
+        "second_edition_figure",
+        "decision",
+        "target_number",
+        "proposed_title",
+        "width_cm",
+        "source_or_capture",
+        "placement_anchor",
+        "reason",
+        "owner",
+    }
+    assert rows and set(rows[0]) == expected_columns
+    assert {row["chapter"] for row in rows} == {"1", "2", "3"}
+    assert len({row["second_edition_figure"] for row in rows if row["second_edition_figure"]}) == 36
+    assert {row["decision"] for row in rows} <= {"保留", "删除", "重绘", "重拍"}
+    assert all(
+        not row["target_number"] or re.fullmatch(r"图[123]\.\d+", row["target_number"])
+        for row in rows
+    )
+    assert all(row["target_number"] for row in rows if row["decision"] != "删除")
+    assert all(not row["target_number"] for row in rows if row["decision"] == "删除")
+    joined = "\n".join("|".join(row.values()) for row in rows)
+    assert "占位" not in joined
+    assert "假截图" not in joined

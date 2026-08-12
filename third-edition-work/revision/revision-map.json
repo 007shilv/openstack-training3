@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "op": "replace",
+    "start_heading": "第一章 云计算基本概念",
+    "end_heading": "第二章 云计算知名厂商及其产品",
+    "fragment": "fragments/ch01.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第二章 云计算知名厂商及其产品",
+    "end_heading": "第三章 原生OpenStack云平台",
+    "fragment": "fragments/ch02.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第三章 原生OpenStack云平台",
+    "end_heading": "第四章 原生OpenStack云平台的环境准备",
+    "fragment": "fragments/ch03.md"
+  }
+]
