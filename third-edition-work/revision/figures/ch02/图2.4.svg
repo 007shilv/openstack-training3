@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">国内私有云通用技术架构</text>
+  <g>
+    <rect x="90" y="90" width="1020" height="95" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+    <text x="250" y="150" text-anchor="middle" font-size="34" font-weight="700">服务入口</text>
+    <text x="500" y="150" text-anchor="middle" font-size="34">门户</text><text x="700" y="150" text-anchor="middle" font-size="34">命令接口</text><text x="920" y="150" text-anchor="middle" font-size="34">应用接口</text>
+    <rect x="90" y="200" width="1020" height="105" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+    <text x="250" y="265" text-anchor="middle" font-size="34" font-weight="700">运营治理</text>
+    <text x="480" y="265" text-anchor="middle" font-size="34">监控·日志</text><text x="725" y="265" text-anchor="middle" font-size="34">自动化·计量</text><text x="970" y="265" text-anchor="middle" font-size="34">安全·生命周期</text>
+    <rect x="90" y="320" width="1020" height="105" rx="16" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
+    <text x="250" y="385" text-anchor="middle" font-size="34" font-weight="700">平台控制</text>
+    <text x="470" y="385" text-anchor="middle" font-size="34">身份·目录</text><text x="700" y="385" text-anchor="middle" font-size="34">调度·配额</text><text x="930" y="385" text-anchor="middle" font-size="34">镜像·编排</text>
+    <rect x="90" y="440" width="1020" height="105" rx="16" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+    <text x="250" y="505" text-anchor="middle" font-size="34" font-weight="700">资源抽象</text>
+    <text x="480" y="505" text-anchor="middle" font-size="34">虚拟机·裸金属</text><text x="740" y="505" text-anchor="middle" font-size="34">容器</text><text x="960" y="505" text-anchor="middle" font-size="34">软件定义网存</text>
+    <rect x="90" y="560" width="1020" height="95" rx="16" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
+    <text x="250" y="620" text-anchor="middle" font-size="34" font-weight="700">物理资源</text>
+    <text x="500" y="620" text-anchor="middle" font-size="34">处理器·服务器</text><text x="760" y="620" text-anchor="middle" font-size="34">网络</text><text x="960" y="620" text-anchor="middle" font-size="34">存储</text>
+  </g>
+  <text x="600" y="693" text-anchor="middle" font-size="34" fill="#6b7280">不同产品实现各异，但都要完成资源、控制、服务和运营闭环</text>
+</svg>

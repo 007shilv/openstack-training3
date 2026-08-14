@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#2563eb"/></marker></defs>
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text x="600" y="54" text-anchor="middle" font-size="44" font-weight="700">计算模式演变与资源服务化</text>
+  <path d="M140 560 H1060" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#a)"/>
+  <g>
+    <rect x="55" y="130" width="250" height="360" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+    <text x="180" y="190" text-anchor="middle" font-size="34" font-weight="700">字符终端—主机</text>
+    <text x="180" y="270" text-anchor="middle" font-size="34">集中运算</text>
+    <text x="180" y="330" text-anchor="middle" font-size="34">分时共享</text>
+    <text x="180" y="390" text-anchor="middle" font-size="34">终端交互</text>
+  </g>
+  <g>
+    <rect x="335" y="130" width="250" height="360" rx="18" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
+    <text x="460" y="190" text-anchor="middle" font-size="34" font-weight="700">客户—服务器</text>
+    <text x="460" y="270" text-anchor="middle" font-size="34">网络分工</text>
+    <text x="460" y="330" text-anchor="middle" font-size="34">本地处理</text>
+    <text x="460" y="390" text-anchor="middle" font-size="34">共享服务</text>
+  </g>
+  <g>
+    <rect x="615" y="130" width="250" height="360" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+    <text x="740" y="190" text-anchor="middle" font-size="34" font-weight="700">集群与分布式</text>
+    <text x="740" y="270" text-anchor="middle" font-size="34">多节点协同</text>
+    <text x="740" y="330" text-anchor="middle" font-size="34">横向扩展</text>
+    <text x="740" y="390" text-anchor="middle" font-size="34">容忍局部故障</text>
+  </g>
+  <g>
+    <rect x="895" y="130" width="250" height="360" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+    <text x="1020" y="190" text-anchor="middle" font-size="34" font-weight="700">云计算</text>
+    <text x="1020" y="250" text-anchor="middle" font-size="34">虚拟化与池化</text>
+    <text x="1020" y="310" text-anchor="middle" font-size="34">自助与弹性</text>
+    <text x="1020" y="370" text-anchor="middle" font-size="34">隔离与计量</text>
+    <text x="1020" y="430" text-anchor="middle" font-size="34">按服务交付</text>
+  </g>
+  <text x="600" y="635" text-anchor="middle" font-size="34" fill="#2563eb">资源由“固定设备”逐步转变为“可申请、可调度、可回收的服务”</text>
+</svg>

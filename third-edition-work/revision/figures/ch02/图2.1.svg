@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#2563eb"/></marker></defs>
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">VMware Cloud Foundation私有云逻辑架构</text>
+  <rect x="100" y="90" width="1000" height="105" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+  <text x="260" y="154" text-anchor="middle" font-size="34" font-weight="700">工作负载</text>
+  <text x="520" y="154" text-anchor="middle" font-size="34">虚拟机应用</text>
+  <text x="830" y="154" text-anchor="middle" font-size="34">容器化应用</text>
+  <path d="M600 198 V226" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
+  <rect x="100" y="230" width="1000" height="120" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+  <text x="260" y="300" text-anchor="middle" font-size="34" font-weight="700">云平台管理</text>
+  <text x="510" y="280" text-anchor="middle" font-size="34">运营监控</text>
+  <text x="750" y="280" text-anchor="middle" font-size="34">服务自动化</text>
+  <text x="930" y="330" text-anchor="middle" font-size="34">生命周期管理</text>
+  <path d="M600 353 V381" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
+  <g>
+    <rect x="100" y="385" width="310" height="115" rx="16" fill="#dbeafe" stroke="#60a5fa" stroke-width="3"/>
+    <text x="255" y="435" text-anchor="middle" font-size="34" font-weight="700">vSphere</text>
+    <text x="255" y="480" text-anchor="middle" font-size="34">ESXi · vCenter</text>
+    <rect x="445" y="385" width="310" height="115" rx="16" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+    <text x="600" y="435" text-anchor="middle" font-size="34" font-weight="700">vSAN</text>
+    <text x="600" y="480" text-anchor="middle" font-size="34">软件定义存储</text>
+    <rect x="790" y="385" width="310" height="115" rx="16" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
+    <text x="945" y="435" text-anchor="middle" font-size="34" font-weight="700">NSX</text>
+    <text x="945" y="480" text-anchor="middle" font-size="34">软件定义网络</text>
+  </g>
+  <path d="M600 503 V531" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
+  <rect x="100" y="535" width="1000" height="105" rx="16" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
+  <text x="260" y="600" text-anchor="middle" font-size="34" font-weight="700">物理基础</text>
+  <text x="500" y="600" text-anchor="middle" font-size="34">服务器</text>
+  <text x="700" y="600" text-anchor="middle" font-size="34">网络</text>
+  <text x="900" y="600" text-anchor="middle" font-size="34">存储设备</text>
+  <text x="600" y="686" text-anchor="middle" font-size="34" fill="#6b7280">计算、存储、网络与运营自动化共同形成私有云服务基础</text>
+</svg>

@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import statistics
+import struct
 import subprocess
 import sys
 from xml.etree import ElementTree as ET
@@ -32,6 +33,7 @@ FIGURE_PLAN = WORK_ROOT / "revision" / "figures" / "figure-plan.csv"
 CHAPTERS_1_2_FIGURE_MANIFEST = (
     WORK_ROOT / "revision" / "figures" / "ch01-02-figure-manifest.json"
 )
+FIGURE_VALIDATOR = WORK_ROOT / "tools" / "validate_textbook_figures.py"
 TASK3_FRAGMENTS = {
     1: FRAGMENTS_DIR / "ch01.md",
     2: FRAGMENTS_DIR / "ch02.md",
@@ -87,6 +89,13 @@ def h2_sections(markdown: str) -> list[tuple[str, str]]:
         )
         for index, match in enumerate(matches)
     ]
+
+
+def png_dimensions(path: Path) -> tuple[int, int]:
+    payload = path.read_bytes()
+    assert payload[:8] == b"\x89PNG\r\n\x1a\n"
+    assert payload[12:16] == b"IHDR"
+    return struct.unpack(">II", payload[16:24])
 
 
 def find_source_docx() -> Path:
@@ -1194,6 +1203,54 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> Non
             "",
         )
         assert compact_length(following) >= 80
+
+
+def test_chapter_figures_exist_and_use_readable_song_font() -> None:
+    records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
+    svg_hashes: set[str] = set()
+    png_hashes: set[str] = set()
+
+    for record in records:
+        svg = WORK_ROOT / "revision" / record["svg"]
+        png = WORK_ROOT / "revision" / record["png"]
+        assert svg.is_file() and png.is_file()
+
+        svg_payload = svg.read_text(encoding="utf-8")
+        root = ET.fromstring(svg_payload)
+        assert root.tag.endswith("svg")
+        view_box = [float(value) for value in root.attrib["viewBox"].split()]
+        assert view_box[2] >= 960 and view_box[3] >= 560
+        assert "SimSun" in svg_payload and "宋体" in svg_payload
+
+        text_nodes = root.findall(".//{*}text")
+        assert text_nodes
+        assert all("font-size" in node.attrib for node in text_nodes)
+        rendered_width_pt = record["width_cm"] * 72 / 2.54
+        assert all(
+            float(node.attrib["font-size"]) * rendered_width_pt / view_box[2] + 0.01
+            >= record["minimum_font_pt"]
+            for node in text_nodes
+        )
+
+        width, height = png_dimensions(png)
+        assert width >= 2400 and height >= 1400
+        svg_hashes.add(hashlib.sha256(svg.read_bytes()).hexdigest())
+        png_hashes.add(hashlib.sha256(png.read_bytes()).hexdigest())
+
+    assert len(svg_hashes) == len(records)
+    assert len(png_hashes) == len(records)
+
+
+def test_chapter_figures_validator_reports_all_assets() -> None:
+    result = subprocess.run(
+        [sys.executable, str(FIGURE_VALIDATOR), str(CHAPTERS_1_2_FIGURE_MANIFEST)],
+        cwd=WORK_ROOT,
+        check=False,
+        capture_output=True,
+    )
+    output = (result.stdout + result.stderr).decode("utf-8", errors="replace")
+    assert result.returncode == 0, output
+    assert "PASS figures=12 svg=12 png=12" in output
 
 
 def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None:

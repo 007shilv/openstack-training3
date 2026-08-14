@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">国产信创云生态架构</text>
+  <g>
+    <rect x="185" y="90" width="830" height="80" rx="14" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
+    <text x="600" y="142" text-anchor="middle" font-size="34" font-weight="700">行业应用·教学科研·政企业务</text>
+    <rect x="185" y="185" width="830" height="80" rx="14" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+    <text x="600" y="237" text-anchor="middle" font-size="34">国产数据库·中间件·开发平台</text>
+    <rect x="185" y="280" width="830" height="80" rx="14" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+    <text x="600" y="332" text-anchor="middle" font-size="34" font-weight="700">OpenStack等开放云平台</text>
+    <rect x="185" y="375" width="830" height="80" rx="14" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
+    <text x="600" y="427" text-anchor="middle" font-size="34" font-weight="700">openEuler等国产开源操作系统</text>
+    <rect x="185" y="470" width="830" height="80" rx="14" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+    <text x="600" y="522" text-anchor="middle" font-size="34">驱动·固件·虚拟化扩展</text>
+    <rect x="185" y="565" width="830" height="80" rx="14" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
+    <text x="600" y="617" text-anchor="middle" font-size="34" font-weight="700">国产处理器·整机·网络·存储</text>
+  </g>
+  <rect x="25" y="175" width="125" height="390" rx="16" fill="#e0f2fe" stroke="#38bdf8" stroke-width="3"/>
+  <text x="88" y="280" text-anchor="middle" font-size="34">兼</text><text x="88" y="330" text-anchor="middle" font-size="34">容</text><text x="88" y="380" text-anchor="middle" font-size="34">核</text><text x="88" y="430" text-anchor="middle" font-size="34">对</text>
+  <rect x="1050" y="175" width="125" height="390" rx="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="3"/>
+  <text x="1112" y="250" text-anchor="middle" font-size="34">运</text><text x="1112" y="300" text-anchor="middle" font-size="34">维</text><text x="1112" y="350" text-anchor="middle" font-size="34">安</text><text x="1112" y="400" text-anchor="middle" font-size="34">全</text><text x="1112" y="450" text-anchor="middle" font-size="34">供</text><text x="1112" y="500" text-anchor="middle" font-size="34">应</text><text x="1112" y="550" text-anchor="middle" font-size="34">链</text>
+  <text x="600" y="690" text-anchor="middle" font-size="34" fill="#6b7280">信创化关注整栈协同、明确版本与持续演进，不是品牌名称叠加</text>
+</svg>
