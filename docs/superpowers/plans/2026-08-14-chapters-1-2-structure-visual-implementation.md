@@ -123,7 +123,7 @@ git commit -m "test: define chapters 1 and 2 visual contracts"
 - Consumes: the five Chapter 1 manifest records and `third-edition-work/research/part1-official-research-2026-07.md`.
 - Produces: a 14,000–18,000-character Chapter 1 fragment with five figure markers and complete forward references/explanations.
 
-- [ ] **Step 1: Lock the exact internal outline in a failing test**
+- [x] **Step 1: Lock the exact internal outline in a failing test**
 
 Require these first-level internal headings, with Arabic-number subheads beneath the detailed topics:
 
@@ -134,13 +134,13 @@ Require these first-level internal headings, with Arabic-number subheads beneath
 1.4 一．产业规模与结构；二．云原生与智算云；三．边缘云与分布式云；四．成本、绿色与可信治理；五．国产云生态
 ```
 
-- [ ] **Step 2: Run the Chapter 1 outline test and confirm RED**
+- [x] **Step 2: Run the Chapter 1 outline test and confirm RED**
 
 Run: `python -m pytest third-edition-work/tests/test_second_base_revision.py -k "chapter_1_layered_outline" -q`
 
 Expected: FAIL because the existing text has no internal numbered hierarchy or figure markers.
 
-- [ ] **Step 3: Rewrite `ch01.md`**
+- [x] **Step 3: Rewrite `ch01.md`**
 
 Use continuous textbook prose around the approved hierarchy. Expand the definition, five characteristics, cloud environment, responsibility boundary, service/deployment models, and 2026 technology/governance trends. Keep historical computing modes and volatile product examples concise. Insert all five markers only after forward references, for example:
 
@@ -152,17 +152,17 @@ Use continuous textbook prose around the approved hierarchy. Expand the definiti
 图1.1从左到右给出四个阶段。字符终端—主机模式强调集中共享……
 ```
 
-- [ ] **Step 4: Verify CAICT facts and prohibited claims**
+- [x] **Step 4: Verify CAICT facts and prohibited claims**
 
 Require the verified values `8288亿元`, `34.4%`, `6216亿元`, `2072亿元`, and `4201亿元`; reject `2025年实际达到10857亿元`, unsupported rankings, and market-share claims.
 
-- [ ] **Step 5: Run Chapter 1 focused tests and confirm GREEN**
+- [x] **Step 5: Run Chapter 1 focused tests and confirm GREEN**
 
 Run: `python -m pytest third-edition-work/tests/test_second_base_revision.py -k "chapter_1 or chapters_1_2" -q`
 
 Expected: all Chapter 1 structure, length, fact-boundary, and cross-reference tests pass; Chapter 2 asset tests may remain RED.
 
-- [ ] **Step 6: Commit Chapter 1**
+- [x] **Step 6: Commit Chapter 1**
 
 ```powershell
 git add third-edition-work/revision/fragments/ch01.md third-edition-work/tests/test_second_base_revision.py

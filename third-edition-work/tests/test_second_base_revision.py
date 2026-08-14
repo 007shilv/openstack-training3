@@ -1044,7 +1044,13 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         text = task3_fragment(chapter)
         headings = [line.strip() for line in text.splitlines() if line.startswith("#")]
         paragraphs = prose_paragraphs(text)
-        lengths = [compact_length(paragraph) for paragraph in paragraphs]
+        narrative_paragraphs = [
+            paragraph
+            for paragraph in paragraphs
+            if not re.match(r"^(?:[一二三四五六七八九十]+|\d+)．", paragraph)
+            and not paragraph.startswith("{{FIGURE:")
+        ]
+        lengths = [compact_length(paragraph) for paragraph in narrative_paragraphs]
 
         assert headings == expected
         assert not any(line.startswith("###") for line in text.splitlines())
@@ -1054,6 +1060,44 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         assert max(lengths) <= 240
         assert statistics.median(lengths) >= 80
         assert sum(length < 45 for length in lengths) <= max(1, len(lengths) // 8)
+
+
+def test_chapter_1_layered_outline_matches_the_approved_teaching_sequence() -> None:
+    expected = {
+        "1.1 计算模式的演变": [
+            "一．字符终端—主机模式",
+            "二．客户机—服务器模式",
+            "三．集群与分布式计算",
+            "四．虚拟化、资源池化与云计算",
+        ],
+        "1.2 云计算的定义": [
+            "一．云计算定义",
+            "二．五个基本特征",
+            "三．云计算环境的组成",
+            "四．云计算的责任边界",
+        ],
+        "1.3 云计算的层次以及分类": [
+            "一．云服务层次",
+            "二．云部署模型",
+            "三．云—边—端协同",
+        ],
+        "1.4 国内外云计算产业现状": [
+            "一．产业规模与结构",
+            "二．云原生与智算云",
+            "三．边缘云与分布式云",
+            "四．成本、绿色与可信治理",
+            "五．国产云生态",
+        ],
+    }
+    chapter = task3_fragment(1)
+
+    for heading, body in h2_sections(chapter):
+        assert re.findall(r"(?m)^[一二三四五六七八九十]+．[^\n]+$", body) == expected[heading]
+        assert re.search(r"(?m)^1．[^\n]+$", body)
+        assert re.search(r"(?m)^2．[^\n]+$", body)
+
+    for marker in ("图1.1", "图1.2", "图1.3", "图1.4", "图1.5"):
+        assert chapter.count(f"{{{{FIGURE:{marker}}}}}") == 1
 
 
 def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
@@ -1193,11 +1237,24 @@ def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None
         assert positions == sorted(positions)
     for topic in ("云原生", "边缘云", "AI云", "FinOps", "绿色云", "主权云", "可信云"):
         assert topic in text
-    for actual in ("8,288亿元", "34.4%", "6,216亿元", "36.6%", "2,072亿元", "29.3%"):
+    for actual in (
+        "8,288亿元",
+        "34.4%",
+        "6,216亿元",
+        "36.6%",
+        "2,072亿元",
+        "29.3%",
+        "4,201亿元",
+        "682亿元",
+        "23.1%",
+        "突破1,000亿元",
+    ):
         assert actual in text
     assert "2024年" in text
     assert "2025E" not in text
     assert "10,857" not in text
+    assert "2025年实际达到10857亿元" not in text
+    assert "市场份额第一" not in text
 
 
 def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> None:
