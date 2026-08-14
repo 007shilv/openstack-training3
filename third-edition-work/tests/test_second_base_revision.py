@@ -2012,8 +2012,8 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
         for chapter in (1, 2)
     }
     assert chapter_targets == {
-        1: [f"图1.{number}" for number in range(1, 6)],
-        2: [f"图2.{number}" for number in range(1, 8)],
+        1: [f"图1.{number}" for number in range(1, 8)],
+        2: [f"图2.{number}" for number in range(1, 15)],
     }
 
     chapter4 = [row for row in rows if row["chapter"] == "4"]

@@ -1,0 +1,94 @@
+[
+  {
+    "number": "图1.2",
+    "raw": "figures/ch01/raw/图1.2-original.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Datacenter_Server_Racks_(22370909788).jpg",
+    "source_image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Datacenter%20Server%20Racks%20(22370909788).jpg",
+    "rights_owner": "Carl Lender",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "4c11e982a08072d38a7058b03c11953a1e46a2b5d27afb9168f74b86c24d7805"
+  },
+  {
+    "number": "图1.4",
+    "raw": "figures/ch01/raw/图1.4-original.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Technician_with_laptop_working_on_server_rack_at_NERSC.jpg",
+    "source_image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Technician%20with%20laptop%20working%20on%20server%20rack%20at%20NERSC.jpg",
+    "rights_owner": "Derrick Coetzee",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "a709bdaf5c9e76184f429cc0d3723744d1341837148b1ae5f86e5a36e709c2c7"
+  },
+  {
+    "number": "图2.2",
+    "raw": "figures/ch02/raw/图2.2-original.png",
+    "source_page": "https://blogs.vmware.com/cloud-foundation/2025/08/07/holistic-views-for-vsan-clusters-using-vcf-operations/",
+    "source_image": "https://blogs.vmware.com/cloud-foundation/wp-content/uploads/sites/75/2025/08/HV-Figure-SOView.png",
+    "rights_owner": "VMware by Broadcom",
+    "license": "厂商官方技术博客产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "e2e8f8f240f9368620f8a351bc7ffce1a2d9c7b05c0f919a03a300bdf4805029"
+  },
+  {
+    "number": "图2.4",
+    "raw": "figures/ch02/raw/图2.4-original.png",
+    "source_page": "https://docs.citrix.com/en-us/citrix-daas/overview.html",
+    "source_image": "https://docs.citrix.com/en-us/citrix-daas/media/new-stud-dashboard-breakdown.png",
+    "rights_owner": "Cloud Software Group, Inc.（Citrix）",
+    "license": "厂商官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "43c7cc4934845f7f7053979ca43905a0a98a599a0dfd0ae9786716ee4c2e4a70"
+  },
+  {
+    "number": "图2.6",
+    "raw": "figures/ch02/raw/图2.6-original.png",
+    "source_page": "https://learn.microsoft.com/en-us/windows-server/manage/windows-admin-center/use/get-started",
+    "source_image": "https://learn.microsoft.com/en-us/windows-server/manage/windows-admin-center/media/launch/use-get-started-5.png",
+    "rights_owner": "Microsoft Corporation",
+    "license": "Microsoft Learn官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "61008307aa0cf4b7629816ba66fa489c955104de65ca8c4233a2590140b0d422"
+  },
+  {
+    "number": "图2.8",
+    "raw": "figures/ch02/raw/图2.8-original.png",
+    "source_page": "https://support.huawei.com/enterprise/en/doc/EDOC1100268259/e1c64ed4/introduction-to-the-manageone-maintenance-portal-webui",
+    "source_image": "https://download.huawei.com/mdl/image/download?uuid=6acc497e53e942f4ac6f0b8ff311b619&_t=ICS20241204171339",
+    "rights_owner": "Huawei Technologies Co., Ltd.",
+    "license": "厂商官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "89675ae0d26b6bc57b04921e3a0b7f711727e0efa47f41922a733a5876ed30c1"
+  },
+  {
+    "number": "图2.9",
+    "raw": "figures/ch02/raw/图2.9-original.png",
+    "source_page": "https://docs.zstack.io/en/zcf/zstack-cloud/user-guide?section=ZStack_User_Guide_0007&version=5.5.30",
+    "source_image": "https://docs.zstack.io/api/doc-asset?path=_content%2Fimported%2Fen-us%2Fzcf__zstack-cloud__5.5.30__user-guide%2Fhtml5%2Fimage%2FZStack_User_Guide_0007_1_1.png",
+    "rights_owner": "ZStack（上海云轴信息科技有限公司）",
+    "license": "厂商官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "4e76c30eb30a90838e6ad01bf2e2e2f2f47d61b665af79075fc4019ad806ac7d"
+  },
+  {
+    "number": "图2.12",
+    "raw": "figures/ch02/raw/图2.12-original.png",
+    "source_page": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances-history.html",
+    "source_image": "https://docs.aws.amazon.com/images/AWSEC2/latest/UserGuide/images/spot-instance-pricing-history.png",
+    "rights_owner": "Amazon Web Services, Inc.",
+    "license": "厂商官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "aa43023f28fb86cc8a854ba6a4130b0746c15b7ac8d627d35234eefdd111a683"
+  },
+  {
+    "number": "图2.13",
+    "raw": "figures/ch02/raw/图2.13-original.png",
+    "source_page": "https://www.alibabacloud.com/help/en/ecs/user-guide/identify-and-troubleshoot-instance-issues",
+    "source_image": "https://help-static-aliyun-doc.aliyuncs.com/assets/img/en-US/8529643561/p295022.png",
+    "rights_owner": "Alibaba Cloud",
+    "license": "厂商官方文档产品截图",
+    "accessed_on": "2026-08-14",
+    "raw_sha256": "1f0931edaae410658686b624378be74c45fe2badd8646621b53e838c5dda8b1c"
+  }
+]

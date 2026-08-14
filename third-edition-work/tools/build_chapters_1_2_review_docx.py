@@ -143,8 +143,8 @@ def build_review_docx(
     records = json.loads(manifest_path.read_text(encoding="utf-8"))
     revision_root = manifest_path.parent.parent
     expected_numbers = [
-        *(f"图1.{index}" for index in range(1, 6)),
-        *(f"图2.{index}" for index in range(1, 8)),
+        *(f"图1.{index}" for index in range(1, 8)),
+        *(f"图2.{index}" for index in range(1, 15)),
     ]
     actual_numbers = [record["number"] for record in records]
     if actual_numbers != expected_numbers:

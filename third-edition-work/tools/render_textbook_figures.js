@@ -12,6 +12,10 @@ async function main() {
 
   try {
     for (const record of records) {
+      if (record.kind !== 'diagram') {
+        process.stdout.write(`kept ${record.number} ${record.kind}\n`);
+        continue;
+      }
       const svgPath = path.join(revisionRoot, record.svg);
       const pngPath = path.join(revisionRoot, record.png);
       const svg = fs.readFileSync(svgPath, 'utf8');
