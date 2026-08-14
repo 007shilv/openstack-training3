@@ -36,6 +36,18 @@
 | 阿里云 / 飞天企业版 Apsara Stack | Apsara Stack 面向企业本地部署的云平台场景；可用于说明公有云技术向专有/本地环境延伸。 | [Apsara Stack](https://www.alibabacloud.com/product/apsarastack)；Alibaba Cloud；页面无单一发布日期；访问 2026-08-12；中 |
 | 华为云 / 华为云 Stack | Huawei Cloud Stack 面向混合云部署与统一管理场景；可用于说明政企云的部署路线。 | [Huawei Cloud Stack](https://www.huaweicloud.com/intl/en-us/product/hcs.html)；Huawei Cloud；页面无单一发布日期；访问 2026-08-12；中 |
 
+### 2.2.1 第二章产品架构补充边界（冻结至 2026-07-31）
+
+| 产品路线 | 可写的稳定架构边界 | 不得扩写的动态结论 | 依据（官方直接 URL；访问日；置信度） |
+|---|---|---|---|
+| VMware Cloud Foundation | 以 vSphere/ESXi 组织计算，以 vSAN 组织软件定义存储，以 NSX 组织软件定义网络，并把运营、自动化与生命周期管理纳入一体化私有云平台。 | 不写动态许可证、套餐、性能数字或“最佳私有云”结论；不把虚拟化本身等同完整云服务。 | [VMware Cloud Foundation](https://www.vmware.com/products/cloud-infrastructure/vmware-cloud-foundation)；VMware/Broadcom 官方产品页；访问 2026-08-14；高。 |
+| Citrix DaaS | Citrix 管理控制平面；客户资源位置中部署 Cloud Connector 与 VDA；用户通过 Citrix Workspace 或 Gateway 访问应用和桌面，会话体验由 HDX 技术承载。 | 不写并发量、时延、版本矩阵和计费；不把 DaaS 写成通用 IaaS，也不写未经核定的安全效果。 | [Citrix DaaS overview](https://docs.citrix.com/en-us/citrix-daas/overview)；[Reference architectures](https://docs.citrix.com/en-us/tech-zone/design/reference-architectures/virtual-apps-and-desktops-service)；Citrix 官方文档；访问 2026-08-14；高。 |
+| Hyper-V / Azure Local / Azure Arc | Hyper-V 由虚拟化程序、父分区、子分区与 VMBus 组成；Azure Local 建立在 Hyper-V、故障转移群集和 Storage Spaces Direct 等 Windows Server 技术之上，并通过 Azure Arc 接入 Azure 管理与治理。 | 不写节点上限、硬件清单、订阅价格或发布后新增能力；不把 Azure Arc 写成替代本地资源层。 | [Hyper-V architecture](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/architecture)；[Azure Local architecture](https://learn.microsoft.com/en-us/azure/azure-local/concepts/architecture)；Microsoft Learn；访问 2026-08-14；高。 |
+| 国内私有云路线 | 可用华为云Stack、Apsara Stack、EasyStack、ZStack说明一体化政企云、企业专有云、OpenStack企业云和轻量化/超融合云平台等不同路线；比较到稳定技术定位为止。 | 不作排名、份额、性能和国产化比例结论；不将厂商“兼容清单”直接写成已验证的整栈能力。 | 各厂商官方产品页；截至冻结日定点核对；访问 2026-08-14；中。 |
+| 国内外公有云 | 可用 AWS、Microsoft Azure、Google Cloud、阿里云、华为云和腾讯云说明区域、可用区、资源池、服务目录、身份权限、计量和运营治理等稳定共性。 | 不写区域/可用区实时数量、详细价格、产品总数、排名或市场份额；具体可用性应在使用时查官方资料。 | 各公有云官方“Regions and Availability Zones/地域和可用区”文档；访问 2026-08-14；高。 |
+
+**第二章写作规则：**厂商只作为技术路线案例，先讲架构层次和责任边界，再讲代表产品；正文不复刻控制台，不罗列全部服务，不根据产品页面推导普遍效果。图2.1—图2.7全部采用中立重绘，图中字体不小于9磅，正文在图前引用、图后解释元素与关系。
+
 ### 2.3 OpenStack 治理、项目与发布
 
 | 主题 | 可写 Claim | 依据（直接 URL；标题；发布日期/页码；访问日；置信度） |

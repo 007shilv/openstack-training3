@@ -182,7 +182,7 @@ git commit -m "docs: deepen cloud computing fundamentals"
 - Consumes: seven Chapter 2 manifest records and official VMware, Citrix, Microsoft, openEuler/OpenStack, domestic private-cloud, and public-cloud product boundaries.
 - Produces: an 18,000–23,000-character Chapter 2 fragment with exactly five H2 sections and seven figure markers.
 
-- [ ] **Step 1: Add RED tests for the restored five-section outline**
+- [x] **Step 1: Add RED tests for the restored five-section outline**
 
 Require the exact H2 headings and these concepts:
 
@@ -198,13 +198,13 @@ required = {
 
 Reject vendor rankings, unverified market shares, detailed pricing, transient region counts, and long product catalogs.
 
-- [ ] **Step 2: Run the Chapter 2 tests and confirm RED**
+- [x] **Step 2: Run the Chapter 2 tests and confirm RED**
 
 Run: `python -m pytest third-edition-work/tests/test_second_base_revision.py -k "chapter_2_restored" -q`
 
 Expected: FAIL because the current Chapter 2 has four different sections and insufficient depth.
 
-- [ ] **Step 3: Update the official research register**
+- [x] **Step 3: Update the official research register**
 
 Record the official July-2026 boundaries used in the chapter, including:
 
@@ -213,17 +213,17 @@ Record the official July-2026 boundaries used in the chapter, including:
 - Microsoft: Hyper-V and Failover Clustering/Storage Spaces Direct under Azure Local, with Azure Arc management.
 - Domestic and public-cloud products: only official technical positioning and stable architectural roles.
 
-- [ ] **Step 4: Rewrite `ch02.md` to the five-section structure**
+- [x] **Step 4: Rewrite `ch02.md` to the five-section structure**
 
 Each section must contain `一．` and `1．` levels. Explain the architecture before naming representative products, distinguish virtualization from cloud service delivery, and connect the domestic private-cloud section to the later openEuler/OpenStack lab without turning it into installation guidance.
 
-- [ ] **Step 5: Run Chapter 2 focused tests and confirm GREEN**
+- [x] **Step 5: Run Chapter 2 focused tests and confirm GREEN**
 
 Run: `python -m pytest third-edition-work/tests/test_second_base_revision.py -k "chapter_2 or chapters_1_2" -q`
 
 Expected: all Chapter 2 structure, length, concept-boundary, and cross-reference tests pass; missing asset tests may remain RED.
 
-- [ ] **Step 6: Commit Chapter 2**
+- [x] **Step 6: Commit Chapter 2**
 
 ```powershell
 git add third-edition-work/revision/fragments/ch02.md third-edition-work/research/part1-official-research-2026-07.md third-edition-work/tests/test_second_base_revision.py

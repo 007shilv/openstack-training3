@@ -1274,6 +1274,71 @@ def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> Non
         assert stale_walkthrough not in text
 
 
+def test_chapter_2_restored_five_section_outline_and_product_boundaries() -> None:
+    expected_internal = {
+        "2.1 VMware的云计算技术及其相关产品": [
+            "一．VMware虚拟化基础",
+            "二．软件定义数据中心",
+            "三．VMware Cloud Foundation一体化平台",
+            "四．适用场景与技术边界",
+        ],
+        "2.2 Citrix的云计算技术": [
+            "一．应用与桌面虚拟化基础",
+            "二．Citrix DaaS核心架构",
+            "三．用户访问与会话交付",
+            "四．混合资源与技术边界",
+        ],
+        "2.3 微软私有云虚拟化技术Hyper-V": [
+            "一．Hyper-V虚拟化架构",
+            "二．虚拟网络与虚拟存储",
+            "三．群集与私有云管理",
+            "四．Azure Local与Azure Arc混合管理",
+        ],
+        "2.4 国内私有云相关产品": [
+            "一．国内私有云的通用架构",
+            "二．代表性私有云产品路线",
+            "三．国产信创云生态",
+            "四．开放平台与教学衔接",
+        ],
+        "2.5 知名公有云平台简介": [
+            "一．公有云的稳定能力层次",
+            "二．国际知名公有云平台",
+            "三．国内知名公有云平台",
+            "四．云产品比较与选择",
+        ],
+    }
+    chapter = task3_fragment(2)
+
+    assert [heading for heading, _ in h2_sections(chapter)] == list(expected_internal)
+    for heading, body in h2_sections(chapter):
+        assert re.findall(r"(?m)^[一二三四五六七八九十]+．[^\n]+$", body) == expected_internal[heading]
+
+    required_by_section = {
+        "2.1": ("ESXi", "vCenter", "vSphere", "vSAN", "NSX", "VMware Cloud Foundation"),
+        "2.2": ("Citrix DaaS", "HDX", "Workspace", "Gateway", "Cloud Connector", "VDA", "资源位置"),
+        "2.3": ("Hyper-V", "父分区", "子分区", "VMBus", "虚拟交换机", "故障转移群集", "Storage Spaces Direct", "Azure Local", "Azure Arc"),
+        "2.4": ("私有云", "openEuler", "OpenStack", "华为云Stack", "Apsara Stack", "EasyStack", "ZStack", "信创"),
+        "2.5": ("AWS", "Microsoft Azure", "Google Cloud", "阿里云", "华为云", "腾讯云", "区域", "可用区", "计量"),
+    }
+    for heading, body in h2_sections(chapter):
+        prefix = heading.split()[0]
+        for concept in required_by_section[prefix]:
+            assert concept in body
+
+    for marker in ("图2.1", "图2.2", "图2.3", "图2.4", "图2.5", "图2.6", "图2.7"):
+        assert chapter.count(f"{{{{FIGURE:{marker}}}}}") == 1
+
+    prohibited = (
+        "市场份额第一",
+        "国内排名第一",
+        "全球排名第一",
+        "每小时价格",
+        "当前拥有100个区域",
+        "产品功能大全",
+    )
+    assert not any(claim in chapter for claim in prohibited)
+
+
 def test_chapter_3_states_governance_architecture_and_release_boundaries() -> None:
     text = task3_fragment(3)
 
