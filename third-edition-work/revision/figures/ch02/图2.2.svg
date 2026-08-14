@@ -6,13 +6,13 @@
   <rect x="380" y="90" width="440" height="105" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
   <text x="600" y="135" text-anchor="middle" font-size="34" font-weight="700">Citrix DaaS控制平面</text>
   <text x="600" y="178" text-anchor="middle" font-size="34">目录·策略·连接协调</text>
-  <rect x="50" y="260" width="250" height="120" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
-  <text x="175" y="310" text-anchor="middle" font-size="34" font-weight="700">用户终端</text>
-  <text x="175" y="355" text-anchor="middle" font-size="34">Citrix Workspace</text>
+  <rect x="50" y="260" width="310" height="120" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+  <text x="205" y="310" text-anchor="middle" font-size="34" font-weight="700">用户终端</text>
+  <text x="205" y="355" text-anchor="middle" font-size="34">Citrix Workspace</text>
   <rect x="405" y="260" width="390" height="120" rx="18" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
   <text x="600" y="310" text-anchor="middle" font-size="34" font-weight="700">访问入口</text>
   <text x="600" y="355" text-anchor="middle" font-size="34">Gateway · 身份策略</text>
-  <path d="M300 320 H400" stroke="#16a34a" stroke-width="4" marker-end="url(#b)"/>
+  <path d="M360 320 H400" stroke="#16a34a" stroke-width="4" marker-end="url(#b)"/>
   <path d="M600 258 V200" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <g>
     <rect x="70" y="455" width="490" height="165" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>

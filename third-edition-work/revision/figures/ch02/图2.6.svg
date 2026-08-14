@@ -13,7 +13,7 @@
   <path d="M600 343 V371" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <rect x="105" y="375" width="990" height="105" rx="16" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
   <text x="260" y="440" text-anchor="middle" font-size="34" font-weight="700">资源服务</text>
-  <text x="460" y="440" text-anchor="middle" font-size="34">计算·网络</text><text x="690" y="440" text-anchor="middle" font-size="34">块与对象存储</text><text x="920" y="440" text-anchor="middle" font-size="34">数据库·应用平台</text>
+  <text x="440" y="440" text-anchor="middle" font-size="34">计算·网络</text><text x="665" y="440" text-anchor="middle" font-size="34">块与对象存储</text><text x="925" y="440" text-anchor="middle" font-size="34">数据库·应用平台</text>
   <path d="M600 483 V511" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <rect x="105" y="515" width="990" height="115" rx="16" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
   <text x="260" y="580" text-anchor="middle" font-size="34" font-weight="700">物理故障域</text>
