@@ -33,6 +33,7 @@ FIGURE_PLAN = WORK_ROOT / "revision" / "figures" / "figure-plan.csv"
 CHAPTERS_1_2_FIGURE_MANIFEST = (
     WORK_ROOT / "revision" / "figures" / "ch01-02-figure-manifest.json"
 )
+REAL_IMAGE_SOURCES = WORK_ROOT / "revision" / "figures" / "real-image-sources.json"
 FIGURE_VALIDATOR = WORK_ROOT / "tools" / "validate_textbook_figures.py"
 TASK3_FRAGMENTS = {
     1: FRAGMENTS_DIR / "ch01.md",
@@ -1105,7 +1106,7 @@ def test_chapter_1_layered_outline_matches_the_approved_teaching_sequence() -> N
         assert re.search(r"(?m)^1．[^\n]+$", body)
         assert re.search(r"(?m)^2．[^\n]+$", body)
 
-    for marker in ("图1.1", "图1.2", "图1.3", "图1.4", "图1.5"):
+    for marker in ("图1.1", "图1.2", "图1.3", "图1.4", "图1.5", "图1.6", "图1.7"):
         assert chapter.count(f"{{{{FIGURE:{marker}}}}}") == 1
 
 
@@ -1154,26 +1155,16 @@ def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
 def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> None:
     records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
     expected_numbers = [
-        "图1.1",
-        "图1.2",
-        "图1.3",
-        "图1.4",
-        "图1.5",
-        "图2.1",
-        "图2.2",
-        "图2.3",
-        "图2.4",
-        "图2.5",
-        "图2.6",
-        "图2.7",
+        *(f"图1.{index}" for index in range(1, 8)),
+        *(f"图2.{index}" for index in range(1, 15)),
     ]
     assert [record["number"] for record in records] == expected_numbers
-    assert len({record["number"] for record in records}) == 12
+    assert len({record["number"] for record in records}) == 21
 
-    required = {
+    common = {
         "number",
         "title",
-        "svg",
+        "kind",
         "png",
         "anchor",
         "minimum_font_pt",
@@ -1181,12 +1172,28 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> Non
         "width_cm",
     }
     for record in records:
-        assert set(record) == required
+        assert common <= set(record)
+        assert record["kind"] in {"diagram", "photo", "screenshot"}
         assert record["minimum_font_pt"] >= 9.0
         assert 11.5 <= record["width_cm"] <= 14.0
-        assert record["svg"].endswith(f"/{record['number']}.svg")
         assert record["png"].endswith(f"/{record['number']}.png")
         assert record["source_note"].strip()
+        if record["kind"] == "diagram":
+            assert record["svg"].endswith(f"/{record['number']}.svg")
+        else:
+            assert {
+                "raw",
+                "source_page",
+                "source_image",
+                "rights_owner",
+                "accessed_on",
+                "crop_note",
+            } <= set(record)
+            assert record["source_page"].startswith("https://")
+            assert record["source_image"].startswith("https://")
+            assert record["rights_owner"].strip()
+            assert record["accessed_on"] == "2026-08-14"
+            assert record["raw"].startswith("figures/")
 
         chapter = task3_fragment(int(record["number"][1]))
         marker = f"{{{{FIGURE:{record['number']}}}}}"
@@ -1211,33 +1218,46 @@ def test_chapter_figures_exist_and_use_readable_song_font() -> None:
     png_hashes: set[str] = set()
 
     for record in records:
-        svg = WORK_ROOT / "revision" / record["svg"]
         png = WORK_ROOT / "revision" / record["png"]
-        assert svg.is_file() and png.is_file()
+        assert png.is_file()
 
-        svg_payload = svg.read_text(encoding="utf-8")
-        root = ET.fromstring(svg_payload)
-        assert root.tag.endswith("svg")
-        view_box = [float(value) for value in root.attrib["viewBox"].split()]
-        assert view_box[2] >= 960 and view_box[3] >= 560
-        assert "SimSun" in svg_payload and "宋体" in svg_payload
+        if record["kind"] == "diagram":
+            svg = WORK_ROOT / "revision" / record["svg"]
+            assert svg.is_file()
+            svg_payload = svg.read_text(encoding="utf-8")
+            root = ET.fromstring(svg_payload)
+            assert root.tag.endswith("svg")
+            view_box = [float(value) for value in root.attrib["viewBox"].split()]
+            assert view_box[2] >= 960 and view_box[3] >= 560
+            assert "SimSun" in svg_payload and "宋体" in svg_payload
 
-        text_nodes = root.findall(".//{*}text")
-        assert text_nodes
-        assert all("font-size" in node.attrib for node in text_nodes)
-        rendered_width_pt = record["width_cm"] * 72 / 2.54
-        assert all(
-            float(node.attrib["font-size"]) * rendered_width_pt / view_box[2] + 0.01
-            >= record["minimum_font_pt"]
-            for node in text_nodes
-        )
+            visible_text = "".join(node.text or "" for node in root.findall(".//{*}text"))
+            assert not any(
+                phrase in visible_text
+                for phrase in ("仅供参考", "不作为结论", "图中不", "使用时核对")
+            )
+            text_nodes = root.findall(".//{*}text")
+            assert text_nodes
+            assert all("font-size" in node.attrib for node in text_nodes)
+            rendered_width_pt = record["width_cm"] * 72 / 2.54
+            assert all(
+                float(node.attrib["font-size"]) * rendered_width_pt / view_box[2] + 0.01
+                >= record["minimum_font_pt"]
+                for node in text_nodes
+            )
+            svg_hashes.add(hashlib.sha256(svg.read_bytes()).hexdigest())
+        else:
+            raw = WORK_ROOT / "revision" / record["raw"]
+            assert raw.is_file()
 
         width, height = png_dimensions(png)
-        assert width >= 2400 and height >= 1400
-        svg_hashes.add(hashlib.sha256(svg.read_bytes()).hexdigest())
+        if record["kind"] == "diagram":
+            assert width >= 2400 and height >= 1400
+        else:
+            assert width >= 1600 and height >= 900
         png_hashes.add(hashlib.sha256(png.read_bytes()).hexdigest())
 
-    assert len(svg_hashes) == len(records)
+    assert len(svg_hashes) == 12
     assert len(png_hashes) == len(records)
 
 
@@ -1250,7 +1270,58 @@ def test_chapter_figures_validator_reports_all_assets() -> None:
     )
     output = (result.stdout + result.stderr).decode("utf-8", errors="replace")
     assert result.returncode == 0, output
-    assert "PASS figures=12 svg=12 png=12" in output
+    assert "PASS figures=21 svg=12 png=21 raw=9" in output
+
+
+def test_chapters_1_2_are_narrative_only_without_editorial_rules() -> None:
+    forbidden = (
+        "第二版教材",
+        "教材不能",
+        "教材需要",
+        "教材不",
+        "教材只",
+        "本章保留",
+        "本章采用",
+        "学习本章时应注意详略关系",
+        "图中只呈现",
+        "使用时核对",
+        "不使用实时",
+        "实际项目必须在使用时核对",
+        "动态数量",
+        "短期宣传结论",
+    )
+    for chapter in (task3_fragment(1), task3_fragment(2)):
+        assert not [phrase for phrase in forbidden if phrase in chapter]
+
+
+def test_chapters_1_2_real_image_source_register_is_complete() -> None:
+    records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
+    actual = [record for record in records if record.get("kind") in {"photo", "screenshot"}]
+    assert [record["number"] for record in actual if record["kind"] == "photo"] == [
+        "图1.2",
+        "图1.4",
+    ]
+    assert [record["number"] for record in actual if record["kind"] == "screenshot"] == [
+        "图2.2",
+        "图2.4",
+        "图2.6",
+        "图2.8",
+        "图2.9",
+        "图2.12",
+        "图2.13",
+    ]
+
+    sources = json.loads(REAL_IMAGE_SOURCES.read_text(encoding="utf-8"))
+    assert len(sources) == 9
+    assert {source["number"] for source in sources} == {record["number"] for record in actual}
+    for source in sources:
+        assert source["source_page"].startswith("https://")
+        assert source["source_image"].startswith("https://")
+        assert source["rights_owner"].strip()
+        assert source["accessed_on"] == "2026-08-14"
+        assert source["raw_sha256"] == hashlib.sha256(
+            (WORK_ROOT / "revision" / source["raw"]).read_bytes()
+        ).hexdigest()
 
 
 def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None:
