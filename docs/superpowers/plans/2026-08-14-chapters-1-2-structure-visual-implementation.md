@@ -28,13 +28,14 @@
 
 **Files:**
 - Modify: `third-edition-work/tests/test_second_base_revision.py`
+- Modify: `third-edition-work/revision/figures/figure-plan.csv`
 - Create: `third-edition-work/revision/figures/ch01-02-figure-manifest.json`
 
 **Interfaces:**
 - Consumes: current `ch01.md`, `ch02.md`, `revision-map.json`, and the second-edition style baseline.
 - Produces: a machine-readable manifest with `number`, `title`, `svg`, `png`, `anchor`, `minimum_font_pt`, and `source_note` fields; focused tests used by Tasks 2–5.
 
-- [ ] **Step 1: Write failing hierarchy and length tests**
+- [x] **Step 1: Write failing hierarchy and length tests**
 
 Add tests that require all four Chapter 1 H2 headings, the five restored Chapter 2 H2 headings, at least two `一．` paragraphs per section, nested `1．` paragraphs under the major concepts, and the approved target lengths.
 
@@ -56,7 +57,7 @@ def test_chapters_1_2_have_second_edition_internal_levels_and_depth():
         assert len(re.findall(r"(?m)^1．", chapter)) >= 1
 ```
 
-- [ ] **Step 2: Write failing figure-contract tests**
+- [x] **Step 2: Write failing figure-contract tests**
 
 Require exactly 12 manifest records, unique chapter-local numbers, SVG and PNG paths, a minimum text size of 9 pt, an in-text forward reference, a caption, and explanatory prose after each figure marker.
 
@@ -74,13 +75,13 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete():
         assert f"{{{{FIGURE:{item['number']}}}}}" in chapter
 ```
 
-- [ ] **Step 3: Run focused tests and confirm RED**
+- [x] **Step 3: Run focused tests and confirm RED**
 
 Run: `python -m pytest third-edition-work/tests/test_second_base_revision.py -k "chapters_1_2" -q`
 
 Expected: failures for the old Chapter 2 headings, insufficient length, absent hierarchy, and absent manifest/assets.
 
-- [ ] **Step 4: Create the exact 12-record manifest**
+- [x] **Step 4: Create the exact 12-record manifest**
 
 Use these titles and file paths:
 
@@ -101,7 +102,9 @@ Use these titles and file paths:
 ]
 ```
 
-- [ ] **Step 5: Commit the RED contracts and manifest**
+Update the Chapter 1 and Chapter 2 rows in `figure-plan.csv` to the same five-plus-seven target figures. Keep the historical second-edition figure disposition rows, but remove the superseded four-plus-two target plan so that the CSV and manifest have one consistent numbering contract.
+
+- [x] **Step 5: Commit the RED contracts and manifest**
 
 ```powershell
 git add third-edition-work/tests/test_second_base_revision.py third-edition-work/revision/figures/ch01-02-figure-manifest.json

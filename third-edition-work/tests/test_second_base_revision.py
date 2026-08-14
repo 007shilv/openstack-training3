@@ -29,6 +29,9 @@ W = f"{{{WORD_NS}}}"
 FIGURE_CAPTION = re.compile(r"^图\d+\.\d+\.\d+")
 FRAGMENTS_DIR = WORK_ROOT / "revision" / "fragments"
 FIGURE_PLAN = WORK_ROOT / "revision" / "figures" / "figure-plan.csv"
+CHAPTERS_1_2_FIGURE_MANIFEST = (
+    WORK_ROOT / "revision" / "figures" / "ch01-02-figure-manifest.json"
+)
 TASK3_FRAGMENTS = {
     1: FRAGMENTS_DIR / "ch01.md",
     2: FRAGMENTS_DIR / "ch02.md",
@@ -71,6 +74,19 @@ def prose_paragraphs(markdown: str) -> list[str]:
 
 def compact_length(value: str) -> int:
     return len(re.sub(r"\s+", "", value))
+
+
+def h2_sections(markdown: str) -> list[tuple[str, str]]:
+    """Return each H2 and its body without turning textbook inner levels into TOC headings."""
+
+    matches = list(re.finditer(r"(?m)^## ([^\n]+)\s*$", markdown))
+    return [
+        (
+            match.group(1),
+            markdown[match.end() : matches[index + 1].start() if index + 1 < len(matches) else None],
+        )
+        for index, match in enumerate(matches)
+    ]
 
 
 def find_source_docx() -> Path:
@@ -1011,17 +1027,18 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
             "## 1.4 国内外云计算产业现状",
         ],
         2: [
-            "## 2.1 云产品的比较方法",
-            "## 2.2 国际代表性云产品",
-            "## 2.3 国内代表性云产品",
-            "## 2.4 产品选择与教学活动",
+            "## 2.1 VMware的云计算技术及其相关产品",
+            "## 2.2 Citrix的云计算技术",
+            "## 2.3 微软私有云虚拟化技术Hyper-V",
+            "## 2.4 国内私有云相关产品",
+            "## 2.5 知名公有云平台简介",
         ],
         3: [
             "## 3.1 OpenStack技术简介",
             "## 3.2 体验原生OpenStack云平台",
         ],
     }
-    minimum_characters = {1: 6_500, 2: 5_500, 3: 6_400}
+    minimum_characters = {1: 14_000, 2: 18_000, 3: 6_400}
 
     for chapter, expected in expected_sections.items():
         text = task3_fragment(chapter)
@@ -1037,6 +1054,102 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         assert max(lengths) <= 240
         assert statistics.median(lengths) >= 80
         assert sum(length < 45 for length in lengths) <= max(1, len(lengths) // 8)
+
+
+def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
+    expected_h2 = {
+        1: [
+            "1.1 计算模式的演变",
+            "1.2 云计算的定义",
+            "1.3 云计算的层次以及分类",
+            "1.4 国内外云计算产业现状",
+        ],
+        2: [
+            "2.1 VMware的云计算技术及其相关产品",
+            "2.2 Citrix的云计算技术",
+            "2.3 微软私有云虚拟化技术Hyper-V",
+            "2.4 国内私有云相关产品",
+            "2.5 知名公有云平台简介",
+        ],
+    }
+    target_lengths = {1: (14_000, 18_000), 2: (18_000, 23_000)}
+
+    for chapter_number in (1, 2):
+        chapter = task3_fragment(chapter_number)
+        sections = h2_sections(chapter)
+        assert [heading for heading, _ in sections] == expected_h2[chapter_number]
+        assert target_lengths[chapter_number][0] <= compact_length(chapter) <= target_lengths[chapter_number][1]
+        assert not any(line.startswith("###") for line in chapter.splitlines())
+
+        for heading, body in sections:
+            chinese_levels = list(
+                re.finditer(r"(?m)^([一二三四五六七八九十]+)．[^\n]+$", body)
+            )
+            assert len(chinese_levels) >= 2, f"{heading} lacks 一．/二． textbook levels"
+            for index, level in enumerate(chinese_levels):
+                nested = body[
+                    level.end() : chinese_levels[index + 1].start()
+                    if index + 1 < len(chinese_levels)
+                    else None
+                ]
+                arabic_levels = re.findall(r"(?m)^\d+．[^\n]+$", nested)
+                assert len(arabic_levels) >= 2, (
+                    f"{heading} / {level.group(0)} lacks two Arabic-number sublevels"
+                )
+
+
+def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> None:
+    records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
+    expected_numbers = [
+        "图1.1",
+        "图1.2",
+        "图1.3",
+        "图1.4",
+        "图1.5",
+        "图2.1",
+        "图2.2",
+        "图2.3",
+        "图2.4",
+        "图2.5",
+        "图2.6",
+        "图2.7",
+    ]
+    assert [record["number"] for record in records] == expected_numbers
+    assert len({record["number"] for record in records}) == 12
+
+    required = {
+        "number",
+        "title",
+        "svg",
+        "png",
+        "anchor",
+        "minimum_font_pt",
+        "source_note",
+        "width_cm",
+    }
+    for record in records:
+        assert set(record) == required
+        assert record["minimum_font_pt"] >= 9.0
+        assert 11.5 <= record["width_cm"] <= 14.0
+        assert record["svg"].endswith(f"/{record['number']}.svg")
+        assert record["png"].endswith(f"/{record['number']}.png")
+        assert record["source_note"].strip()
+
+        chapter = task3_fragment(int(record["number"][1]))
+        marker = f"{{{{FIGURE:{record['number']}}}}}"
+        assert chapter.count(marker) == 1
+        before, after = chapter.split(marker, 1)
+        assert f"如{record['number']}所示" in before
+        assert record["anchor"] in before
+        following = next(
+            (
+                block.strip()
+                for block in re.split(r"\n\s*\n", after)
+                if block.strip() and not block.lstrip().startswith("#")
+            ),
+            "",
+        )
+        assert compact_length(following) >= 80
 
 
 def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None:
@@ -1636,6 +1749,22 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
     joined = "\n".join("|".join(row.values()) for row in rows)
     assert "占位" not in joined
     assert "假截图" not in joined
+
+    chapter_targets = {
+        chapter: sorted(
+            [
+                row["target_number"]
+                for row in rows
+                if row["chapter"] == str(chapter) and row["target_number"]
+            ],
+            key=lambda number: int(number.split(".")[1]),
+        )
+        for chapter in (1, 2)
+    }
+    assert chapter_targets == {
+        1: [f"图1.{number}" for number in range(1, 6)],
+        2: [f"图2.{number}" for number in range(1, 8)],
+    }
 
     chapter4 = [row for row in rows if row["chapter"] == "4"]
     chapter4_sources = {row["second_edition_figure"] for row in chapter4}
