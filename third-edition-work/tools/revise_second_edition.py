@@ -368,6 +368,20 @@ def _paragraph_properties(paragraph: bytes) -> bytes:
     return b"<w:pPr/>" if match is None else bytes(match.group(0))
 
 
+def _code_block_properties(properties: bytes) -> bytes:
+    """Keep a code block's left indent while aligning every visual line."""
+
+    def normalize_indent(match: re.Match[bytes]) -> bytes:
+        indent = match.group(0)
+        return re.sub(
+            rb'\s+w:(?:firstLine|firstLineChars|hanging|hangingChars)="[^"]*"',
+            b"",
+            indent,
+        )
+
+    return re.sub(rb"<w:ind\b[^>]*/>", normalize_indent, properties)
+
+
 def _attribute(element: ET.Element | None, name: str) -> str | None:
     return None if element is None else element.get(f"{W}{name}")
 
@@ -493,6 +507,8 @@ def _render_blocks(document: DocxDocument, blocks: list[Block]) -> list[bytes]:
         properties = _paragraph_properties(templates[block.kind])
         if block.kind == "caption":
             properties = _caption_properties(properties)
+        elif block.kind in {"command", "config"}:
+            properties = _code_block_properties(properties)
         rendered.append(
             b"<w:p>" + properties + _text_runs(block.text, caption=block.kind == "caption") + b"</w:p>"
         )

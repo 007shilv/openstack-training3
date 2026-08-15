@@ -64,17 +64,37 @@ def build_chapter4() -> None:
             arrow(lines, 800, y + 102, 800, y + 132)
     save("4.1", lines)
 
-    lines = start_svg("双节点实验环境拓扑")
-    box(lines, 70, 150, 350, 190, ["管理主机", "SSH终端", "Xshell / PowerShell"], fill="#fff7ed", stroke="#fdba74")
-    box(lines, 540, 125, 440, 260, ["controller", "192.168.234.151", "控制服务与基础服务"], fill="#eff6ff", stroke="#93c5fd", title=True)
-    box(lines, 1100, 125, 440, 260, ["compute", "192.168.234.150", "实例与资源代理"], fill="#f0fdf4", stroke="#86efac", title=True)
-    box(lines, 540, 525, 440, 190, ["管理网络", "192.168.234.0/24", "ens33"], fill="#eff6ff", stroke="#93c5fd")
-    box(lines, 1100, 525, 440, 190, ["Provider网络", "外部二层网络", "ens34（无IP）"], fill="#f0fdf4", stroke="#86efac")
-    arrow(lines, 420, 230, 540, 230)
-    arrow(lines, 980, 250, 1100, 250)
-    arrow(lines, 760, 385, 760, 525)
-    arrow(lines, 1320, 385, 1320, 525, color="green")
-    lines.append('<text x="70" y="805" class="sub">蓝色：管理与控制通信　　绿色：实例外部网络数据</text>')
+    lines = start_svg("双节点环境拓扑与组件分布")
+    arrow(lines, 300, 235, 350, 235)
+    arrow(lines, 860, 235, 950, 235)
+    arrow(lines, 605, 680, 605, 735)
+    arrow(lines, 1240, 680, 1240, 735, color="green")
+    box(lines, 35, 150, 265, 170, ["管理主机", "SSH远程连接"], fill="#fff7ed", stroke="#fdba74")
+    box(lines, 350, 100, 510, 580, [
+        "controller 控制节点",
+        "192.168.234.151　ens33",
+        "MariaDB　RabbitMQ",
+        "Memcached",
+        "Keystone　Glance　Placement",
+        "Nova控制服务",
+        "Neutron控制服务",
+        "Cinder控制服务",
+        "Swift Proxy",
+        "Horizon　Apache",
+    ], fill="#eff6ff", stroke="#93c5fd", title=True)
+    box(lines, 950, 100, 590, 580, [
+        "compute 计算节点",
+        "192.168.234.150　ens33",
+        "KVM　libvirt",
+        "nova-compute",
+        "Neutron代理",
+        "Cinder：/dev/sdb",
+        "Swift：/dev/sdc",
+        "ens34：Provider接口",
+        "无IP地址",
+    ], fill="#f0fdf4", stroke="#86efac", title=True)
+    box(lines, 350, 735, 510, 100, ["管理网络　192.168.234.0/24", "SSH、API与节点通信"], fill="#eff6ff", stroke="#93c5fd")
+    box(lines, 950, 735, 590, 100, ["Provider网络　外部二层网络", "实例外部网络数据"], fill="#f0fdf4", stroke="#86efac")
     save("4.2", lines)
 
     lines = start_svg("双网卡与网络平面")
@@ -87,15 +107,6 @@ def build_chapter4() -> None:
     arrow(lines, 540, 400, 540, 650, color="green")
     arrow(lines, 1300, 400, 1300, 650, color="green")
     save("4.3", lines)
-
-    lines = start_svg("控制节点与计算节点组件分布")
-    box(lines, 70, 120, 690, 650, ["controller 控制节点", "MariaDB　RabbitMQ　Memcached", "Keystone　Glance　Placement", "Nova控制服务　Neutron控制服务", "Cinder API/Scheduler　Swift Proxy", "Horizon　Apache"], fill="#eff6ff", stroke="#93c5fd", title=True)
-    box(lines, 840, 120, 690, 650, ["compute 计算节点", "KVM　libvirt　nova-compute", "Neutron Linux Bridge代理", "Cinder Volume（/dev/sdb）", "Swift存储服务（/dev/sdc）", "实例与虚拟网络"], fill="#f0fdf4", stroke="#86efac", title=True)
-    arrow(lines, 760, 300, 840, 300)
-    arrow(lines, 840, 430, 760, 430, color="purple")
-    lines.append('<text x="800" y="835" text-anchor="middle" class="sub">控制节点保存状态并作出决策；计算节点报告资源并执行任务</text>')
-    save("4.4", lines)
-
 
 def two_column(number: str, title: str, left_title: str, left_items: list[str], right_title: str, right_items: list[str], footer: str) -> None:
     lines = start_svg(title)
@@ -110,13 +121,14 @@ def two_column(number: str, title: str, left_title: str, left_items: list[str], 
 def flow(number: str, title: str, nodes: list[list[str]], footer: str) -> None:
     lines = start_svg(title)
     count = len(nodes)
-    gap = 35
+    gap = 60
     w = int((1460 - (count - 1) * gap) / count)
+    positions = [70 + i * (w + gap) for i in range(count)]
+    for i in range(count - 1):
+        arrow(lines, positions[i] + w, 395, positions[i + 1], 395)
     for i, labels in enumerate(nodes):
-        x = 70 + i * (w + gap)
+        x = positions[i]
         box(lines, x, 245, w, 300, labels, fill="#eff6ff" if i % 2 == 0 else "#f0fdf4", stroke="#93c5fd" if i % 2 == 0 else "#86efac", title=True)
-        if i < count - 1:
-            arrow(lines, x + w, 395, x + w + gap, 395)
     lines.append(f'<text x="800" y="720" text-anchor="middle" class="sub">{escape(footer)}</text>')
     save(number, lines)
 
@@ -136,7 +148,7 @@ def build_chapters5_8() -> None:
     arrow(lines, 890, 610, 970, 610, color="green")
     arrow(lines, 1250, 360, 1250, 520, color="green")
     save("6.1", lines)
-    flow("6.2", "Keystone认证与服务发现", [["OpenStackClient", "提交凭据"], ["Keystone", "认证并签发令牌", "返回服务目录"], ["业务服务端点", "Glance / Nova / Neutron"], ["策略处理", "依据角色与作用域", "执行业务请求"]], "Keystone建立统一身份，业务服务仍负责自己的资源操作")
+    flow("6.2", "Keystone认证与服务发现", [["OpenStack", "Client", "提交凭据"], ["Keystone", "认证并签发令牌", "返回服务目录"], ["业务服务端点", "Glance　Nova", "Neutron"], ["策略处理", "依据角色与作用域", "执行业务请求"]], "Keystone建立统一身份，业务服务仍负责自己的资源操作")
 
     lines = start_svg("Glance主要组成")
     box(lines, 60, 250, 310, 230, ["客户端", "Horizon", "OpenStackClient", "Nova"], fill="#fff7ed", stroke="#fdba74", title=True)

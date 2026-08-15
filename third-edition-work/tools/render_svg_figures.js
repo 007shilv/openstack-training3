@@ -14,7 +14,11 @@ const path = require('path');
     if (!fs.existsSync(directory)) continue;
     for (const name of fs.readdirSync(directory).filter((item) => item.endsWith('.svg'))) {
       const page = await browser.newPage({ viewport: { width: 2400, height: 1350 }, deviceScaleFactor: 1 });
-      await page.goto('file:///' + path.join(directory, name).replace(/\\/g, '/'));
+      const svg = fs.readFileSync(path.join(directory, name), 'utf8');
+      await page.setContent(`<!doctype html><html><head><style>
+        html, body { margin: 0; width: 2400px; height: 1350px; overflow: hidden; background: white; }
+        svg { display: block; width: 2400px !important; height: 1350px !important; }
+      </style></head><body>${svg}</body></html>`);
       await page.screenshot({ path: path.join(directory, name.replace(/\.svg$/, '.png')) });
       pages.push(path.join(chapter, name));
       await page.close();

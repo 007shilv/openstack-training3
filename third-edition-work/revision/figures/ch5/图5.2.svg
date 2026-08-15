@@ -3,21 +3,21 @@
 <defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">OpenStack基础服务协作</text>
-<rect x="70" y="245" width="338" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="239.0" y="384.0" text-anchor="middle" class="title">客户端</text>
-<text x="239.0" y="430.0" text-anchor="middle">OpenStack命令</text>
-<line x1="408" y1="395" x2="443" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
-<rect x="443" y="245" width="338" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="612.0" y="384.0" text-anchor="middle" class="title">API与后台进程</text>
-<text x="612.0" y="430.0" text-anchor="middle">身份、计算、网络</text>
-<line x1="781" y1="395" x2="816" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
-<rect x="816" y="245" width="338" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="985.0" y="384.0" text-anchor="middle" class="title">RabbitMQ</text>
-<text x="985.0" y="430.0" text-anchor="middle">任务与消息</text>
-<line x1="1154" y1="395" x2="1189" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
-<rect x="1189" y="245" width="338" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="1358.0" y="361.0" text-anchor="middle" class="title">数据与缓存</text>
-<text x="1358.0" y="407.0" text-anchor="middle">MariaDB</text>
-<text x="1358.0" y="453.0" text-anchor="middle">Memcached</text>
+<line x1="390" y1="395" x2="450" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="770" y1="395" x2="830" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="1150" y1="395" x2="1210" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<rect x="70" y="245" width="320" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="230.0" y="384.0" text-anchor="middle" class="title">客户端</text>
+<text x="230.0" y="430.0" text-anchor="middle">OpenStack命令</text>
+<rect x="450" y="245" width="320" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="610.0" y="384.0" text-anchor="middle" class="title">API与后台进程</text>
+<text x="610.0" y="430.0" text-anchor="middle">身份、计算、网络</text>
+<rect x="830" y="245" width="320" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="990.0" y="384.0" text-anchor="middle" class="title">RabbitMQ</text>
+<text x="990.0" y="430.0" text-anchor="middle">任务与消息</text>
+<rect x="1210" y="245" width="320" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="1370.0" y="361.0" text-anchor="middle" class="title">数据与缓存</text>
+<text x="1370.0" y="407.0" text-anchor="middle">MariaDB</text>
+<text x="1370.0" y="453.0" text-anchor="middle">Memcached</text>
 <text x="800" y="720" text-anchor="middle" class="sub">数据库、消息队列、缓存和客户端各自承担不同职责</text>
 </svg>
