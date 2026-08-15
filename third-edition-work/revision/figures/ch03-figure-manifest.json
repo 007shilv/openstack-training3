@@ -82,9 +82,9 @@
     "kind": "diagram",
     "svg": "figures/ch03/图3.8.svg",
     "png": "figures/ch03/图3.8.png",
-    "anchor": "图3.8由Antelope教学云的Horizon登录界面与项目概览组成",
+    "anchor": "图3.8由Antelope实验环境的Horizon登录界面与项目概览组成",
     "minimum_font_pt": 9.0,
-    "source_note": "依据Horizon官方用户文档页面结构与本教材教学云对象关系重绘的界面示意",
+    "source_note": "依据Horizon官方用户文档页面结构与本教材实验环境对象关系重绘的界面示意",
     "width_cm": 14.0
   },
   {

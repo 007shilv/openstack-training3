@@ -93,6 +93,22 @@ def test_chapter3_uses_textbook_levels_and_avoids_editorial_language():
     assert "已经与openEuler 24.03 LTS SP3信创化环境完成稳定适配与集成" in text
 
 
+def test_manuscript_sources_use_experiment_environment_not_teaching_cloud():
+    forbidden_term = "教学" + "云"
+    paths = [
+        ROOT / "third-edition-work" / "revision" / "fragments" / f"ch{number:02d}.md"
+        for number in range(1, 4)
+    ]
+    paths.extend((ROOT / "third-edition-work" / "revision" / "figures").glob("*.json"))
+    paths.extend((ROOT / "third-edition-work" / "revision" / "figures").glob("*.csv"))
+    paths.extend((ROOT / "third-edition-work" / "revision" / "research").glob("ch03-*"))
+    for path in paths:
+        assert forbidden_term not in path.read_text(encoding="utf-8"), path
+    text = chapter_text()
+    assert "2．OpenStack实验环境与生产环境的差异" in text
+    assert "在学习OpenStack相关知识的过程中" in text
+
+
 def test_chapter3_has_continuous_figure_and_table_references():
     text = chapter_text()
     for number in range(1, 10):

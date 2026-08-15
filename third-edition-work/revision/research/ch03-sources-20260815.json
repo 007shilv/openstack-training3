@@ -417,7 +417,7 @@
       "evidence_basis": "Horizon官方版本化文档确认其为OpenStack Web管理界面，并提供用户和管理员功能入口。",
       "supports": [
         "Horizon访问入口",
-        "图3.8 Antelope教学云Horizon登录与项目概览的官方后备素材依据",
+        "图3.8 Antelope实验环境Horizon登录与项目概览的官方后备素材依据",
         "表3-4访问方式比较"
       ]
     },
@@ -469,7 +469,7 @@
       "url": "https://docs.openstack.org/horizon/2026.1/admin/manage-instances.html",
       "source_date": "2026.1 documentation series",
       "retrieved_at": "2026-08-15",
-      "evidence_basis": "Horizon官方管理员文档与官方界面素材，用作本地教学云截图不可得时的后备。",
+      "evidence_basis": "Horizon官方管理员文档与官方界面素材，用作本地实验环境截图不可得时的后备。",
       "supports": [
         "图3.9 Horizon资源页面与OpenStack服务关系"
       ]
