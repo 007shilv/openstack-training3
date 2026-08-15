@@ -1,0 +1,101 @@
+[
+  {
+    "number": "图3.1",
+    "title": "OpenStack发展与开放基础设施演进",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.1.svg",
+    "png": "figures/ch03/图3.1.png",
+    "anchor": "图3.1把2010年的项目起源、2012年的基金会成立、2020年的治理调整和2025年的组织演进排列在一条时间线上",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenStack与OpenInfra官方组织、治理和历史资料重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.2",
+    "title": "OpenInfra基金会与OpenStack治理结构",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.2.svg",
+    "png": "figures/ch03/图3.2.png",
+    "anchor": "图3.2表示OpenInfra基金会、OpenStack技术委员会、项目团队以及用户、开发者和商业生态之间的关系",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenInfra现行章程、OpenStack技术委员会章程与四项开放原则重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.3",
+    "title": "OpenStack逻辑架构",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.3.svg",
+    "png": "figures/ch03/图3.3.png",
+    "anchor": "图3.3从上到下排列访问层、控制层和资源层",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenStack安装指南、服务目录与本章逻辑分层重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.4",
+    "title": "OpenStack核心服务与资源对象",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.4.svg",
+    "png": "figures/ch03/图3.4.png",
+    "anchor": "图3.4把八个核心服务与主要资源对象建立对应关系",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenStack官方服务说明与项目导航重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.5",
+    "title": "OpenStack发布节奏与教材版本边界",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.5.svg",
+    "png": "figures/ch03/图3.5.png",
+    "anchor": "图3.5把Antelope、Gazpacho和Hibiscus放在半年发布与SLURP节奏中比较",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenStack Releases、SLURP决议和Hibiscus官方日程重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.6",
+    "title": "OpenStack扩展项目生态",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.6.svg",
+    "png": "figures/ch03/图3.6.png",
+    "anchor": "图3.6按照编排、硬件、存储、网络、安全、容器和遥测七个能力域排列扩展项目",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据OpenStack Project Navigator与2026.1项目安装指南重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.7",
+    "title": "实例创建过程中的服务协作",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.7.svg",
+    "png": "figures/ch03/图3.7.png",
+    "anchor": "图3.7以概念时序展示实例创建中的主要调用",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据Nova架构、调度和Keystone服务目录资料重绘",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.8",
+    "title": "Horizon登录与项目概览",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.8.svg",
+    "png": "figures/ch03/图3.8.png",
+    "anchor": "图3.8由Antelope教学云的Horizon登录界面与项目概览组成",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据Horizon官方用户文档页面结构与本教材教学云对象关系重绘的界面示意",
+    "width_cm": 14.0
+  },
+  {
+    "number": "图3.9",
+    "title": "Horizon资源页面与OpenStack服务关系",
+    "kind": "diagram",
+    "svg": "figures/ch03/图3.9.svg",
+    "png": "figures/ch03/图3.9.png",
+    "anchor": "图3.9把实例、镜像、网络和卷页面与Nova、Glance、Neutron和Cinder建立对应",
+    "minimum_font_pt": 9.0,
+    "source_note": "依据Horizon官方用户文档与OpenStack资源对象关系重绘的界面示意",
+    "width_cm": 14.0
+  }
+]

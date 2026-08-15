@@ -1,0 +1,9 @@
+[
+  {
+    "op": "replace_with_part_opener",
+    "start_heading": "第三章 原生OpenStack云平台",
+    "end_heading": "第四章 openEuler与信创OpenStack实验环境准备",
+    "fragment": "fragments/ch03.md",
+    "part_title": "第二部分 信创OpenStack云平台构建与应用"
+  }
+]

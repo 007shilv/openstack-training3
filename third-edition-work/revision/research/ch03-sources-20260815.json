@@ -1,0 +1,693 @@
+{
+  "chapter": 3,
+  "cutoff_date": "2026-07-31",
+  "accessed": "2026-08-15",
+  "status_evidence_policy": {
+    "archived_snapshot_available": false,
+    "statement": "未取得2026-07-31官方页面归档快照。状态口径为‘2026-08-15核验官方页面，并结合官方日程推定2026-07-31状态’；推定还参考官方发布日期和维护阶段规则，不得把2026-08-15页面假称为截止日快照。"
+  },
+  "sources": [
+    {
+      "id": "openstack-software-overview",
+      "title": "OpenStack Software Overview",
+      "publisher": "OpenStack",
+      "url": "https://www.openstack.org/software/",
+      "source_date": "living page; publication date not stated",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "2026-08-15读取的OpenStack官方产品概述，用于稳定的平台定义与访问方式，不用于反推截止日版本状态。",
+      "supports": [
+        "OpenStack作为云基础设施/IaaS平台的定义",
+        "Dashboard、CLI、REST API和SDK访问方式",
+        "表3-4 Horizon、命令行、REST API和SDK访问方式比较"
+      ]
+    },
+    {
+      "id": "openstack-project-origin",
+      "title": "OpenStack Project Team Guide: Introduction",
+      "publisher": "OpenStack",
+      "url": "https://docs.openstack.org/project-team-guide/introduction.html",
+      "source_date": "living documentation; historical dates stated in page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方项目团队指南对2010年起源、2012年基金会和2020年治理调整的历史记载。",
+      "supports": [
+        "2010年项目起源",
+        "Nova与Swift早期项目关系",
+        "图3.1 OpenStack发展与开放治理演变"
+      ]
+    },
+    {
+      "id": "openstack-introducing-announcement",
+      "title": "Introducing OpenStack",
+      "publisher": "OpenStack",
+      "url": "https://www.openstack.org/blog/introducing-openstack/",
+      "source_date": "2010-07-19",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack项目发布时期的官方公告，用于交叉核对Nova、Swift、Rackspace与NASA的早期关系。",
+      "supports": [
+        "OpenStack最初由计算和对象存储两类项目构成",
+        "图3.1 OpenStack发展与开放治理演变"
+      ]
+    },
+    {
+      "id": "openinfra-joins-linux-foundation",
+      "title": "We’ve Closed the Deal—And Opened a New Chapter for Open Source",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/blog/openinfra-joins-linux-foundation",
+      "source_date": "2025-06-03",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方公告确认其成为Linux Foundation一部分，并说明社区治理与技术流程继续保留。",
+      "supports": [
+        "2025年OpenInfra与Linux Foundation的组织关系",
+        "图3.1 OpenStack发展与开放治理演变",
+        "图3.2 OpenStack社区治理与项目协作关系"
+      ]
+    },
+    {
+      "id": "openinfra-charter",
+      "title": "OpenInfra Foundation Charter",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/legal/charter/",
+      "source_date": "current charter retrieved 2026-08-15",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "现行官方章程将OpenInfra Foundation定义为Linux Foundation的directed fund，并区分Governing Board与技术项目治理。",
+      "supports": [
+        "OpenInfra Foundation现行组织定位",
+        "图3.2 OpenStack社区治理与项目协作关系"
+      ]
+    },
+    {
+      "id": "openstack-governance-overview",
+      "title": "OpenStack Governance",
+      "publisher": "OpenStack Governance",
+      "url": "https://governance.openstack.org/",
+      "source_date": "living governance page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方治理入口对Governing Board、Technical Committee、Project Teams和SIG的职责划分。",
+      "supports": [
+        "基金会治理与技术治理的层次",
+        "图3.2 OpenStack社区治理与项目协作关系"
+      ]
+    },
+    {
+      "id": "openstack-tc",
+      "title": "OpenStack Technical Committee",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/",
+      "source_date": "living governance page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方技术治理页，用于TC选举属性、技术监督范围和组织方式。",
+      "supports": [
+        "技术委员会职责",
+        "项目团队、SIG、工作组和临时团队关系",
+        "图3.2 OpenStack社区治理与项目协作关系"
+      ]
+    },
+    {
+      "id": "openstack-project-teams",
+      "title": "OpenStack Project Teams",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/projects/",
+      "source_date": "living governance page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方项目团队名录和TC监督关系。",
+      "supports": [
+        "Project Teams负责软件交付物和共同开发职能",
+        "图3.2 OpenStack社区治理与项目协作关系"
+      ]
+    },
+    {
+      "id": "openstack-four-opens",
+      "title": "Requirements for new OpenStack Project applications",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/new-projects-requirements.html",
+      "source_date": "living governance reference",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack TC对官方项目加入条件和开放协作要求的治理资料。",
+      "supports": [
+        "开放治理原则",
+        "官方Project Team的治理边界"
+      ]
+    },
+    {
+      "id": "openstack-base-services",
+      "title": "Base services",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/base-services.html",
+      "source_date": "2018-06-06 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "TC正式定义的base services口径，用于区分面向用户的云服务与数据库、消息队列、etcd、密钥库等公共支撑。",
+      "supports": [
+        "基础依赖与OpenStack服务项目的区别",
+        "图3.3 OpenStack逻辑架构"
+      ]
+    },
+    {
+      "id": "openstack-logical-architecture",
+      "title": "OpenStack Architecture Design Guide: Design",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/arch-design/design.html",
+      "source_date": "2018-11-29 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方架构指南用于Dashboard、CLI、API、Identity与服务API协作等稳定原则；因组件图较旧，仅作为重绘依据，不原样复制项目清单。",
+      "supports": [
+        "独立服务通过公共身份认证和API协作",
+        "图3.3 OpenStack逻辑架构"
+      ]
+    },
+    {
+      "id": "openstack-install-overview",
+      "title": "OpenStack Installation Guide: Overview",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/install-guide/overview.html",
+      "source_date": "2026-07-16 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方最小学习架构说明，用于控制节点、计算节点及可选存储节点职责；页面明确该架构不是生产参考。",
+      "supports": [
+        "两节点教学架构",
+        "控制节点、计算节点、块存储节点和对象存储节点职责",
+        "图3.3 OpenStack逻辑架构"
+      ]
+    },
+    {
+      "id": "openstack-install-services",
+      "title": "OpenStack Installation Guide: Install OpenStack services",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/install-guide/openstack-services.html",
+      "source_date": "living installation guide",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方安装指南给出的最小服务顺序以及Horizon、Cinder的建议追加位置。",
+      "supports": [
+        "Keystone、Glance、Placement、Nova、Neutron的最小部署顺序",
+        "图3.4 OpenStack核心服务与资源对象",
+        "表3-1 OpenStack核心服务及其主要资源对象"
+      ]
+    },
+    {
+      "id": "openstack-2026-1-install-index",
+      "title": "OpenStack 2026.1 Installation Guides",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/2026.1/install/",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Gazpacho系列官方安装文档索引，用于核对可部署服务项目范围。",
+      "supports": [
+        "2026.1可用服务文档目录",
+        "图3.6 OpenStack扩展项目生态",
+        "表3-3 OpenStack常用扩展项目及典型应用场景"
+      ]
+    },
+    {
+      "id": "openstack-2026-1-doc-index",
+      "title": "OpenStack 2026.1 Documentation",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/2026.1/",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Gazpacho系列官方文档总入口，用作版本化项目文档导航。",
+      "supports": [
+        "2026.1项目文档范围"
+      ]
+    },
+    {
+      "id": "openstack-components",
+      "title": "OpenStack Components",
+      "publisher": "OpenStack",
+      "url": "https://www.openstack.org/software/project-navigator/openstack-components",
+      "source_date": "living project navigator",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方Project Navigator按能力分类展示服务项目，用于重绘而非截取为固定不变的核心清单。",
+      "supports": [
+        "核心服务分类与资源对象",
+        "扩展项目及典型能力",
+        "图3.4 OpenStack核心服务与资源对象",
+        "图3.6 OpenStack扩展项目生态",
+        "表3-1和表3-3"
+      ]
+    },
+    {
+      "id": "release-cadence-adjustment",
+      "title": "2022-02-10 Release Cadence Adjustment",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html",
+      "source_date": "2024-10-08 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "TC正式决议定义六个月协调发布节奏、SLURP全称、相邻SLURP跨一级升级测试边界；该政策证据不依赖2026-07-31网页快照。",
+      "supports": [
+        "约六个月发布周期",
+        "SLURP全称与升级边界",
+        "图3.5 OpenStack版本发布与教材版本边界"
+      ]
+    },
+    {
+      "id": "openstack-releases",
+      "title": "OpenStack Releases",
+      "publisher": "OpenStack Release Management",
+      "url": "https://releases.openstack.org/",
+      "source_date": "2026-08-15 (living status page as retrieved)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性来源。未取得2026-07-31归档；2026-08-15核验现行系列状态，再与各系列不可逆的首发日期、Hibiscus官方日程和维护政策结合，推定2026-07-31状态。",
+      "supports": [
+        "2026-08-15页面列示的Gazpacho、Hibiscus和Antelope状态",
+        "推定的2026-07-31版本状态",
+        "图3.5 OpenStack版本发布与教材版本边界",
+        "表3-2 Antelope、Gazpacho与Hibiscus版本状态比较"
+      ]
+    },
+    {
+      "id": "gazpacho-release",
+      "title": "OpenStack Releases: 2026.1 Gazpacho",
+      "publisher": "OpenStack Release Management",
+      "url": "https://releases.openstack.org/gazpacho/index.html",
+      "source_date": "2026-04-01 (original release date shown; status is living)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性来源。官方页的2026-04-01首发日期可直接使用；Maintained状态为2026-08-15页面核验值，结合Hibiscus尚未到计划发布日期推定2026-07-31的Gazpacho定位。",
+      "supports": [
+        "Gazpacho首发日期和上游首发组件版本",
+        "推定Gazpacho在2026-07-31为最新已发布Maintained版本",
+        "图3.5和表3-2"
+      ]
+    },
+    {
+      "id": "hibiscus-schedule",
+      "title": "OpenStack Releases: 2026.2 Hibiscus Release Schedule",
+      "publisher": "OpenStack Release Management",
+      "url": "https://releases.openstack.org/hibiscus/schedule.html",
+      "source_date": "2026-07-25 (page updated value observed during research)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性来源。官方日程明确2026-07-02为H-2、2026-07-27至31为R-9、2026-08-27为H-3/功能冻结、2026-09-30为计划发布日，因此可直接推定2026-07-31仍处开发周期。",
+      "supports": [
+        "Hibiscus开发里程碑和计划发布日期",
+        "推定Hibiscus在2026-07-31尚未发布",
+        "图3.5和表3-2"
+      ]
+    },
+    {
+      "id": "antelope-release",
+      "title": "OpenStack Releases: 2023.1 Antelope",
+      "publisher": "OpenStack Release Management",
+      "url": "https://releases.openstack.org/antelope/index.html",
+      "source_date": "2023-03-22 (original release date shown; status is living)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性来源。官方页的2023-03-22首发日期可直接使用；Unmaintained为2026-08-15页面核验值，结合维护政策与后续SLURP时间线推定2026-07-31亦处该阶段，不声称取得截止日快照。",
+      "supports": [
+        "Antelope首发日期和上游首发组件版本",
+        "推定Antelope在2026-07-31为Unmaintained",
+        "课程实训版本边界",
+        "图3.5和表3-2"
+      ]
+    },
+    {
+      "id": "stable-branches-policy",
+      "title": "Stable Branches",
+      "publisher": "OpenStack Project Team Guide",
+      "url": "https://docs.openstack.org/project-team-guide/stable-branches.html",
+      "source_date": "2026-08-15 (living policy page as retrieved)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性政策来源。官方维护阶段表明确：Unmaintained不再产生正式发行且CI承诺降低；仍可按Unmaintained政策接受适当修复。用于解释状态含义，不将页面当作2026-07-31快照。",
+      "supports": [
+        "Maintained、Unmaintained和EOL的精确定义",
+        "Antelope教学版本边界",
+        "表3-2中的维护阶段解释"
+      ]
+    },
+    {
+      "id": "unmaintained-resolution",
+      "title": "2023-07-24 Unmaintained status replaces Extended Maintenance",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/resolutions/20230724-unmaintained-branches.html",
+      "source_date": "2023-11-30 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "状态性政策来源。TC正式决议说明Unmaintained取代Extended Maintenance、仅SLURP可进入该阶段，并明确2023.1为首个SLURP。",
+      "supports": [
+        "Unmaintained政策来源",
+        "Antelope是首个SLURP",
+        "图3.5 OpenStack版本发布与教材版本边界"
+      ]
+    },
+    {
+      "id": "nova-2026-1",
+      "title": "OpenStack Compute (nova) 2026.1",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/nova/2026.1/",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Nova官方版本化文档说明基本运行对Keystone、Glance、Neutron、Placement的依赖及可选集成。",
+      "supports": [
+        "Nova与其他核心服务的依赖",
+        "图3.4 OpenStack核心服务与资源对象",
+        "图3.7 实例创建过程中的服务协作",
+        "表3-4访问方式"
+      ]
+    },
+    {
+      "id": "nova-system-architecture",
+      "title": "Nova System Architecture",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/nova/latest/admin/architecture",
+      "source_date": "living Nova documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Nova官方架构文档对API、Scheduler、Conductor、Compute、数据库和RPC消息机制的说明。",
+      "supports": [
+        "Nova控制面组件关系",
+        "图3.3 OpenStack逻辑架构",
+        "图3.7 实例创建过程中的服务协作"
+      ]
+    },
+    {
+      "id": "nova-scheduling",
+      "title": "Nova Scheduling",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/nova/latest/reference/scheduling.html",
+      "source_date": "2023-10-02 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Nova官方调度流程文档说明Conductor、Scheduler、Placement、过滤称重和资源声明的概念顺序。",
+      "supports": [
+        "实例调度与Placement调用链",
+        "图3.7 实例创建过程中的服务协作"
+      ]
+    },
+    {
+      "id": "keystone-service-catalog",
+      "title": "Keystone Service Catalog Overview",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/keystone/latest/contributor/service-catalog.html",
+      "source_date": "living Keystone documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Keystone官方文档说明客户端认证后通过服务目录发现API端点。",
+      "supports": [
+        "令牌与服务目录",
+        "图3.3 OpenStack逻辑架构",
+        "图3.7 实例创建过程中的服务协作"
+      ]
+    },
+    {
+      "id": "placement-usage",
+      "title": "Placement Usage",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/placement/latest/user/",
+      "source_date": "living Placement documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Placement官方文档说明nova-scheduler请求allocation candidates并对资源提供者建立分配。",
+      "supports": [
+        "Placement资源库存、候选与分配职责",
+        "图3.4 OpenStack核心服务与资源对象",
+        "图3.7 实例创建过程中的服务协作"
+      ]
+    },
+    {
+      "id": "nova-security-groups",
+      "title": "Nova Security Groups",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/nova/2026.1/user/security-groups.html",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Nova官方文档明确安全组与配额属于Neutron资源，并作为端口属性参与服务器网络连接。",
+      "supports": [
+        "Nova与Neutron端口/安全组协作",
+        "图3.7 实例创建过程中的服务协作"
+      ]
+    },
+    {
+      "id": "horizon-2026-1",
+      "title": "Horizon 2026.1",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/horizon/2026.1/",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Horizon官方版本化文档确认其为OpenStack Web管理界面，并提供用户和管理员功能入口。",
+      "supports": [
+        "Horizon访问入口",
+        "图3.8 Antelope教学云Horizon登录与项目概览的官方后备素材依据",
+        "表3-4访问方式比较"
+      ]
+    },
+    {
+      "id": "horizon-user-index",
+      "title": "OpenStack Dashboard User Documentation 2026.1",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/horizon/2026.1/user/",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Horizon官方用户文档目录，用于登录、项目资源和实例操作截图的字段核对。",
+      "supports": [
+        "图3.8 Horizon登录与项目概览",
+        "图3.9 Horizon资源页面与服务关系"
+      ]
+    },
+    {
+      "id": "horizon-launch-instances",
+      "title": "Horizon: Launch and manage instances",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/horizon/2026.1/user/launch-instances.html",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Horizon官方用户文档说明实例创建输入项及镜像启动时在计算节点形成本地副本。",
+      "supports": [
+        "实例创建输入对象与Glance关系",
+        "图3.7实例链",
+        "图3.9资源页面关系"
+      ]
+    },
+    {
+      "id": "horizon-manage-volumes",
+      "title": "Horizon: Create and manage volumes",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/horizon/2026.1/user/manage-volumes.html",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Horizon官方用户文档说明卷创建、附加与实例关系，用于把Cinder画成实例链的可选分支。",
+      "supports": [
+        "Cinder卷与实例的可选协作",
+        "图3.7实例链",
+        "图3.9资源页面关系"
+      ]
+    },
+    {
+      "id": "horizon-manage-instances",
+      "title": "Horizon: Manage instances",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/horizon/2026.1/admin/manage-instances.html",
+      "source_date": "2026.1 documentation series",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "Horizon官方管理员文档与官方界面素材，用作本地教学云截图不可得时的后备。",
+      "supports": [
+        "图3.9 Horizon资源页面与OpenStack服务关系"
+      ]
+    },
+    {
+      "id": "openstack-packaging-rdo",
+      "title": "OpenStack packages for RHEL and CentOS",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/install-guide/environment-packages-rdo.html",
+      "source_date": "2026-07-16 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方安装指南说明发行版因发布节奏不同自行提供OpenStack软件包，用于区分上游系列与下游包仓。",
+      "supports": [
+        "OpenStack上游版本与Linux发行版打包层次"
+      ]
+    },
+    {
+      "id": "devstack-openeuler",
+      "title": "DevStack Quick Start",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/devstack/latest/",
+      "source_date": "living DevStack documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "DevStack官方文档把openEuler列入尝试支持的开发/测试主机范围；该事实不等于生产支持矩阵或认证。",
+      "supports": [
+        "openEuler进入部分OpenStack上游工具适配范围",
+        "不得据此推导特定生产支持或信创认证"
+      ]
+    },
+    {
+      "id": "openeuler-minimal",
+      "title": "diskimage-builder openeuler-minimal element",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/diskimage-builder/latest/elements/openeuler-minimal/README.html",
+      "source_date": "2026-06-10 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方diskimage-builder元素说明可构建openEuler最小镜像；只支持镜像构建工具关系，不证明特定云平台生产支持组合。",
+      "supports": [
+        "openEuler镜像构建元素",
+        "OpenStack与openEuler的上下游集成关系"
+      ]
+    },
+    {
+      "id": "diskimage-builder-tested-distros",
+      "title": "diskimage-builder Tested Distributions",
+      "publisher": "OpenStack Documentation",
+      "url": "https://docs.openstack.org/diskimage-builder/latest/user_guide/supported_distros.html",
+      "source_date": "2024-11-01 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方测试范围页列出openeuler-minimal的构建测试，并提醒实际支持关系复杂；用于限定而非扩大兼容结论。",
+      "supports": [
+        "openEuler镜像元素的测试层级",
+        "不得把构建测试等同于端到端生产支持"
+      ]
+    },
+    {
+      "id": "openinfra-about",
+      "title": "About the OpenInfra Foundation",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/about/",
+      "source_date": "living foundation overview",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方概述用于核对基金会的中立协作定位、Linux Foundation组织关系、开发者用户商业生态三类力量及四项开放原则。",
+      "supports": [
+        "OpenInfra Foundation组织定位",
+        "开发者、用户和商业生态的协作关系",
+        "图3.2 OpenInfra基金会与OpenStack治理结构"
+      ]
+    },
+    {
+      "id": "openinfra-foundation-announcement",
+      "title": "Introducing the Open Infrastructure Foundation",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/blog/introducing-the-open-infrastructure-foundation/",
+      "source_date": "2020-10-19",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方公告确认Open Infrastructure Foundation作为OpenStack Foundation的继任组织，以及基金会服务范围扩展到多种开放基础设施项目。",
+      "supports": [
+        "2020年OpenStack Foundation演进为OpenInfra Foundation",
+        "基金会支持范围由OpenStack扩展到开放基础设施生态"
+      ]
+    },
+    {
+      "id": "openinfra-four-opens-overview",
+      "title": "Our Philosophy: The Four Opens",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/four-opens/",
+      "source_date": "living principles page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方四项开放原则总览，说明四项原则源自OpenStack社区，并列举公开代码评审、设计峰会、技术委员会和lazy consensus等实践。",
+      "supports": [
+        "Open Source、Open Design、Open Development和Open Community",
+        "四项开放原则与社区实践的关系"
+      ]
+    },
+    {
+      "id": "openinfra-open-source",
+      "title": "Open Source Software",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/four-opens/open-source/",
+      "source_date": "living principles page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方对Open Source的定义，强调开放许可证、可研究修改再分发、可实际使用与扩展，以及不采用人为削弱功能的open core模式。",
+      "supports": ["四项开放原则中的Open Source"]
+    },
+    {
+      "id": "openinfra-open-design",
+      "title": "Open Source Design",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/four-opens/open-design/",
+      "source_date": "living principles page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方对Open Design的定义，强调软件规划、架构设计和功能路线由开放透明的社区过程推动。",
+      "supports": ["四项开放原则中的Open Design"]
+    },
+    {
+      "id": "openinfra-open-development",
+      "title": "Open Source Software Development",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/four-opens/open-development/",
+      "source_date": "living principles page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方对Open Development的定义，强调可公开访问的开发活动、平等参与和按照公开标准评价贡献。",
+      "supports": ["四项开放原则中的Open Development"]
+    },
+    {
+      "id": "openinfra-open-community",
+      "title": "Open Source Project Community",
+      "publisher": "OpenInfra Foundation",
+      "url": "https://openinfra.org/four-opens/open-community/",
+      "source_date": "living principles page",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenInfra官方对Open Community的定义，强调包容、平等参与、开放领导机会，以及开发者、用户和商业生态之间的平衡。",
+      "supports": ["四项开放原则中的Open Community"]
+    },
+    {
+      "id": "openstack-tc-charter",
+      "title": "OpenStack Technical Committee Charter",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/charter.html",
+      "source_date": "2026-04-20 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "TC现行章程用于核对技术委员会使命、官方项目团队监督关系、PTL职责、贡献者选举与公开讨论机制。",
+      "supports": [
+        "Technical Committee与Project Team职责边界",
+        "贡献者选举和公开技术治理",
+        "表3-1治理主体比较"
+      ]
+    },
+    {
+      "id": "openstack-governance-principles",
+      "title": "OpenStack Guiding Principles",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/principles.html",
+      "source_date": "2018-05-29 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "OpenStack官方治理原则用于核对One OpenStack、代表性民主、社区领导服务责任、平等商业参与和公开沟通等稳定原则。",
+      "supports": ["OpenStack技术路线不由单一企业决定", "开放社区与代表性治理"]
+    },
+    {
+      "id": "openstack-group-structures",
+      "title": "Comparison of Official Group Structures",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/reference/comparison-of-official-group-structures.html",
+      "source_date": "2025-11-17 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方治理资料区分Project Team、SIG、Working Group、Popup Team和OpenStack-wide Goal的持续期限与职能。",
+      "supports": ["表3-1治理主体比较", "图3.2 OpenInfra基金会与OpenStack治理结构"]
+    },
+    {
+      "id": "openstack-review-way",
+      "title": "How to Review Changes the OpenStack Way",
+      "publisher": "OpenStack Project Team Guide",
+      "url": "https://docs.openstack.org/project-team-guide/review-the-openstack-way.html",
+      "source_date": "2018-09-14 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方评审指南用于说明Gerrit公开评审、普通评审者与核心评审者权限及所有贡献者遵循相同流程。",
+      "supports": ["Open Development的公开代码评审流程"]
+    },
+    {
+      "id": "openstack-open-development",
+      "title": "Open Development",
+      "publisher": "OpenStack Project Team Guide",
+      "url": "https://docs.openstack.org/project-team-guide/open-development.html",
+      "source_date": "2025-04-29 (page last-updated value)",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方项目团队指南用于核对PTL与核心评审者的社区角色、公开规格文档及规格与代码采用相同贡献流程。",
+      "supports": ["Open Design与Open Development的具体社区流程"]
+    },
+    {
+      "id": "openstack-zuul-status",
+      "title": "Checking Status in Zuul",
+      "publisher": "OpenStack Contributor Guide",
+      "url": "https://docs.openstack.org/contributors/common/zuul-status.html",
+      "source_date": "living contributor documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方贡献者指南说明提交到Gerrit的补丁会自动触发Zuul任务，必要测试通过后才能合并。",
+      "supports": ["Open Development的持续集成与合并门控"]
+    },
+    {
+      "id": "openstack-release-management",
+      "title": "Release Management",
+      "publisher": "OpenStack Project Team Guide",
+      "url": "https://docs.openstack.org/project-team-guide/release-management.html",
+      "source_date": "living project team documentation",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "官方项目团队指南用于核对协调发布、openstack/releases评审、签名标签和自动化发布流程。",
+      "supports": ["从设计提案到协调发布的社区流程"]
+    },
+    {
+      "id": "openstack-dco-resolution",
+      "title": "2025-05-20 Replace CLA with DCO for all contributions",
+      "publisher": "OpenStack Technical Committee",
+      "url": "https://governance.openstack.org/tc/resolutions/20250520-replace-the-cla-with-dco-for-all-contributions.html",
+      "source_date": "2025-05-20; effective 2025-07-01",
+      "retrieved_at": "2026-08-15",
+      "evidence_basis": "TC正式决议确认自2025年7月1日起新提交使用DCO，并由OpenDev代码评审系统检查Signed-off-by。",
+      "supports": ["OpenStack贡献的DCO签署要求"]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <style>text{font-family:SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.en{fill:#2563eb;font-weight:700}.white{fill:#ffffff}</style>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="800" y="65" text-anchor="middle" font-size="52" class="title">OpenStack核心服务与资源对象</text>
+  <g text-anchor="middle">
+    <g><rect x="80" y="125" width="340" height="245" rx="24" fill="#eff6ff" stroke="#60a5fa" stroke-width="4"/><text x="250" y="190" font-size="46" class="en">Keystone</text><text x="250" y="250" font-size="40">用户　项目　角色</text><text x="250" y="305" font-size="40">令牌　服务　端点</text></g>
+    <g><rect x="450" y="125" width="340" height="245" rx="24" fill="#f0fdfa" stroke="#2dd4bf" stroke-width="4"/><text x="620" y="190" font-size="46" class="en">Glance</text><text x="620" y="250" font-size="40">镜像内容</text><text x="620" y="305" font-size="40">镜像元数据</text></g>
+    <g><rect x="820" y="125" width="340" height="245" rx="24" fill="#f0fdf4" stroke="#4ade80" stroke-width="4"/><text x="990" y="190" font-size="46" class="en">Placement</text><text x="990" y="250" font-size="40">资源提供者　库存</text><text x="990" y="305" font-size="40">特征　分配</text></g>
+    <g><rect x="1190" y="125" width="330" height="245" rx="24" fill="#fff7ed" stroke="#fb923c" stroke-width="4"/><text x="1355" y="190" font-size="46" class="en">Nova</text><text x="1355" y="250" font-size="40">实例　规格</text><text x="1355" y="305" font-size="38">计算节点　密钥对</text></g>
+    <g><rect x="80" y="455" width="340" height="245" rx="24" fill="#f5f3ff" stroke="#a78bfa" stroke-width="4"/><text x="250" y="520" font-size="46" class="en">Neutron</text><text x="250" y="580" font-size="40">网络　子网　端口</text><text x="250" y="635" font-size="40">路由器　安全组</text></g>
+    <g><rect x="450" y="455" width="340" height="245" rx="24" fill="#fdf2f8" stroke="#f472b6" stroke-width="4"/><text x="620" y="520" font-size="46" class="en">Cinder</text><text x="620" y="580" font-size="40">卷　快照</text><text x="620" y="635" font-size="40">备份　卷类型</text></g>
+    <g><rect x="820" y="455" width="340" height="245" rx="24" fill="#ecfeff" stroke="#22d3ee" stroke-width="4"/><text x="990" y="520" font-size="46" class="en">Swift</text><text x="990" y="580" font-size="40">账户　容器</text><text x="990" y="635" font-size="40">对象</text></g>
+    <g><rect x="1190" y="455" width="330" height="245" rx="24" fill="#f8fafc" stroke="#94a3b8" stroke-width="4"/><text x="1355" y="520" font-size="46" class="en">Horizon</text><text x="1355" y="580" font-size="40">资源图形视图</text><text x="1355" y="635" font-size="40">统一操作入口</text></g>
+  </g>
+  <rect x="280" y="770" width="1040" height="80" rx="20" fill="#172033"/>
+  <text x="800" y="823" text-anchor="middle" font-size="42" class="white">身份、镜像、计算、网络和存储对象通过服务API形成协作</text>
+</svg>

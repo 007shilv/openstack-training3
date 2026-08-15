@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <style>text{font-family:SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.en{fill:#2563eb;font-weight:700}.white{fill:#ffffff}</style>
+  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#94a3b8"/></marker></defs>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="800" y="65" text-anchor="middle" font-size="52" class="title">OpenStack扩展项目生态</text>
+  <rect x="575" y="315" width="450" height="280" rx="36" fill="#172033"/>
+  <text x="800" y="390" text-anchor="middle" font-size="46" class="title white">核心基础设施服务</text><text x="800" y="455" text-anchor="middle" font-size="38" class="white">身份　镜像　计算　网络</text><text x="800" y="510" text-anchor="middle" font-size="38" class="white">块存储　对象存储</text><text x="800" y="565" text-anchor="middle" font-size="38" class="white">Horizon控制面板</text>
+  <g text-anchor="middle">
+    <g><rect x="70" y="120" width="350" height="150" rx="24" fill="#eff6ff" stroke="#60a5fa" stroke-width="4"/><text x="245" y="180" font-size="42" class="title">编排</text><text x="245" y="235" font-size="42" class="en">Heat</text></g>
+    <g><rect x="465" y="120" width="350" height="150" rx="24" fill="#f0fdfa" stroke="#2dd4bf" stroke-width="4"/><text x="640" y="180" font-size="42" class="title">硬件生命周期</text><text x="640" y="235" font-size="42" class="en">Ironic　Cyborg</text></g>
+    <g><rect x="860" y="120" width="350" height="150" rx="24" fill="#f0fdf4" stroke="#4ade80" stroke-width="4"/><text x="1035" y="180" font-size="42" class="title">共享存储</text><text x="1035" y="235" font-size="42" class="en">Manila</text></g>
+    <g><rect x="1255" y="120" width="280" height="150" rx="24" fill="#fff7ed" stroke="#fb923c" stroke-width="4"/><text x="1395" y="180" font-size="42" class="title">负载均衡</text><text x="1395" y="235" font-size="42" class="en">Octavia</text></g>
+    <g><rect x="100" y="650" width="350" height="150" rx="24" fill="#fdf2f8" stroke="#f472b6" stroke-width="4"/><text x="275" y="710" font-size="42" class="title">密钥管理</text><text x="275" y="765" font-size="42" class="en">Barbican</text></g>
+    <g><rect x="530" y="650" width="350" height="150" rx="24" fill="#f5f3ff" stroke="#a78bfa" stroke-width="4"/><text x="705" y="710" font-size="42" class="title">容器基础设施</text><text x="705" y="765" font-size="42" class="en">Magnum</text></g>
+    <g><rect x="960" y="650" width="500" height="150" rx="24" fill="#ecfeff" stroke="#22d3ee" stroke-width="4"/><text x="1210" y="710" font-size="42" class="title">遥测与告警</text><text x="1210" y="765" font-size="42" class="en">Ceilometer　Aodh</text></g>
+  </g>
+  <g fill="none" stroke="#94a3b8" stroke-width="4" marker-end="url(#a)"><path d="M420 245 L600 350"/><path d="M680 270 L700 330"/><path d="M990 270 L930 330"/><path d="M1255 245 L1010 350"/><path d="M450 690 L600 555"/><path d="M705 650 V575"/><path d="M1100 650 L990 555"/></g>
+</svg>

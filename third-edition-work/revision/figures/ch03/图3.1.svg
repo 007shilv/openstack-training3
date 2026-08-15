@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <style>text{font-family:SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.muted{fill:#475569}</style>
+  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#2563eb"/></marker></defs>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="800" y="72" text-anchor="middle" font-size="52" class="title">OpenStack发展与开放基础设施演进</text>
+  <text x="800" y="130" text-anchor="middle" font-size="40" class="muted">组织治理与技术能力相互促进</text>
+  <path d="M130 460 H1470" stroke="#2563eb" stroke-width="7" fill="none" marker-end="url(#a)"/>
+  <g>
+    <circle cx="215" cy="460" r="25" fill="#2563eb"/><rect x="40" y="195" width="350" height="190" rx="24" fill="#eff6ff" stroke="#60a5fa" stroke-width="4"/>
+    <text x="215" y="255" text-anchor="middle" font-size="48" class="title">2010</text><text x="215" y="315" text-anchor="middle" font-size="40">Nova与Swift起步</text><text x="215" y="365" text-anchor="middle" font-size="38">开放源码协作</text>
+  </g>
+  <g>
+    <circle cx="595" cy="460" r="25" fill="#14b8a6"/><rect x="420" y="535" width="350" height="190" rx="24" fill="#f0fdfa" stroke="#2dd4bf" stroke-width="4"/>
+    <text x="595" y="595" text-anchor="middle" font-size="48" class="title">2012</text><text x="595" y="655" text-anchor="middle" font-size="42">基金会成立</text><text x="595" y="705" text-anchor="middle" font-size="38">社区治理制度化</text>
+  </g>
+  <g>
+    <circle cx="985" cy="460" r="25" fill="#22c55e"/><rect x="810" y="195" width="350" height="190" rx="24" fill="#f0fdf4" stroke="#4ade80" stroke-width="4"/>
+    <text x="985" y="255" text-anchor="middle" font-size="48" class="title">2020</text><text x="985" y="315" text-anchor="middle" font-size="40">OpenInfra基金会</text><text x="985" y="365" text-anchor="middle" font-size="38">开放基础设施拓展</text>
+  </g>
+  <g>
+    <circle cx="1375" cy="460" r="25" fill="#f59e0b"/><rect x="1200" y="535" width="350" height="190" rx="24" fill="#fff7ed" stroke="#fb923c" stroke-width="4"/>
+    <text x="1375" y="595" text-anchor="middle" font-size="48" class="title">2025</text><text x="1375" y="655" text-anchor="middle" font-size="42">组织协作演进</text><text x="1375" y="705" text-anchor="middle" font-size="38">融入Linux基金会</text>
+  </g>
+  <text x="800" y="820" text-anchor="middle" font-size="42" class="title">从计算与对象存储项目，发展为开放基础设施平台生态</text>
+</svg>
