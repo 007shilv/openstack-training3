@@ -35,10 +35,10 @@
   {
     "number": "表3-3",
     "title": "Antelope、Gazpacho与Hibiscus版本状态比较",
-    "anchor": "表3-3进一步比较三个版本的发布日期或计划日期、截止日状态、SLURP属性和教材用途",
-    "columns": ["版本", "发布日期或计划日期", "截止日状态", "SLURP属性", "本章定位"],
+    "anchor": "表3-3列出三个版本的发布日期或计划日期、截至2026年7月31日的状态、SLURP属性和版本说明",
+    "columns": ["版本", "发布日期或计划日期", "截止日状态", "SLURP属性", "版本说明"],
     "rows": [
-      ["2023.1 Antelope", "2023年3月22日", "Unmaintained", "是，首个SLURP版本", "固定的课程实验环境"],
+      ["2023.1 Antelope", "2023年3月22日", "Unmaintained", "是，首个SLURP版本", "与openEuler 24.03 LTS SP3稳定适配集成"],
       ["2026.1 Gazpacho", "2026年4月1日", "Maintained", "是", "截止日最新已发布版本"],
       ["2026.2 Hibiscus", "计划2026年9月30日", "Development", "否", "截止日仍在开发的下一版本"]
     ],

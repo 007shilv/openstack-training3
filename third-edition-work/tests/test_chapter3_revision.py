@@ -82,10 +82,15 @@ def test_chapter3_uses_textbook_levels_and_avoids_editorial_language():
         "本章写作",
         "研究口径",
         "使用提示",
+        "只有同时说明这些维度",
+        "把三条边界分开",
+        "理解这一区分后",
+        "新建生产云仍需",
     )
     for term in banned:
         assert term not in text
     assert not re.search(r"(?m)^注[：:]", text)
+    assert "已经与openEuler 24.03 LTS SP3信创化环境完成稳定适配与集成" in text
 
 
 def test_chapter3_has_continuous_figure_and_table_references():
