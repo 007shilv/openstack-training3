@@ -148,6 +148,28 @@ def test_local_repository_is_packaged_uploaded_and_used_without_repo_switches() 
     assert "--enablerepo" not in all_text
 
 
+def test_chapter4_uses_only_the_packaged_local_repository() -> None:
+    text = chapter(4)
+    for forbidden in (
+        "openstack-release-antelope",
+        "openstack-antelope.repo",
+        "repo.openeuler.org",
+        "OpenStack_Antelope",
+        "OpenStack_Antelope_update",
+        "步骤八：安装Antelope发行包并修正软件仓路径",
+    ):
+        assert forbidden not in text
+    assert "enabled=1" in text
+    assert "baseurl=file:///opt/openstack_repo" in text
+    assert "baseurl=ftp://controller/openstack_repo" in text
+
+
+def test_chapter4_tables_are_numbered_in_reading_order() -> None:
+    text = chapter(4)
+    markers = re.findall(r"\{\{TABLE:(表4-\d+)\}\}", text)
+    assert markers == ["表4-1", "表4-2", "表4-3", "表4-4"]
+
+
 def test_empty_concept_subsections_are_filled_and_environment_wording_is_used() -> None:
     text5 = chapter(5)
     message = re.search(
@@ -259,3 +281,121 @@ def test_chapter_diagram_text_is_at_least_nine_points_when_printed(number: int) 
         assert sizes
         rendered_width_pt = float(record["width_cm"]) * 72 / 2.54
         assert min(sizes) * rendered_width_pt / view_box_width >= 9.0
+
+
+def _all_diagram_svg_paths() -> list[Path]:
+    manifests = [REVISION_ROOT / "figures" / "ch01-02-figure-manifest.json"]
+    manifests.extend(
+        REVISION_ROOT / "figures" / f"ch{number:02d}-figure-manifest.json"
+        for number in range(3, 9)
+    )
+    paths: list[Path] = []
+    for manifest in manifests:
+        for record in json.loads(manifest.read_text(encoding="utf-8")):
+            if record.get("kind", "diagram") == "diagram" and record.get("svg"):
+                paths.append(REVISION_ROOT / record["svg"])
+    return paths
+
+
+def _css_font_size(payload: str, node: ET.Element) -> float:
+    direct = node.attrib.get("font-size")
+    if direct:
+        return float(direct.removesuffix("px"))
+    class_name = node.attrib.get("class")
+    if class_name:
+        match = re.search(
+            rf"\.{re.escape(class_name)}\s*\{{[^}}]*font-size:(\d+(?:\.\d+)?)px",
+            payload,
+        )
+        if match:
+            return float(match.group(1))
+    match = re.search(r"text\s*\{[^}]*font-size:(\d+(?:\.\d+)?)px", payload)
+    if match:
+        return float(match.group(1))
+    raise AssertionError(f"text has no resolvable font size: {ET.tostring(node)}")
+
+
+def _estimated_text_width(text: str, font_size: float) -> float:
+    units = 0.0
+    for char in text:
+        if "\u4e00" <= char <= "\u9fff":
+            units += 1.0
+        elif char.isspace():
+            units += 0.35
+        elif char.isascii() and (char.isalnum() or char in "_-/"):
+            units += 0.58
+        else:
+            units += 0.55
+    return units * font_size
+
+
+def test_all_diagram_arrowheads_are_compact() -> None:
+    ns = "{http://www.w3.org/2000/svg}"
+    for path in _all_diagram_svg_paths():
+        root = ET.fromstring(path.read_text(encoding="utf-8"))
+        for marker in root.iter(f"{ns}marker"):
+            assert float(marker.attrib["markerWidth"]) <= 9, path
+            assert float(marker.attrib["markerHeight"]) <= 7, path
+
+
+def test_all_diagram_text_fits_inside_its_smallest_containing_box() -> None:
+    ns = "{http://www.w3.org/2000/svg}"
+    for path in _all_diagram_svg_paths():
+        payload = path.read_text(encoding="utf-8")
+        root = ET.fromstring(payload)
+        view_width = float(root.attrib["viewBox"].split()[2])
+        view_height = float(root.attrib["viewBox"].split()[3])
+        rectangles = []
+        for rect in root.iter(f"{ns}rect"):
+            x = float(rect.attrib.get("x", 0))
+            y = float(rect.attrib.get("y", 0))
+            width = float(rect.attrib.get("width", 0))
+            height = float(rect.attrib.get("height", 0))
+            if width >= view_width and height >= view_height:
+                continue
+            rectangles.append((x, y, width, height))
+        for node in root.iter(f"{ns}text"):
+            if "x" not in node.attrib or "y" not in node.attrib:
+                continue
+            text = "".join(node.itertext()).strip()
+            if not text:
+                continue
+            x = float(node.attrib["x"])
+            y = float(node.attrib["y"])
+            containing = [
+                rect
+                for rect in rectangles
+                if rect[0] <= x <= rect[0] + rect[2]
+                and rect[1] <= y <= rect[1] + rect[3]
+            ]
+            if not containing:
+                continue
+            box = min(containing, key=lambda rect: rect[2] * rect[3])
+            available = box[2] - 24
+            estimated = _estimated_text_width(text, _css_font_size(payload, node))
+            assert estimated <= available, f"{path.name}: {text!r} exceeds {box}"
+
+
+def test_china_market_figure_uses_one_value_font_size() -> None:
+    path = REVISION_ROOT / "figures" / "ch01" / "图1.8.svg"
+    root = ET.fromstring(path.read_text(encoding="utf-8"))
+    ns = "{http://www.w3.org/2000/svg}"
+    value_sizes = {
+        float(node.attrib["font-size"])
+        for node in root.iter(f"{ns}text")
+        if "亿元" in "".join(node.itertext())
+    }
+    assert len(value_sizes) == 1
+
+
+def test_metadata_figure_boxes_are_proportional_to_their_content() -> None:
+    path = REVISION_ROOT / "figures" / "ch5" / "图5.1.svg"
+    root = ET.fromstring(path.read_text(encoding="utf-8"))
+    ns = "{http://www.w3.org/2000/svg}"
+    boxes = [
+        node
+        for node in root.iter(f"{ns}rect")
+        if node.attrib.get("x") in {"80", "860"}
+    ]
+    assert len(boxes) == 2
+    assert all(float(box.attrib["height"]) <= 360 for box in boxes)

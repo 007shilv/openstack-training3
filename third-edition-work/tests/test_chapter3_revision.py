@@ -95,6 +95,9 @@ def test_chapter3_uses_textbook_levels_and_avoids_editorial_language():
 
 def test_chapter3_translates_general_governance_and_release_states_to_chinese():
     text = chapter_text()
+    prose_without_approved_term_expansions = text.replace(
+        "Software Development Kit", "Software Kit"
+    )
     for chinese_term in (
         "开放源代码",
         "开放设计",
@@ -117,7 +120,7 @@ def test_chapter3_translates_general_governance_and_release_states_to_chinese():
         "Unmaintained",
         "Development",
     ):
-        assert english_term not in text
+        assert english_term not in prose_without_approved_term_expansions
 
 
 def test_manuscript_sources_use_experiment_environment_not_teaching_cloud():

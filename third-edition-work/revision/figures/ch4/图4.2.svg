@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
 <style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
-<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">双节点环境拓扑与组件分布</text>
 <line x1="300" y1="235" x2="350" y2="235" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
@@ -15,7 +15,7 @@
 <text x="605.0" y="241.0" text-anchor="middle">192.168.234.151　ens33</text>
 <text x="605.0" y="287.0" text-anchor="middle">MariaDB　RabbitMQ</text>
 <text x="605.0" y="333.0" text-anchor="middle">Memcached</text>
-<text x="605.0" y="379.0" text-anchor="middle">Keystone　Glance　Placement</text>
+<text x="605.0" y="379.0" text-anchor="middle" font-size="34">Keystone　Glance　Placement</text>
 <text x="605.0" y="425.0" text-anchor="middle">Nova控制服务</text>
 <text x="605.0" y="471.0" text-anchor="middle">Neutron控制服务</text>
 <text x="605.0" y="517.0" text-anchor="middle">Cinder控制服务</text>
@@ -32,7 +32,7 @@
 <text x="1245.0" y="540.0" text-anchor="middle">ens34：Provider接口</text>
 <text x="1245.0" y="586.0" text-anchor="middle">无IP地址</text>
 <rect x="350" y="735" width="510" height="100" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="605.0" y="774.0" text-anchor="middle">管理网络　192.168.234.0/24</text>
+<text x="605.0" y="774.0" text-anchor="middle" font-size="35">管理网络　192.168.234.0/24</text>
 <text x="605.0" y="820.0" text-anchor="middle">SSH、API与节点通信</text>
 <rect x="950" y="735" width="590" height="100" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
 <text x="1245.0" y="774.0" text-anchor="middle">Provider网络　外部二层网络</text>

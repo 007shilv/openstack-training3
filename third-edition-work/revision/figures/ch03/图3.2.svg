@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
   <style>text{font-family:SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.small{font-size:40px;fill:#334155}.white{fill:#ffffff}</style>
-  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#64748b"/></marker></defs>
+  <defs><marker id="a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#64748b"/></marker></defs>
   <rect width="1600" height="900" fill="#ffffff"/>
   <text x="800" y="66" text-anchor="middle" font-size="52" class="title">OpenInfra基金会与OpenStack治理结构</text>
 

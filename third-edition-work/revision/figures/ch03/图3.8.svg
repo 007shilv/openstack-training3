@@ -14,7 +14,7 @@
   <g>
     <rect x="715" y="115" width="830" height="700" rx="28" fill="#ffffff" stroke="#94a3b8" stroke-width="4"/>
     <rect x="715" y="115" width="830" height="92" rx="28" fill="#172033"/><text x="760" y="175" font-size="42" class="title white">项目　›　概览</text><text x="1485" y="175" text-anchor="end" font-size="40" class="white">admin</text>
-    <rect x="715" y="207" width="180" height="608" fill="#f1f5f9"/><g font-size="40"><text x="755" y="285">计算</text><text x="755" y="355">网络</text><text x="755" y="425">卷</text><text x="755" y="495">对象存储</text></g>
+    <rect x="715" y="207" width="180" height="608" fill="#f1f5f9"/><g font-size="38"><text x="755" y="285">计算</text><text x="755" y="355">网络</text><text x="755" y="425">卷</text><text x="755" y="495" font-size="38">对象存储</text></g>
     <text x="945" y="280" font-size="46" class="title">资源用量</text>
     <g text-anchor="middle"><circle cx="1040" cy="420" r="105" fill="none" stroke="#dbeafe" stroke-width="28"/><path d="M1040 315 A105 105 0 0 1 1135 465" fill="none" stroke="#2563eb" stroke-width="28"/><text x="1040" y="410" font-size="48" class="title">2 / 10</text><text x="1040" y="465" font-size="40">实例</text>
     <circle cx="1320" cy="420" r="105" fill="none" stroke="#ccfbf1" stroke-width="28"/><path d="M1320 315 A105 105 0 0 1 1410 470" fill="none" stroke="#14b8a6" stroke-width="28"/><text x="1320" y="410" font-size="48" class="title">4 / 20</text><text x="1320" y="465" font-size="40">vCPU</text></g>

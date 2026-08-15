@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
 <style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
-<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">Glance主要组成</text>
 <rect x="60" y="250" width="310" height="230" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
 <text x="215.0" y="308.0" text-anchor="middle" class="title">客户端</text>
 <text x="215.0" y="354.0" text-anchor="middle">Horizon</text>
-<text x="215.0" y="400.0" text-anchor="middle">OpenStackClient</text>
+<text x="215.0" y="400.0" text-anchor="middle" font-size="32">OpenStackClient</text>
 <text x="215.0" y="446.0" text-anchor="middle">Nova</text>
 <rect x="500" y="200" width="430" height="330" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
 <text x="715.0" y="308.0" text-anchor="middle" class="title">glance-api</text>

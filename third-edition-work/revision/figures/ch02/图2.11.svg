@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
   <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
-  <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#2563eb"/></marker></defs>
+  <defs><marker id="a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker></defs>
   <rect width="1200" height="700" fill="#ffffff"/>
   <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">国内外公有云稳定能力层次</text>
   <rect x="105" y="95" width="990" height="105" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>

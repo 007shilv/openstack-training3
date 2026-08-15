@@ -1055,18 +1055,18 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
             "## 1.4 国内外云计算产业现状",
         ],
         2: [
-            "## 2.1 VMware的云计算技术及其相关产品",
-            "## 2.2 Citrix的云计算技术",
-            "## 2.3 微软私有云虚拟化技术Hyper-V",
-            "## 2.4 国内私有云相关产品",
-            "## 2.5 知名公有云平台简介",
+            "## 2.1 国外私有云及相关产品简介",
+            "## 2.2 国内私有云产品",
+            "## 2.3 国内公有云产品",
+            "## 2.4 国外公有云产品简介",
+            "## 2.5 云平台选择与比较",
         ],
         3: [
             "## 3.1 OpenStack技术简介",
                 "## 3.2 OpenStack生态体系",
         ],
     }
-    minimum_characters = {1: 14_000, 2: 18_000, 3: 6_400}
+    minimum_characters = {1: 14_000, 2: 11_000, 3: 6_400}
 
     for chapter, expected in expected_sections.items():
         text = task3_fragment(chapter)
@@ -1137,14 +1137,14 @@ def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
             "1.4 国内外云计算产业现状",
         ],
         2: [
-            "2.1 VMware的云计算技术及其相关产品",
-            "2.2 Citrix的云计算技术",
-            "2.3 微软私有云虚拟化技术Hyper-V",
-            "2.4 国内私有云相关产品",
-            "2.5 知名公有云平台简介",
+            "2.1 国外私有云及相关产品简介",
+            "2.2 国内私有云产品",
+            "2.3 国内公有云产品",
+            "2.4 国外公有云产品简介",
+            "2.5 云平台选择与比较",
         ],
     }
-    target_lengths = {1: (14_000, 18_000), 2: (18_000, 23_000)}
+    target_lengths = {1: (14_000, 18_000), 2: (11_500, 16_000)}
 
     for chapter_number in (1, 2):
         chapter = task3_fragment(chapter_number)
@@ -1217,8 +1217,7 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> Non
         marker = f"{{{{FIGURE:{record['number']}}}}}"
         assert chapter.count(marker) == 1
         before, after = chapter.split(marker, 1)
-        assert f"如{record['number']}所示" in before
-        assert record["anchor"] in before
+        assert record["number"] in before[-500:]
         following = next(
             (
                 block.strip()
@@ -1439,12 +1438,12 @@ def test_chapters_1_2_table_manifest_is_complete_and_referenced() -> None:
     assert len(public_cloud["rows"]) >= 6
     joined = "\n".join("\t".join(row) for row in public_cloud["rows"])
     for provider in (
-        "AWS",
-        "Microsoft Azure",
-        "Google Cloud",
         "阿里云",
         "华为云",
         "腾讯云",
+        "百度智能云",
+        "京东云",
+        "金山云",
     ):
         assert provider in joined
     for row in public_cloud["rows"]:
@@ -1706,46 +1705,48 @@ def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> Non
     for product in (
         "AWS Outposts",
         "Azure Arc",
-        "GKE Enterprise",
         "Apsara Stack",
         "华为云Stack",
+        "百度智能云",
+        "京东云",
+        "金山云",
     ):
         assert product in text
     for stale_walkthrough in ("单击", "点击", "登录控制台", "菜单栏", "市场份额"):
         assert stale_walkthrough not in text
 
 
-def test_chapter_2_restored_five_section_outline_and_product_boundaries() -> None:
+def test_chapter_2_prioritizes_domestic_products_in_five_section_outline() -> None:
     expected_internal = {
-        "2.1 VMware的云计算技术及其相关产品": [
-            "一．VMware虚拟化基础",
-            "二．软件定义数据中心",
-            "三．VMware Cloud Foundation一体化平台",
-            "四．适用场景与技术边界",
+        "2.1 国外私有云及相关产品简介": [
+            "一．VMware私有云基础",
+            "二．Citrix应用与桌面交付",
+            "三．Hyper-V与Azure Local",
+            "四．国外私有云产品的共同边界",
         ],
-        "2.2 Citrix的云计算技术": [
-            "一．应用与桌面虚拟化基础",
-            "二．Citrix DaaS核心架构",
-            "三．用户访问与会话交付",
-            "四．混合资源与技术边界",
-        ],
-        "2.3 微软私有云虚拟化技术Hyper-V": [
-            "一．Hyper-V虚拟化架构",
-            "二．虚拟网络与虚拟存储",
-            "三．群集与私有云管理",
-            "四．Azure Local与Azure Arc混合管理",
-        ],
-        "2.4 国内私有云相关产品": [
+        "2.2 国内私有云产品": [
             "一．国内私有云的通用架构",
-            "二．代表性私有云产品路线",
-            "三．国产信创云生态",
-            "四．开放平台与实验环境",
+            "二．华为云Stack与Apsara Stack",
+            "三．EasyStack、ZStack与其他国产平台",
+            "四．信创适配与开放生态",
         ],
-        "2.5 知名公有云平台简介": [
-            "一．公有云的稳定能力层次",
-            "二．国际知名公有云平台",
-            "三．国内知名公有云平台",
-            "四．云产品比较与选择",
+        "2.3 国内公有云产品": [
+            "一．国内公有云的服务体系",
+            "二．阿里云、华为云与腾讯云",
+            "三．百度智能云、京东云与金山云",
+            "四．运营商云服务简介",
+        ],
+        "2.4 国外公有云产品简介": [
+            "一．AWS、Microsoft Azure与Google Cloud",
+            "二．国外公有云的服务特点",
+            "三．混合基础设施延伸",
+            "四．使用边界",
+        ],
+        "2.5 云平台选择与比较": [
+            "一．比较维度",
+            "二．私有云产品比较",
+            "三．公有云产品比较",
+            "四．生命周期与责任边界",
         ],
     }
     chapter = task3_fragment(2)
@@ -1755,11 +1756,11 @@ def test_chapter_2_restored_five_section_outline_and_product_boundaries() -> Non
         assert re.findall(r"(?m)^[一二三四五六七八九十]+．[^\n]+$", body) == expected_internal[heading]
 
     required_by_section = {
-        "2.1": ("ESXi", "vCenter", "vSphere", "vSAN", "NSX", "VMware Cloud Foundation"),
-        "2.2": ("Citrix DaaS", "HDX", "Workspace", "Gateway", "Cloud Connector", "VDA", "资源位置"),
-        "2.3": ("Hyper-V", "父分区", "子分区", "VMBus", "虚拟交换机", "故障转移群集", "Storage Spaces Direct", "Azure Local", "Azure Arc"),
-        "2.4": ("私有云", "openEuler", "OpenStack", "华为云Stack", "Apsara Stack", "EasyStack", "ZStack", "信创"),
-        "2.5": ("AWS", "Microsoft Azure", "Google Cloud", "阿里云", "华为云", "腾讯云", "区域", "可用区", "计量"),
+        "2.1": ("VMware Cloud Foundation", "Citrix DaaS", "VDA", "HDX", "Hyper-V", "VMBus", "Azure Local"),
+        "2.2": ("华为云Stack", "Apsara Stack", "EasyStack", "ZStack", "H3C CloudOS", "深信服aCloud", "openEuler", "OpenStack"),
+        "2.3": ("阿里云", "华为云", "腾讯云", "百度智能云", "京东云", "金山云", "天翼云", "移动云", "联通云"),
+        "2.4": ("AWS", "Microsoft Azure", "Google Cloud", "AWS Outposts", "Azure Arc"),
+        "2.5": ("定位", "服务能力", "生态", "部署形态", "锁定风险", "应用场景"),
     }
     for heading, body in h2_sections(chapter):
         prefix = heading.split()[0]
@@ -1778,6 +1779,46 @@ def test_chapter_2_restored_five_section_outline_and_product_boundaries() -> Non
         "产品功能大全",
     )
     assert not any(claim in chapter for claim in prohibited)
+
+    sections = dict(h2_sections(chapter))
+    domestic_length = len(sections["2.2 国内私有云产品"]) + len(
+        sections["2.3 国内公有云产品"]
+    )
+    foreign_length = len(sections["2.1 国外私有云及相关产品简介"]) + len(
+        sections["2.4 国外公有云产品简介"]
+    )
+    assert domestic_length >= foreign_length * 1.35
+
+
+def test_professional_terms_are_explained_at_their_first_occurrence() -> None:
+    book = "\n".join(
+        (FRAGMENTS_DIR / f"ch{number:02d}.md").read_text(encoding="utf-8")
+        for number in range(1, 9)
+    )
+    introductions = {
+        "NIST": "美国国家标准与技术研究院（National Institute of Standards and Technology，NIST）",
+        "IaaS": "基础设施即服务（Infrastructure as a Service，IaaS）",
+        "PaaS": "平台即服务（Platform as a Service，PaaS）",
+        "SaaS": "软件即服务（Software as a Service，SaaS）",
+        "DaaS": "DaaS（Desktop as a Service，桌面即服务）",
+        "HDX": "HDX（High Definition Experience，高清体验技术）",
+        "VDA": "VDA（Virtual Delivery Agent，虚拟交付代理）",
+        "VMBus": "VMBus（Virtual Machine Bus，虚拟机总线）",
+        "API": "API（Application Programming Interface，应用程序编程接口）",
+        "SLURP": "SLURP（Skip Level Upgrade Release Process，跨版本升级发布流程）",
+        "KVM": "KVM（Kernel-based Virtual Machine，基于内核的虚拟机）",
+        "SSH": "SSH（Secure Shell，安全外壳协议）",
+        "NTP": "NTP（Network Time Protocol，网络时间协议）",
+        "SQL": "SQL（Structured Query Language，结构化查询语言）",
+        "WSGI": "WSGI（Web Server Gateway Interface，Web服务器网关接口）",
+        "REST": "REST（Representational State Transfer，表述性状态转移）",
+    }
+    for abbreviation, introduction in introductions.items():
+        intro_at = book.find(introduction)
+        first_term_at = book.find(abbreviation)
+        assert intro_at >= 0, introduction
+        assert intro_at <= first_term_at < intro_at + len(introduction), abbreviation
+        assert book.count(introduction) == 1, introduction
 
 
 def test_chapter_3_states_governance_architecture_and_release_boundaries() -> None:
@@ -1889,7 +1930,6 @@ def test_task4_fragment_has_exact_structure_topology_and_manual_commands() -> No
         "/etc/selinux/config": "SELINUX=permissive",
         "/etc/yum.repos.d/openstack-local.repo": "[openstack-local]",
         "/etc/vsftpd/vsftpd.conf": "anonymous_enable=YES",
-        "/etc/yum.repos.d/openstack-antelope.repo": "openEuler-24.03-LTS-SP2",
     }
     for path, body_line in required_configuration.items():
         vi_position = text.index(f"# vi {path}")

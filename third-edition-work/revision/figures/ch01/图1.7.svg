@@ -34,9 +34,9 @@
     <text x="472" y="278" text-anchor="middle" font-size="34">用户管理</text>
     <text x="472" y="475" text-anchor="middle" font-size="34">提供者管理</text>
     <text x="735" y="238" text-anchor="middle" font-size="34">用户管理数据</text>
-    <text x="735" y="434" text-anchor="middle" font-size="34">提供者管理平台</text>
+    <text x="735" y="434" text-anchor="middle" font-size="32">提供者管理平台</text>
     <text x="998" y="238" text-anchor="middle" font-size="34">用户管理使用</text>
-    <text x="998" y="434" text-anchor="middle" font-size="34">提供者管理服务</text>
+    <text x="998" y="434" text-anchor="middle" font-size="32">提供者管理服务</text>
   </g>
   <rect x="180" y="625" width="300" height="52" rx="12" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
   <text x="330" y="662" text-anchor="middle" font-size="34">用户责任</text>

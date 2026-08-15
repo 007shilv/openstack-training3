@@ -161,3 +161,28 @@
 - [ ] **Step 6: 重新运行全套验收并记录最终哈希、页数和图表数量**
 - [ ] **Step 7: 提交最终审阅稿相关源文件并停止后续章节写作**
 
+### Task 8: 按集中反馈统一术语、产品结构、图形和编号
+
+**Files:**
+- Modify: `third-edition-work/revision/fragments/ch01.md`
+- Modify: `third-edition-work/revision/fragments/ch02.md`
+- Modify: `third-edition-work/revision/fragments/ch03.md`
+- Modify: `third-edition-work/revision/fragments/ch04.md`
+- Modify: `third-edition-work/revision/fragments/ch05.md` 至 `ch08.md`
+- Modify: `third-edition-work/revision/figures/ch01` 至 `ch8` 中现有图形资产
+- Modify: `third-edition-work/tests/test_chapters_4_8_revision.py`
+- Modify in place: `D:/codex/云计算教材更新/云计算基础架构平台构建与应用（第三版第1-3章审阅稿-20260815-04修复版）.docx`
+
+**Interfaces:**
+- Consumes: 用户八幅截图、已批准的术语首现格式和当前第1—8章图文内容。
+- Produces: 术语首次出现即释义、国内产品详写、国外产品简写、图形无重叠溢出、表格连续编号且只使用本地软件源的当前审阅稿。
+
+- [x] **Step 1: 写入术语首现、第二章结构、第四章表号和本地源流程的失败测试**
+- [x] **Step 2: 运行定向测试，确认上述问题在当前稿中真实存在**
+- [x] **Step 3: 重组第二章为国外私有云简介、国内私有云、国内公有云、国外公有云简介和产品选择五节**
+- [x] **Step 4: 按正文阅读顺序统一第1—8章专业术语的首次解释，命令、路径、网址和环境变量保持原样**
+- [x] **Step 5: 把第四章表号按出现顺序改为表4-1至表4-4，删除远程Antelope仓配置，仅保留教材配套本地仓**
+- [x] **Step 6: 逐张检查第1—8章44幅图片；示意图修正箭头、字号、模块尺寸和文字溢出，截图检查清晰度与裁切**
+- [x] **Step 7: 运行定向和全量测试并修正到通过**
+- [x] **Step 8: 在临时文件中生成当前Word，完成打开、页数和代表页视觉检查后原子覆盖原文件**
+- [x] **Step 9: 提交本轮源文件和检查项，不提交临时文件或另建正式书稿**

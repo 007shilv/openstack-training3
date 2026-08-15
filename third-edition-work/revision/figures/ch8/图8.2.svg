@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
 <style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
-<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">Nova与Placement调度协作</text>
 <line x1="390" y1="395" x2="450" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
 <line x1="770" y1="395" x2="830" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
 <line x1="1150" y1="395" x2="1210" y2="395" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
 <rect x="70" y="245" width="320" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="230.0" y="361.0" text-anchor="middle" class="title">nova-compute</text>
+<text x="230.0" y="361.0" text-anchor="middle" font-size="40" font-weight="700">nova-compute</text>
 <text x="230.0" y="407.0" text-anchor="middle">登记资源提供者</text>
 <text x="230.0" y="453.0" text-anchor="middle">清单与特征</text>
 <rect x="450" y="245" width="320" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="610.0" y="384.0" text-anchor="middle" class="title">Nova Scheduler</text>
+<text x="610.0" y="384.0" text-anchor="middle" font-size="34" font-weight="700">Nova Scheduler</text>
 <text x="610.0" y="430.0" text-anchor="middle">提交实例资源请求</text>
 <rect x="830" y="245" width="320" height="300" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
 <text x="990.0" y="384.0" text-anchor="middle" class="title">Placement</text>
 <text x="990.0" y="430.0" text-anchor="middle">返回分配候选</text>
 <rect x="1210" y="245" width="320" height="300" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="1370.0" y="361.0" text-anchor="middle" class="title">Nova</text>
-<text x="1370.0" y="407.0" text-anchor="middle">选择目标并建立分配</text>
-<text x="1370.0" y="453.0" text-anchor="middle">交给计算节点创建实例</text>
+<text x="1370.0" y="340" text-anchor="middle" class="title">Nova</text>
+<text x="1380" y="440" text-anchor="middle" font-size="28">选择目标、建立分配</text>
+<text x="1380" y="480" text-anchor="middle" font-size="27">在计算节点创建实例</text>
 <text x="800" y="720" text-anchor="middle" class="sub">Placement提供资源事实和候选，Nova完成最终调度与实例生命周期</text>
 </svg>
