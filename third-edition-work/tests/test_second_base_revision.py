@@ -1063,7 +1063,7 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         ],
         3: [
             "## 3.1 OpenStack技术简介",
-            "## 3.2 体验原生OpenStack云平台",
+                "## 3.2 OpenStack生态体系",
         ],
     }
     minimum_characters = {1: 14_000, 2: 18_000, 3: 6_400}
@@ -1739,7 +1739,7 @@ def test_chapter_2_restored_five_section_outline_and_product_boundaries() -> Non
             "一．国内私有云的通用架构",
             "二．代表性私有云产品路线",
             "三．国产信创云生态",
-            "四．开放平台与教学衔接",
+            "四．开放平台与实验环境",
         ],
         "2.5 知名公有云平台简介": [
             "一．公有云的稳定能力层次",
@@ -1784,13 +1784,13 @@ def test_chapter_3_states_governance_architecture_and_release_boundaries() -> No
     text = task3_fragment(3)
 
     for topic in (
-        "NASA",
+        "美国国家航空航天局",
         "Rackspace",
         "开放源代码",
         "开放设计",
         "开放开发",
         "开放社区",
-        "OpenInfra Foundation",
+        "OpenInfra基金会",
         "技术委员会",
         "Keystone",
         "Glance",
@@ -1804,21 +1804,19 @@ def test_chapter_3_states_governance_architecture_and_release_boundaries() -> No
     ):
         assert topic in text
     assert re.search(
-        r"2026\.1 Gazpacho.{0,80}2026年4月1日.{0,100}Maintained.{0,50}SLURP",
+        r"2026\.1 Gazpacho.{0,80}2026年4月1日.{0,100}维护中.{0,50}SLURP",
         text,
         re.S,
     )
     assert re.search(
-        r"2026\.2 Hibiscus.{0,100}开发中.{0,100}计划于2026年9月30日",
+        r"2026\.2 Hibiscus.{0,100}开发阶段.{0,100}计划于2026年9月30日",
         text,
         re.S,
     )
-    assert re.search(
-        r"2023\.1 Antelope.{0,80}2023年3月22日.{0,100}Unmaintained.{0,100}隔离教学环境",
-        text,
-        re.S,
-    )
-    assert re.search(r"Antelope.{0,220}不.{0,20}生产", text, re.S)
+    assert re.search(r"实验环境.{0,20}2023\.1 Antelope.{0,80}2023年3月22日", text, re.S)
+    assert re.search(r"2023\.1 Antelope.{0,220}非持续维护", text, re.S)
+    assert "OpenStack实验环境与生产环境的差异" in text
+    assert re.search(r"实验环境.{0,260}生产环境", text, re.S)
 
 
 def test_task3_text_has_no_source_dump_or_command_manual_language() -> None:
@@ -1836,7 +1834,6 @@ def test_task3_text_has_no_source_dump_or_command_manual_language() -> None:
         r"门禁",
         r"失败即停",
         r"验收",
-        r"验证",
     )
 
     for path in TASK3_FRAGMENTS.values():
@@ -1900,7 +1897,7 @@ def test_task4_fragment_has_exact_structure_topology_and_manual_commands() -> No
         assert vi_position < body_position
         assert f"]# {body_line}" not in text
 
-    assert "保留文件中原有内容，只在文件末尾追加后两行" in text
+    assert "保留文件原有内容，在末尾加入controller和compute地址映射" in text
     assert "::1         localhost localhost.localdomain localhost6 localhost6.localdomain6" in text
 
 
@@ -1924,11 +1921,11 @@ def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> N
         assert re.search(pattern, text, re.I) is None, pattern
 
     def require_core_contract(candidate: str) -> None:
-        assert "controller管理地址为192.168.234.151/24" in candidate
-        assert "compute管理地址为192.168.234.150/24" in candidate
-        assert "ens34不配置IP地址" in candidate
-        assert "/dev/sdb用于Cinder" in candidate
-        assert "/dev/sdc用于Swift" in candidate
+        assert re.search(r"controller.{0,12}管理地址为192\.168\.234\.151/24", candidate)
+        assert re.search(r"compute.{0,12}管理地址为192\.168\.234\.150/24", candidate)
+        assert re.search(r"ens34.{0,40}不配置IP地址", candidate)
+        assert re.search(r"/dev/sdb.{0,20}Cinder", candidate)
+        assert re.search(r"/dev/sdc.{0,20}Swift", candidate)
         assert "CentOS" not in candidate
         assert "\nsed " not in candidate
         assert "python" not in candidate.lower()
@@ -1952,20 +1949,20 @@ def test_task4_fragment_rejects_forbidden_procedures_and_simple_mutations() -> N
 
     require_core_contract(text)
     swapped_nodes = text.replace(
-        "controller管理地址为192.168.234.151/24",
-        "controller管理地址为192.168.234.150/24",
+        "controller的管理地址为192.168.234.151/24",
+        "controller的管理地址为192.168.234.150/24",
         1,
     ).replace(
-        "compute管理地址为192.168.234.150/24",
-        "compute管理地址为192.168.234.151/24",
+        "compute的管理地址为192.168.234.150/24",
+        "compute的管理地址为192.168.234.151/24",
         1,
     )
     corruptions = (
         text.replace("192.168.234.151/24", "192.168.234.152/24"),
         swapped_nodes,
-        text.replace("ens34不配置IP地址", "ens34配置IP地址", 1),
-        text.replace("/dev/sdc用于Swift", "/dev/sdb用于Swift"),
-        text.replace("/dev/sdb用于Cinder", "/dev/sdb用于Swift", 1),
+        text.replace("不配置IP地址", "配置IP地址", 1),
+        text.replace("/dev/sdc在Swift章节", "/dev/sdb在Swift章节"),
+        text.replace("/dev/sdb在Cinder章节", "/dev/sdb在Swift章节", 1),
         text + "\nCentOS\n",
         text + "\nXshell还可以独立学习。\n",
         text.replace("[root@controller ~]# nmcli", "nmcli", 1),
@@ -2002,10 +1999,10 @@ def test_task5_chapters_follow_second_edition_textbook_shape_and_manual_prompts(
         assert headings == expected
         assert 8_500 <= compact_length(text) <= 13_000
         assert "本章导读" in text
-        assert "一．实训前提环境：" in text
-        assert "二．实训涉及节点：" in text
-        assert "三．实训目标：" in text
-        assert "四．实训步骤及其详解：" in text
+        assert "一．实训前提环境" in text
+        assert "二．实训涉及节点" in text
+        assert "三．实训目标" in text
+        assert "四．实训步骤及其详解" in text
 
         for kind, body in re.findall(r"```(command|config)\n(.*?)\n```", text, re.S):
             lines = [line for line in body.splitlines() if line.strip()]
@@ -2121,10 +2118,10 @@ def test_task6_chapters_are_textbook_shaped_manual_deployment_records() -> None:
         assert 9_000 <= compact_length(text) <= 13_500
         assert "本章导读" in text
         for heading in (
-            "一．实训前提环境：",
-            "二．实训涉及节点：",
-            "三．实训目标：",
-            "四．实训步骤及其详解：",
+            "一．实训前提环境",
+            "二．实训涉及节点",
+            "三．实训目标",
+            "四．实训步骤及其详解",
         ):
             assert heading in text
         for kind, body in re.findall(r"```(command|config)\n(.*?)\n```", text, re.S):

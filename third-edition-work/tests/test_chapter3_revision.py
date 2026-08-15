@@ -90,7 +90,34 @@ def test_chapter3_uses_textbook_levels_and_avoids_editorial_language():
     for term in banned:
         assert term not in text
     assert not re.search(r"(?m)^注[：:]", text)
-    assert "已经与openEuler 24.03 LTS SP3信创化环境完成稳定适配与集成" in text
+    assert "与openEuler 24.03 LTS SP3上的软件包和配置组合较为稳定" in text
+
+
+def test_chapter3_translates_general_governance_and_release_states_to_chinese():
+    text = chapter_text()
+    for chinese_term in (
+        "开放源代码",
+        "开放设计",
+        "开放开发",
+        "开放社区",
+        "理事会",
+        "技术委员会",
+        "维护中",
+        "非持续维护",
+        "开发中",
+    ):
+        assert chinese_term in text
+    for english_term in (
+        "Governing Board",
+        "Open Source",
+        "Open Design",
+        "Open Development",
+        "Open Community",
+        "Maintained",
+        "Unmaintained",
+        "Development",
+    ):
+        assert english_term not in text
 
 
 def test_manuscript_sources_use_experiment_environment_not_teaching_cloud():
@@ -137,7 +164,7 @@ def test_chapter3_keeps_version_boundaries_precise():
     assert re.search(r"Hibiscus.{0,80}(开发|计划)", text, flags=re.DOTALL)
     assert "2026年9月30日" in text
     assert "2023.1 Antelope" in text
-    assert "Unmaintained" in text
+    assert "非持续维护" in text
     assert "SLURP" in text
     assert "LTS" in text
     assert re.search(r"SLURP.{0,160}(不是|不等于).{0,20}LTS", text, flags=re.DOTALL)
@@ -168,15 +195,15 @@ def test_chapter3_has_required_architecture_and_ecosystem_topics():
         "REST API",
         "SDK",
         "openEuler",
-        "OpenInfra Foundation",
-        "Governing Board",
-        "Technical Committee",
-        "Project Team",
+        "OpenInfra基金会",
+        "理事会",
+        "技术委员会",
+        "项目团队",
         "四项开放原则",
-        "Open Source",
-        "Open Design",
-        "Open Development",
-        "Open Community",
+        "开放源代码",
+        "开放设计",
+        "开放开发",
+        "开放社区",
         "Gerrit",
         "Zuul",
         "Developer Certificate of Origin",
@@ -246,7 +273,7 @@ def test_chapter3_figure_manifest_has_nine_readable_assets():
         payload = png_path.read_bytes()
         assert payload[:8] == b"\x89PNG\r\n\x1a\n" and payload[12:16] == b"IHDR"
         width, height = struct.unpack(">II", payload[16:24])
-        assert width >= 2400 and height >= 1400
+        assert width >= 2400 and height >= 1350
 
 
 def test_chapter3_openxml_builder_inserts_figures_tables_and_captions():

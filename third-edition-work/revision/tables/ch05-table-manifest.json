@@ -1,0 +1,4 @@
+[
+  {"number":"表5-1","title":"OpenStack控制面基础服务比较","headers":["基础能力","主要职责","数据特性","使用位置"],"rows":[["MariaDB","保存组件控制面元数据","持久化、结构化","controller后台服务"],["RabbitMQ","传递RPC任务和消息","异步通信","controller后台服务"],["Memcached","缓存短期可重建数据","内存、非持久","controller后台服务"],["OpenStackClient","向各组件API发送命令请求","客户端显示结果","controller命令行"]]},
+  {"number":"表5-2","title":"基础服务软件包、配置文件与端口","headers":["服务","主要软件包","主要配置文件","默认端口"],"rows":[["MariaDB","mariadb-server","/etc/my.cnf.d/openstack.cnf","3306"],["RabbitMQ","rabbitmq-server","服务账户由rabbitmqctl配置","5672"],["Memcached","memcached","/etc/sysconfig/memcached","11211"],["OpenStackClient","python3-openstackclient","管理员环境文件由后续章节创建","无常驻端口"]]}
+]

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="800" y="70" text-anchor="middle" class="title">控制面元数据与资源数据</text>
+<rect x="80" y="150" width="660" height="560" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="410.0" y="373.0" text-anchor="middle" class="title">MariaDB元数据</text>
+<text x="410.0" y="419.0" text-anchor="middle">用户、项目与角色</text>
+<text x="410.0" y="465.0" text-anchor="middle">镜像、实例与网络记录</text>
+<text x="410.0" y="511.0" text-anchor="middle">卷状态与对象关系</text>
+<rect x="860" y="150" width="660" height="560" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="1190.0" y="373.0" text-anchor="middle" class="title">资源数据后端</text>
+<text x="1190.0" y="419.0" text-anchor="middle">镜像文件</text>
+<text x="1190.0" y="465.0" text-anchor="middle">实例磁盘与块数据</text>
+<text x="1190.0" y="511.0" text-anchor="middle">对象存储数据</text>
+<line x1="740" y1="330" x2="860" y2="330" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="860" y1="500" x2="740" y2="500" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
+<text x="800" y="815" text-anchor="middle" class="sub">元数据描述对象与关系，后端保存实际资源数据</text>
+</svg>

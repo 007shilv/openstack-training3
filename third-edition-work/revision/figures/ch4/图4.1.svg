@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="800" y="70" text-anchor="middle" class="title">信创OpenStack技术栈</text>
+<rect x="220" y="120" width="1160" height="102" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+<text x="800.0" y="160.0" text-anchor="middle">访问入口</text>
+<text x="800.0" y="206.0" text-anchor="middle">Horizon　命令行　应用接口</text>
+<line x1="800" y1="222" x2="800" y2="252" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<rect x="220" y="258" width="1160" height="102" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="800.0" y="298.0" text-anchor="middle">OpenStack云平台</text>
+<text x="800.0" y="344.0" text-anchor="middle">身份　镜像　计算　网络　存储</text>
+<line x1="800" y1="360" x2="800" y2="390" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<rect x="220" y="396" width="1160" height="102" rx="18" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
+<text x="800.0" y="436.0" text-anchor="middle">虚拟化与资源管理</text>
+<text x="800.0" y="482.0" text-anchor="middle">KVM　libvirt　Linux网络　LVM</text>
+<line x1="800" y1="498" x2="800" y2="528" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<rect x="220" y="534" width="1160" height="102" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="800.0" y="574.0" text-anchor="middle">openEuler操作系统</text>
+<text x="800.0" y="620.0" text-anchor="middle">内核　驱动　进程　软件包</text>
+<line x1="800" y1="636" x2="800" y2="666" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<rect x="220" y="672" width="1160" height="102" rx="18" fill="#fef2f2" stroke="#fca5a5" stroke-width="3"/>
+<text x="800.0" y="712.0" text-anchor="middle">国产软硬件基础</text>
+<text x="800.0" y="758.0" text-anchor="middle">处理器　服务器　网卡　磁盘</text>
+</svg>

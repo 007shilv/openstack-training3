@@ -1,0 +1,50 @@
+[
+  {
+    "op": "replace",
+    "start_heading": "第一章 云计算基本概念",
+    "end_heading": "第二章 云计算知名厂商及其产品",
+    "fragment": "fragments/ch01.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第二章 云计算知名厂商及其产品",
+    "end_heading": "第三章 原生OpenStack云平台",
+    "fragment": "fragments/ch02.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第三章 原生OpenStack云平台",
+    "end_heading": "第四章 openEuler与信创OpenStack实验环境准备",
+    "fragment": "fragments/ch03.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第四章 openEuler与信创OpenStack实验环境准备",
+    "end_heading": "第五章 MariaDB数据库及基础服务的安装与配置",
+    "fragment": "fragments/ch04.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第五章 MariaDB数据库及基础服务的安装与配置",
+    "end_heading": "第六章 Keystone的安装及其配置",
+    "fragment": "fragments/ch05.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第六章 Keystone的安装及其配置",
+    "end_heading": "第七章 Glance的安装及其配置",
+    "fragment": "fragments/ch06.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第七章 Glance的安装及其配置",
+    "end_heading": "第八章 Placement的安装及其配置",
+    "fragment": "fragments/ch07.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第八章 Placement的安装及其配置",
+    "end_heading": "第九章 Nova的安装及其配置",
+    "fragment": "fragments/ch08.md"
+  }
+]

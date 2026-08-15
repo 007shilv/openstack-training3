@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<defs><marker id="blue" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#9333ea"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="800" y="70" text-anchor="middle" class="title">双网卡与网络平面</text>
+<rect x="80" y="150" width="650" height="560" rx="18" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
+<text x="405.0" y="396.0" text-anchor="middle" class="title">controller</text>
+<text x="405.0" y="442.0" text-anchor="middle">ens33：192.168.234.151/24</text>
+<text x="405.0" y="488.0" text-anchor="middle">ens34：无IP地址</text>
+<rect x="870" y="150" width="650" height="560" rx="18" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
+<text x="1195.0" y="396.0" text-anchor="middle" class="title">compute</text>
+<text x="1195.0" y="442.0" text-anchor="middle">ens33：192.168.234.150/24</text>
+<text x="1195.0" y="488.0" text-anchor="middle">ens34：无IP地址</text>
+<rect x="120" y="520" width="1360" height="90" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/><text x="800" y="578" text-anchor="middle">管理网络：SSH、API、数据库、消息与节点通信</text>
+<rect x="120" y="650" width="1360" height="90" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/><text x="800" y="708" text-anchor="middle">Provider网络：Neutron接入外部二层网络，承载实例数据</text>
+<line x1="270" y1="350" x2="270" y2="520" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="1030" y1="350" x2="1030" y2="520" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="540" y1="400" x2="540" y2="650" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
+<line x1="1300" y1="400" x2="1300" y2="650" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
+</svg>

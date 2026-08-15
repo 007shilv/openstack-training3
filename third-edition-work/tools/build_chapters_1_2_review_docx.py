@@ -319,7 +319,7 @@ def build_review_docx(
     revision_root = manifest_path.parent.parent
     expected_numbers = [
         *(f"图1.{index}" for index in range(1, 10)),
-        *(f"图2.{index}" for index in range(1, 15)),
+        *(f"图2.{index}" for index in range(1, 16)),
     ]
     actual_numbers = [record["number"] for record in records]
     if actual_numbers != expected_numbers:

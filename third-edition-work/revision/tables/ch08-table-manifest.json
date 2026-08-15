@@ -1,0 +1,4 @@
+[
+  {"number":"表8-1","title":"Placement核心资源对象","headers":["对象","回答的问题","主要关系"],"rows":[["资源提供者","谁提供资源","拥有清单和特征，可组成提供者树"],["资源类别","资源是什么","VCPU、MEMORY_MB、DISK_GB等"],["资源清单","有多少可分配资源","记录总量、保留量、单位和超分比"],["资源特征","提供者具有什么能力","标准或CUSTOM_特征"],["消费者","谁占用资源","实例或其他占用对象"],["资源分配","占用哪个提供者的多少资源","连接消费者、提供者、类别和数量"]]},
+  {"number":"表8-2","title":"Placement部署对象与承载","headers":["类别","对象或位置","作用"],"rows":[["数据库","placement数据库及三个来源账户","保存资源模型和分配关系"],["服务身份","placement用户、admin角色、placement服务","在service项目中完成认证"],["端点","public、internal、admin，端口8778","提供服务发现"],["配置文件","/etc/placement/placement.conf","数据库、认证和策略参数"],["数据库同步","placement-manage db sync","建立表结构"],["Web承载","Apache 00-placement-api.conf","通过WSGI提供Placement API"]]}
+]

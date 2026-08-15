@@ -1,0 +1,6 @@
+[
+  {"number":"图4.1","title":"信创OpenStack技术栈","svg":"figures/ch4/图4.1.svg","png":"figures/ch4/图4.1.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图4.2","title":"双节点实验环境拓扑","svg":"figures/ch4/图4.2.svg","png":"figures/ch4/图4.2.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图4.3","title":"双网卡与网络平面","svg":"figures/ch4/图4.3.svg","png":"figures/ch4/图4.3.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图4.4","title":"控制节点与计算节点组件分布","svg":"figures/ch4/图4.4.svg","png":"figures/ch4/图4.4.png","width_cm":14.5,"minimum_font_pt":9.0}
+]

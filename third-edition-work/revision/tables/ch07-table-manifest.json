@@ -1,0 +1,4 @@
+[
+  {"number":"表7-1","title":"Glance常用镜像状态","headers":["状态","含义","后续方向"],"rows":[["queued","镜像对象已建立，数据尚未写入","开始上传"],["saving","镜像数据正在写入后端","成功后进入active"],["active","镜像数据可用","可供Nova使用"],["deactivated","数据暂不向普通用户提供","可重新激活"],["killed","上传过程失败，镜像不可读","排查后重新创建"],["deleted / pending_delete","镜像不可用或等待最终清理","按删除策略清理"]]},
+  {"number":"表7-2","title":"Glance部署对象与配置","headers":["类别","对象或参数","本书设置"],"rows":[["数据库","glance数据库及三个来源账户","口令qwer1234"],["服务身份","glance用户、admin角色、image服务","service项目、Default域"],["端点","public、internal、admin","http://controller:9292"],["配置文件","/etc/glance/glance-api.conf","数据库、身份和file后端"],["数据库同步","glance-manage db_sync","建立Antelope表结构"],["系统服务","openstack-glance-api","controller启用并启动"]]}
+]
