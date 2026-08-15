@@ -134,6 +134,62 @@ def flow(number: str, title: str, nodes: list[list[str]], footer: str) -> None:
     save(number, lines)
 
 
+def decision_loop(
+    number: str,
+    title: str,
+    start: list[str],
+    first_question: list[str],
+    yes_process: list[str],
+    no_process: list[str],
+    second_question: list[str],
+    success: list[str],
+    retry: list[str],
+    footer: str,
+) -> None:
+    """Draw a component-specific decision flow with an external feedback loop.
+
+    All connectors are drawn before the modules.  The feedback path stays in the
+    bottom corridor, so arrows never cross module text or cover a decision box.
+    """
+
+    lines = start_svg(title)
+    # Main path and the two branches.  Paths terminate at module edges.
+    lines.extend(
+        [
+            '<path d="M280 390 H300" stroke="#2563eb" stroke-width="5" fill="none" marker-end="url(#blue)"/>',
+            '<path d="M430 270 V230 H650" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>',
+            '<path d="M430 510 V600 H650" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>',
+            '<path d="M950 250 L1110 270" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>',
+            '<path d="M950 600 L1110 510" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>',
+            '<path d="M1110 270 V230 H1270" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>',
+            '<path d="M1110 510 V600 H1270" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>',
+            '<path class="feedback-loop" d="M1420 680 V790 H430 V510" stroke="#2563eb" stroke-width="5" stroke-dasharray="14 10" fill="none" marker-end="url(#blue)"/>',
+        ]
+    )
+    lines.extend(
+        [
+            '<text x="520" y="205" text-anchor="middle" fill="#15803d">是</text>',
+            '<text x="520" y="650" text-anchor="middle" fill="#7e22ce">否</text>',
+            '<text x="1200" y="205" text-anchor="middle" fill="#15803d">是</text>',
+            '<text x="1200" y="650" text-anchor="middle" fill="#7e22ce">否</text>',
+        ]
+    )
+
+    box(lines, 30, 320, 250, 140, start, fill="#eff6ff", stroke="#93c5fd", title=True)
+    lines.append('<polygon class="decision" points="430,270 560,390 430,510 300,390" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>')
+    for index, label in enumerate(first_question):
+        lines.append(f'<text x="430" y="{378 + index * 44}" text-anchor="middle">{escape(label)}</text>')
+    box(lines, 650, 170, 300, 160, yes_process, fill="#f0fdf4", stroke="#86efac", title=True)
+    box(lines, 650, 520, 300, 160, no_process, fill="#faf5ff", stroke="#c4b5fd", title=True)
+    lines.append('<polygon class="decision" points="1110,270 1240,390 1110,510 980,390" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>')
+    for index, label in enumerate(second_question):
+        lines.append(f'<text x="1110" y="{378 + index * 44}" text-anchor="middle">{escape(label)}</text>')
+    box(lines, 1270, 170, 300, 160, success, fill="#f0fdf4", stroke="#86efac", title=True)
+    box(lines, 1270, 520, 300, 160, retry, fill="#fef2f2", stroke="#fca5a5", title=True)
+    lines.append(f'<text x="800" y="865" text-anchor="middle" class="sub">{escape(footer)}</text>')
+    save(number, lines)
+
+
 def build_chapters5_8() -> None:
     two_column("5.1", "控制面元数据与资源数据", "MariaDB元数据", ["用户、项目与角色", "镜像、实例与网络记录", "卷状态与对象关系"], "资源数据后端", ["镜像文件", "实例磁盘与块数据", "对象存储数据"], "元数据描述对象与关系，后端保存实际资源数据")
     flow("5.2", "OpenStack基础服务协作", [["客户端", "OpenStack命令"], ["API与后台进程", "身份、计算、网络"], ["RabbitMQ", "任务与消息"], ["数据与缓存", "MariaDB", "Memcached"]], "数据库、消息队列、缓存和客户端各自承担不同职责")
@@ -218,10 +274,98 @@ def build_chapters9_13() -> None:
     flow("13.2", "云平台基础资源创建顺序", [["项目与用户", "角色授权"], ["公共资源", "规格与镜像"], ["网络资源", "子网与路由器"], ["实例", "安全组与密钥对"]], "资源按依赖关系建立，实例同时引用身份、计算、镜像和网络对象")
 
 
+def build_theory_decision_figures() -> None:
+    decision_loop(
+        "7.3",
+        "镜像导入、状态分支与缓存循环",
+        ["镜像请求", "元数据与数据"],
+        ["采用可互操作", "导入流程？"],
+        ["暂存与导入", "任务处理"],
+        ["直接上传", "写入后端"],
+        ["处理成功且", "数据完整？"],
+        ["镜像 active", "进入可用缓存"],
+        ["FAILED", "清理或重试"],
+        "导入任务和缓存任务都根据状态继续、重试或清理",
+    )
+    decision_loop(
+        "8.3",
+        "分配候选与并发重试",
+        ["资源请求", "数量与能力"],
+        ["候选集合", "非空？"],
+        ["按权重选择", "候选组合"],
+        ["调整请求", "或等待资源"],
+        ["generation", "仍一致？"],
+        ["写入分配", "返回结果"],
+        ["HTTP 409", "重新读取"],
+        "并发变化会使旧候选失效，调用方重新读取后再限定次数重试",
+    )
+    decision_loop(
+        "9.3",
+        "Nova调度与实例构建重试",
+        ["实例请求", "镜像与规格"],
+        ["主机候选", "非空？"],
+        ["尝试首选", "计算节点"],
+        ["记录失败", "实例 ERROR"],
+        ["资源声明和", "构建成功？"],
+        ["实例 ACTIVE", "清空任务状态"],
+        ["选择备用", "主机重试"],
+        "调度器保存备用主机，单次构建失败后按重试上限继续选择",
+    )
+    decision_loop(
+        "10.3",
+        "端口绑定与代理同步",
+        ["端口创建", "或状态变更"],
+        ["机制驱动", "完成绑定？"],
+        ["代理配置", "网桥与安全组"],
+        ["标记端口", "绑定失败"],
+        ["设备状态", "已确认？"],
+        ["端口 ACTIVE", "进入转发"],
+        ["保持 DOWN", "重新同步"],
+        "控制面保存期望状态，代理循环检查主机实际状态并回报结果",
+    )
+    decision_loop(
+        "11.3",
+        "卷调度、连接与状态变化",
+        ["卷请求", "创建或连接"],
+        ["后端满足", "过滤条件？"],
+        ["调度到目标", "存储后端"],
+        ["报告无可用", "后端"],
+        ["后端操作和", "连接成功？"],
+        ["available", "或 in-use"],
+        ["清理连接", "恢复或重试"],
+        "卷状态由控制面、后端驱动和计算主机共同推进并最终收敛",
+    )
+    decision_loop(
+        "12.3",
+        "对象写入与后台修复循环",
+        ["对象请求", "写入或读取"],
+        ["主节点达到", "法定数量？"],
+        ["访问主节点", "保存副本"],
+        ["访问 handoff", "临时节点"],
+        ["副本与元数据", "一致？"],
+        ["请求成功", "返回客户端"],
+        ["复制与审计", "后台修复"],
+        "前台请求优先保证可用性，后台进程持续把数据恢复到Ring规定位置",
+    )
+    decision_loop(
+        "13.3",
+        "Horizon请求与权限判断",
+        ["页面请求", "资源与操作"],
+        ["令牌与会话", "有效？"],
+        ["读取目录", "执行策略判断"],
+        ["返回登录页", "重新认证"],
+        ["前端与服务端", "策略允许？"],
+        ["调用API", "刷新资源状态"],
+        ["隐藏操作或", "返回403"],
+        "页面权限只是第一层判断，后端服务仍按令牌与资源关系独立授权",
+    )
+
+
 def main() -> None:
     build_chapter4()
     build_chapters5_8()
     build_chapters9_13()
+    build_theory_decision_figures()
 
 
 if __name__ == "__main__":

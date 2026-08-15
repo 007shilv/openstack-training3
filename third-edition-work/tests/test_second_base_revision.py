@@ -2149,19 +2149,21 @@ def test_task6_chapters_are_textbook_shaped_manual_deployment_records() -> None:
             "# 第七章 Glance的安装及其配置",
             "## 7.1 Glance功能简介",
             "## 7.2 Glance后端与调用过程",
-            "## 7.3 实训项目4 Glance的手工安装与配置",
+            "## 7.3 镜像生命周期与任务处理",
+            "## 7.4 实训项目4 Glance的手工安装与配置",
         ],
         8: [
             "# 第八章 Placement的安装及其配置",
             "## 8.1 Placement功能简介",
             "## 8.2 Allocation、Consumer与调度协作",
-            "## 8.3 实训项目5 Placement的手工安装与配置",
+            "## 8.3 调度候选与并发控制",
+            "## 8.4 实训项目5 Placement的手工安装与配置",
         ],
     }
     for chapter, expected in expected_headings.items():
         text = task6_fragment(chapter)
         assert [line for line in text.splitlines() if line.startswith("#")] == expected
-        assert 9_000 <= compact_length(text) <= 13_500
+        assert 9_000 <= compact_length(text) <= 20_000
         assert "本章导读" in text
         for heading in (
             "一．实训前提环境",

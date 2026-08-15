@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="800" y="70" text-anchor="middle" class="title">镜像导入、状态分支与缓存循环</text>
+<path d="M280 390 H300" stroke="#2563eb" stroke-width="5" fill="none" marker-end="url(#blue)"/>
+<path d="M430 270 V230 H650" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>
+<path d="M430 510 V600 H650" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>
+<path d="M950 250 L1110 270" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>
+<path d="M950 600 L1110 510" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>
+<path d="M1110 270 V230 H1270" stroke="#16a34a" stroke-width="5" fill="none" marker-end="url(#green)"/>
+<path d="M1110 510 V600 H1270" stroke="#9333ea" stroke-width="5" fill="none" marker-end="url(#purple)"/>
+<path class="feedback-loop" d="M1420 680 V790 H430 V510" stroke="#2563eb" stroke-width="5" stroke-dasharray="14 10" fill="none" marker-end="url(#blue)"/>
+<text x="520" y="205" text-anchor="middle" fill="#15803d">是</text>
+<text x="520" y="650" text-anchor="middle" fill="#7e22ce">否</text>
+<text x="1200" y="205" text-anchor="middle" fill="#15803d">是</text>
+<text x="1200" y="650" text-anchor="middle" fill="#7e22ce">否</text>
+<rect x="30" y="320" width="250" height="140" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="155.0" y="379.0" text-anchor="middle" class="node-title">镜像请求</text>
+<text x="155.0" y="425.0" text-anchor="middle">元数据与数据</text>
+<polygon class="decision" points="430,270 560,390 430,510 300,390" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+<text x="430" y="378" text-anchor="middle">采用可互操作</text>
+<text x="430" y="422" text-anchor="middle">导入流程？</text>
+<rect x="650" y="170" width="300" height="160" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="800.0" y="239.0" text-anchor="middle" class="node-title">暂存与导入</text>
+<text x="800.0" y="285.0" text-anchor="middle">任务处理</text>
+<rect x="650" y="520" width="300" height="160" rx="18" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
+<text x="800.0" y="589.0" text-anchor="middle" class="node-title">直接上传</text>
+<text x="800.0" y="635.0" text-anchor="middle">写入后端</text>
+<polygon class="decision" points="1110,270 1240,390 1110,510 980,390" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+<text x="1110" y="378" text-anchor="middle">处理成功且</text>
+<text x="1110" y="422" text-anchor="middle">数据完整？</text>
+<rect x="1270" y="170" width="300" height="160" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="1420.0" y="239.0" text-anchor="middle" class="node-title">镜像 active</text>
+<text x="1420.0" y="285.0" text-anchor="middle">进入可用缓存</text>
+<rect x="1270" y="520" width="300" height="160" rx="18" fill="#fef2f2" stroke="#fca5a5" stroke-width="3"/>
+<text x="1420.0" y="589.0" text-anchor="middle" class="node-title">FAILED</text>
+<text x="1420.0" y="635.0" text-anchor="middle">清理或重试</text>
+<text x="800" y="865" text-anchor="middle" class="sub">导入任务和缓存任务都根据状态继续、重试或清理</text>
+</svg>

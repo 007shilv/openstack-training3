@@ -1,4 +1,5 @@
 [
   {"number":"图13.1","title":"Horizon访问OpenStack服务","svg":"figures/ch13/图13.1.svg","png":"figures/ch13/图13.1.png","width_cm":14.5,"minimum_font_pt":9.0},
-  {"number":"图13.2","title":"云平台基础资源创建顺序","svg":"figures/ch13/图13.2.svg","png":"figures/ch13/图13.2.png","width_cm":14.5,"minimum_font_pt":9.0}
+  {"number":"图13.2","title":"云平台基础资源创建顺序","svg":"figures/ch13/图13.2.svg","png":"figures/ch13/图13.2.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图13.3","title":"Horizon请求与权限判断","svg":"figures/ch13/图13.3.svg","png":"figures/ch13/图13.3.png","width_cm":14.5,"minimum_font_pt":9.0}
 ]

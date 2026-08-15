@@ -1,0 +1,28 @@
+{
+  "retrieved_at": "2026-08-15",
+  "source_policy": "OpenStack official documentation confirms technical facts. OpenInfra Superuser and Red Hat materials may support examples or exposition only after cross-checking.",
+  "sources": [
+    {"id":"glance-architecture","component":"Glance","title":"Basic architecture","url":"https://docs.openstack.org/glance/latest/contributor/architecture.html","supports":["REST API layers","database metadata","glance_store backend abstraction"]},
+    {"id":"glance-import","component":"Glance","title":"Interoperable Image Import","url":"https://docs.openstack.org/glance/ussuri/admin/interoperable-image-import.html","supports":["glance-direct","web-download","copy-image","staging workflow"]},
+    {"id":"glance-config","component":"Glance","title":"glance-api.conf","url":"https://docs.openstack.org/glance/latest/configuration/glance_api.html","supports":["image cache queue","incomplete and invalid cache","periodic cleanup","import methods"]},
+    {"id":"glance-domain","component":"Glance","title":"glance.domain source documentation","url":"https://docs.openstack.org/glance/latest/_modules/glance/domain.html","supports":["image status transitions"]},
+    {"id":"placement-overview","component":"Placement","title":"Placement","url":"https://docs.openstack.org/placement/latest/","supports":["providers","inventories","usages","resource classes"]},
+    {"id":"placement-tree","component":"Placement","title":"Modeling with Provider Trees","url":"https://docs.openstack.org/placement/latest/user/provider-tree.html","supports":["provider trees","sharing providers","aggregates","traits","allocation candidates"]},
+    {"id":"placement-api","component":"Placement","title":"Placement API Reference","url":"https://docs.openstack.org/api-ref/placement/","supports":["provider generation","consumer generation","409 concurrent_update","re-read and retry"]},
+    {"id":"placement-config","component":"Placement","title":"Placement Configuration Options","url":"https://docs.openstack.org/placement/latest/configuration/config.html","supports":["allocation conflict retries","candidate limits"]},
+    {"id":"nova-scheduling","component":"Nova","title":"Scheduling","url":"https://docs.openstack.org/nova/latest/reference/scheduling.html","supports":["Placement candidates","filtering and weighing","resource claims","alternate hosts","build retry"]},
+    {"id":"nova-config","component":"Nova","title":"Nova Configuration Options","url":"https://docs.openstack.org/nova/latest/configuration/config.html","supports":["scheduler max_attempts","host discovery interval","MaxRetriesExceeded"]},
+    {"id":"neutron-ml2","component":"Neutron","title":"Calling the ML2 Plugin","url":"https://docs.openstack.org/neutron/latest/contributor/internals/calling_ml2_plugin.html","supports":["precommit and postcommit","hierarchical port binding","reverse teardown"]},
+    {"id":"neutron-internals","component":"Neutron","title":"Neutron Internals","url":"https://docs.openstack.org/neutron/latest/contributor/internals/index.html","supports":["RPC","agents","provisioning blocks","retrying operations"]},
+    {"id":"neutron-agents","component":"Neutron","title":"ML2 plug-in","url":"https://docs.openstack.org/neutron/train/admin/config-ml2.html","supports":["L2 agent","DHCP agent","L3 agent","Metadata agent"]},
+    {"id":"cinder-architecture","component":"Cinder","title":"Cinder System Architecture","url":"https://docs.openstack.org/cinder/latest/contributor/architecture.html","supports":["API","scheduler","volume service","database and RPC","volume creation path"]},
+    {"id":"cinder-attachment","component":"Cinder","title":"Volume Attach/Detach workflow - V2","url":"https://docs.openstack.org/cinder/latest/contributor/attach_detach_conventions_v2.html","supports":["Attachment object","reserve","update","complete","detach"]},
+    {"id":"cinder-redhat","component":"Cinder","title":"Performing basic operations with the Block Storage service","url":"https://docs.redhat.com/en/documentation/red_hat_openstack_platform/17.1/html/configuring_persistent_storage/assembly_performing-basic-operations-with-block-storage_configuring-cinder","supports":["filtering","capacity weighing","no suitable backend branch"]},
+    {"id":"swift-architecture","component":"Swift","title":"Swift Architectural Overview","url":"https://docs.openstack.org/swift/rocky/overview_architecture.html","supports":["proxy","rings","handoff","replicas","eventual consistency"]},
+    {"id":"swift-ring","component":"Swift","title":"The Rings","url":"https://docs.openstack.org/swift/latest/overview_ring.html","supports":["hash partitions","replica placement","failure domains","ring rebalance"]},
+    {"id":"swift-policies","component":"Swift","title":"Storage Policies","url":"https://docs.openstack.org/swift/latest/overview_policies","supports":["object rings per policy","replication policies","container reconciler"]},
+    {"id":"horizon-basics","component":"Horizon","title":"Horizon Basics","url":"https://docs.openstack.org/horizon/latest/contributor/intro.html","supports":["Dashboard","Panel","registration architecture","API abstractions"]},
+    {"id":"horizon-quickstart","component":"Horizon","title":"Quickstart","url":"https://docs.openstack.org/horizon/latest/contributor/quickstart.html","supports":["Keystone service catalog","panel permissions","URL registration"]},
+    {"id":"horizon-policy","component":"Horizon","title":"Horizon Policy Enforcement","url":"https://docs.openstack.org/horizon/latest/contributor/topics/policy.html","supports":["scoped token roles","resource ownership","policy checks"]}
+  ]
+}

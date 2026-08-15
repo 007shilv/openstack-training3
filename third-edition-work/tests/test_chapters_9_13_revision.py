@@ -94,7 +94,7 @@ def test_linux_commands_have_prompts(number: int) -> None:
 @pytest.mark.parametrize("number", range(9, 14))
 def test_figures_and_tables_are_cited_and_numbered(number: int) -> None:
     text = chapter(number)
-    for index in (1, 2):
+    for index in (1, 2, 3):
         figure = f"图{number}.{index}"
         table = f"表{number}-{index}"
         assert text.count(figure) >= 2
@@ -107,8 +107,16 @@ def test_figures_and_tables_are_cited_and_numbered(number: int) -> None:
     tables = json.loads(
         (REVISION / "tables" / f"ch{number:02d}-table-manifest.json").read_text(encoding="utf-8")
     )
-    assert [row["number"] for row in figures] == [f"图{number}.1", f"图{number}.2"]
-    assert [row["number"] for row in tables] == [f"表{number}-1", f"表{number}-2"]
+    assert [row["number"] for row in figures] == [
+        f"图{number}.1",
+        f"图{number}.2",
+        f"图{number}.3",
+    ]
+    assert [row["number"] for row in tables] == [
+        f"表{number}-1",
+        f"表{number}-2",
+        f"表{number}-3",
+    ]
 
 
 def test_fixed_lab_parameters_are_consistent() -> None:

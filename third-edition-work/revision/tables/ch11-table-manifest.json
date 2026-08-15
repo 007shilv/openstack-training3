@@ -1,4 +1,5 @@
 [
   {"number":"表11-1","title":"Cinder主要组件与部署位置","headers":["组件","部署节点","主要作用"],"rows":[["cinder-api","controller","接收块存储请求"],["cinder-scheduler","controller","选择卷后端"],["cinder-volume","compute","调用后端驱动管理卷"],["LVM","compute","建立物理卷、卷组和逻辑卷"],["targetclid与LIO","compute","公布iSCSI目标"]]},
-  {"number":"表11-2","title":"LVM块存储参数","headers":["项目","参数","作用"],"rows":[["数据盘","/dev/sdb，50 GiB","Cinder专用独立磁盘"],["卷组","cinder-volumes","保存Cinder逻辑卷"],["后端标识","LVM","与卷类型属性关联"],["目标协议","iSCSI","向实例提供块设备"],["目标助手","lioadm","通过LIO管理目标"],["服务端口","8776","Cinder volumev3 API"]]}
+  {"number":"表11-2","title":"LVM块存储参数","headers":["项目","参数","作用"],"rows":[["数据盘","/dev/sdb，50 GiB","Cinder专用独立磁盘"],["卷组","cinder-volumes","保存Cinder逻辑卷"],["后端标识","LVM","与卷类型属性关联"],["目标协议","iSCSI","向实例提供块设备"],["目标助手","lioadm","通过LIO管理目标"],["服务端口","8776","Cinder volumev3 API"]]},
+  {"number":"表11-3","title":"卷生命周期状态与责任服务","headers":["卷状态","主要阶段","负责组件","允许的后续操作"],"rows":[["creating","后端创建资源","cinder-scheduler、cinder-volume","等待available或error"],["available","卷可被连接","cinder-api","连接、快照、扩容或删除"],["attaching / reserved","预留并初始化连接","Nova、cinder-volume","完成Attachment或清理"],["in-use","卷已连接实例","Nova与计算主机","正常读写或开始分离"],["detaching","正在终止连接","Nova、cinder-volume","清理Attachment后available"],["deleting","正在删除后端资源","cinder-volume","完成后释放记录与容量"],["error","创建或操作失败","失败阶段对应服务","排查后重试或清理"]]}
 ]

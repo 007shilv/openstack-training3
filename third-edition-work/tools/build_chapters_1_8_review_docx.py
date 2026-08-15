@@ -162,7 +162,12 @@ def _normalize_styles_xml(styles_xml: bytes) -> bytes:
 def _rewrite_styles_in_place(docx_path: Path) -> None:
     """Reassert bilingual style fonts after Word has normalized the package."""
 
-    with tempfile.TemporaryDirectory(prefix="textbook-font-style-") as directory:
+    # Keep the replacement on the same volume as the destination.  The
+    # manuscript normally lives on D:, while the system temporary directory is
+    # on C:; os.replace is atomic only within one filesystem.
+    with tempfile.TemporaryDirectory(
+        prefix="textbook-font-style-", dir=docx_path.parent
+    ) as directory:
         replacement = Path(directory) / docx_path.name
         with ZipFile(docx_path, "r") as source, ZipFile(
             replacement, "w", compression=ZIP_DEFLATED

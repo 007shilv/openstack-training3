@@ -1,4 +1,5 @@
 [
   {"number":"图8.1","title":"Placement资源模型","svg":"figures/ch8/图8.1.svg","png":"figures/ch8/图8.1.png","width_cm":14.5,"minimum_font_pt":9.0},
-  {"number":"图8.2","title":"Nova与Placement调度协作","svg":"figures/ch8/图8.2.svg","png":"figures/ch8/图8.2.png","width_cm":14.5,"minimum_font_pt":9.0}
+  {"number":"图8.2","title":"Nova与Placement调度协作","svg":"figures/ch8/图8.2.svg","png":"figures/ch8/图8.2.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图8.3","title":"分配候选与并发重试","svg":"figures/ch8/图8.3.svg","png":"figures/ch8/图8.3.png","width_cm":14.5,"minimum_font_pt":9.0}
 ]

@@ -1,4 +1,5 @@
 [
   {"number":"图12.1","title":"Swift双节点组件分布","svg":"figures/ch12/图12.1.svg","png":"figures/ch12/图12.1.png","width_cm":14.5,"minimum_font_pt":9.0},
-  {"number":"图12.2","title":"Swift对象请求过程","svg":"figures/ch12/图12.2.svg","png":"figures/ch12/图12.2.png","width_cm":14.5,"minimum_font_pt":9.0}
+  {"number":"图12.2","title":"Swift对象请求过程","svg":"figures/ch12/图12.2.svg","png":"figures/ch12/图12.2.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图12.3","title":"对象写入与后台修复循环","svg":"figures/ch12/图12.3.svg","png":"figures/ch12/图12.3.png","width_cm":14.5,"minimum_font_pt":9.0}
 ]

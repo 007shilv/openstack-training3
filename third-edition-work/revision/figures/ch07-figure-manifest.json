@@ -1,4 +1,5 @@
 [
   {"number":"图7.1","title":"Glance主要组成","svg":"figures/ch7/图7.1.svg","png":"figures/ch7/图7.1.png","width_cm":14.5,"minimum_font_pt":9.0},
-  {"number":"图7.2","title":"Glance部署与调用顺序","svg":"figures/ch7/图7.2.svg","png":"figures/ch7/图7.2.png","width_cm":14.5,"minimum_font_pt":9.0}
+  {"number":"图7.2","title":"Glance部署与调用顺序","svg":"figures/ch7/图7.2.svg","png":"figures/ch7/图7.2.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图7.3","title":"镜像导入、状态分支与缓存循环","svg":"figures/ch7/图7.3.svg","png":"figures/ch7/图7.3.png","width_cm":14.5,"minimum_font_pt":9.0}
 ]

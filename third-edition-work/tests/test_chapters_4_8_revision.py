@@ -217,7 +217,8 @@ def test_rendered_figure_content_fills_the_png_canvas(chapter_dir: str) -> None:
 @pytest.mark.parametrize("number", range(5, 9))
 def test_service_chapters_have_explanatory_figures_and_tables(number: int) -> None:
     text = chapter(number)
-    for index in range(1, 3):
+    expected_count = 3 if number in (7, 8) else 2
+    for index in range(1, expected_count + 1):
         figure = f"图{number}.{index}"
         table = f"表{number}-{index}"
         assert text.count(figure) >= 2

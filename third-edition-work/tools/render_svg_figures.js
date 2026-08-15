@@ -9,7 +9,7 @@ const path = require('path');
     headless: true,
   });
   const pages = [];
-  for (const chapter of ['ch01', 'ch02', 'ch03', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']) {
+  for (const chapter of ['ch01', 'ch02', 'ch03', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8', 'ch9', 'ch10', 'ch11', 'ch12', 'ch13']) {
     const directory = path.join(root, chapter);
     if (!fs.existsSync(directory)) continue;
     for (const name of fs.readdirSync(directory).filter((item) => item.endsWith('.svg'))) {
