@@ -1,7 +1,29 @@
 [
   {
+    "number": "图1.1",
+    "raw": "figures/ch01/raw/图1.1-original.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Dept_of_Agriculture_Computer_Room.jpg",
+    "source_image": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Dept_of_Agriculture_Computer_Room.jpg",
+    "rights_owner": "Warren K. Leffler / U.S. News & World Report Collection, Library of Congress",
+    "license": "Public domain",
+    "license_url": "https://commons.wikimedia.org/wiki/Commons:Public_domain",
+    "accessed_on": "2026-08-15",
+    "raw_sha256": "21d35342ed86a6c3d27e1d0fb10aee738d0f9c3b4196101b79b1cb08d4288443"
+  },
+  {
     "number": "图1.2",
     "raw": "figures/ch01/raw/图1.2-original.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:School_computer_lab_LCCN2011636104.tif",
+    "source_image": "https://upload.wikimedia.org/wikipedia/commons/6/60/School_computer_lab_LCCN2011636104.tif",
+    "rights_owner": "Carol M. Highsmith / Library of Congress",
+    "license": "Public domain",
+    "license_url": "https://commons.wikimedia.org/wiki/Commons:Public_domain",
+    "accessed_on": "2026-08-15",
+    "raw_sha256": "40ef974a15b8dd5b1b12ca7f71cb4748f6d4082cad59e4055ea55871c03c31a3"
+  },
+  {
+    "number": "图1.4",
+    "raw": "figures/ch01/raw/图1.4-original.jpg",
     "source_page": "https://commons.wikimedia.org/wiki/File:Datacenter_Server_Racks_(22370909788).jpg",
     "source_image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Datacenter%20Server%20Racks%20(22370909788).jpg",
     "rights_owner": "Carl Lender",
@@ -11,8 +33,8 @@
     "raw_sha256": "4c11e982a08072d38a7058b03c11953a1e46a2b5d27afb9168f74b86c24d7805"
   },
   {
-    "number": "图1.4",
-    "raw": "figures/ch01/raw/图1.4-original.jpg",
+    "number": "图1.6",
+    "raw": "figures/ch01/raw/图1.6-original.jpg",
     "source_page": "https://commons.wikimedia.org/wiki/File:Technician_with_laptop_working_on_server_rack_at_NERSC.jpg",
     "source_image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Technician%20with%20laptop%20working%20on%20server%20rack%20at%20NERSC.jpg",
     "rights_owner": "Derrick Coetzee",

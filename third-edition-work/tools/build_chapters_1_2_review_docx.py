@@ -62,8 +62,126 @@ def _set_simsun(font, size: float) -> None:
     font.Size = size
 
 
-def _prepare_inner_headings(input_docx: Path, prepared_docx: Path) -> None:
-    """Remove body indents from inner headings without a slow Word COM loop."""
+def _ensure_run_format(
+    run: etree._Element,
+    *,
+    size_half_points: int | None = None,
+    bold: bool = False,
+) -> None:
+    properties = run.find(f"{W}rPr")
+    if properties is None:
+        properties = etree.Element(f"{W}rPr")
+        run.insert(0, properties)
+    fonts = properties.find(f"{W}rFonts")
+    if fonts is None:
+        fonts = etree.Element(f"{W}rFonts")
+        properties.insert(0, fonts)
+    fonts.set(f"{W}ascii", "Times New Roman")
+    fonts.set(f"{W}hAnsi", "Times New Roman")
+    fonts.set(f"{W}eastAsia", "宋体")
+    fonts.set(f"{W}cs", "Times New Roman")
+    if size_half_points is not None:
+        for tag in ("sz", "szCs"):
+            size = properties.find(f"{W}{tag}")
+            if size is None:
+                size = etree.SubElement(properties, f"{W}{tag}")
+            size.set(f"{W}val", str(size_half_points))
+    if bold and properties.find(f"{W}b") is None:
+        etree.SubElement(properties, f"{W}b")
+
+
+def _new_text_paragraph(
+    text: str,
+    *,
+    align: str,
+    size_half_points: int,
+    bold: bool = False,
+    page_break_before: bool = False,
+) -> etree._Element:
+    paragraph = etree.Element(f"{W}p")
+    properties = etree.SubElement(paragraph, f"{W}pPr")
+    justification = etree.SubElement(properties, f"{W}jc")
+    justification.set(f"{W}val", align)
+    spacing = etree.SubElement(properties, f"{W}spacing")
+    spacing.set(f"{W}before", "0")
+    spacing.set(f"{W}after", "0")
+    if page_break_before:
+        page_break = etree.SubElement(properties, f"{W}pageBreakBefore")
+        page_break.set(f"{W}val", "1")
+    run = etree.SubElement(paragraph, f"{W}r")
+    _ensure_run_format(run, size_half_points=size_half_points, bold=bold)
+    lines = text.split("\n")
+    for index, line in enumerate(lines):
+        if index:
+            etree.SubElement(run, f"{W}br")
+        value = etree.SubElement(run, f"{W}t")
+        if line[:1].isspace() or line[-1:].isspace():
+            value.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        value.text = line
+    return paragraph
+
+
+def _new_table(record: dict) -> etree._Element:
+    columns = record["columns"]
+    rows = [columns, *record["rows"]]
+    widths_twips = [round(float(width) / 2.54 * 1440) for width in record["column_widths_cm"]]
+    size_half_points = round(float(record["font_pt"]) * 2)
+
+    table = etree.Element(f"{W}tbl")
+    properties = etree.SubElement(table, f"{W}tblPr")
+    layout = etree.SubElement(properties, f"{W}tblLayout")
+    layout.set(f"{W}type", "fixed")
+    width = etree.SubElement(properties, f"{W}tblW")
+    width.set(f"{W}type", "dxa")
+    width.set(f"{W}w", str(sum(widths_twips)))
+    borders = etree.SubElement(properties, f"{W}tblBorders")
+    for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        border = etree.SubElement(borders, f"{W}{side}")
+        border.set(f"{W}val", "single")
+        border.set(f"{W}sz", "4")
+        border.set(f"{W}color", "808080")
+    grid = etree.SubElement(table, f"{W}tblGrid")
+    for column_width in widths_twips:
+        column = etree.SubElement(grid, f"{W}gridCol")
+        column.set(f"{W}w", str(column_width))
+
+    for row_index, row_values in enumerate(rows):
+        row = etree.SubElement(table, f"{W}tr")
+        row_properties = etree.SubElement(row, f"{W}trPr")
+        if row_index == 0:
+            repeat = etree.SubElement(row_properties, f"{W}tblHeader")
+            repeat.set(f"{W}val", "1")
+        cannot_split = etree.SubElement(row_properties, f"{W}cantSplit")
+        cannot_split.set(f"{W}val", "1")
+        for cell_index, value in enumerate(row_values):
+            cell = etree.SubElement(row, f"{W}tc")
+            cell_properties = etree.SubElement(cell, f"{W}tcPr")
+            cell_width = etree.SubElement(cell_properties, f"{W}tcW")
+            cell_width.set(f"{W}type", "dxa")
+            cell_width.set(f"{W}w", str(widths_twips[cell_index]))
+            vertical = etree.SubElement(cell_properties, f"{W}vAlign")
+            vertical.set(f"{W}val", "center")
+            if row_index == 0:
+                shading = etree.SubElement(cell_properties, f"{W}shd")
+                shading.set(f"{W}val", "clear")
+                shading.set(f"{W}fill", "D9EAF7")
+            cell.append(
+                _new_text_paragraph(
+                    str(value),
+                    align="center" if row_index == 0 else "left",
+                    size_half_points=size_half_points,
+                    bold=row_index == 0,
+                )
+            )
+    return table
+
+
+def _prepare_inner_headings(
+    input_docx: Path,
+    prepared_docx: Path,
+    table_manifest_path: Path | None = None,
+) -> None:
+    """Normalize the bounded chapter layout and insert native Word tables."""
 
     chinese_heading = re.compile(r"^[一二三四五六七八九十]+．")
     arabic_heading = re.compile(r"^\d+．")
@@ -76,6 +194,7 @@ def _prepare_inner_headings(input_docx: Path, prepared_docx: Path) -> None:
         chapter_one_count = 0
         chapter_three_count = 0
         changed = 0
+        scoped_paragraphs: list[etree._Element] = []
         for paragraph in root.xpath(".//w:body/w:p", namespaces=namespace):
             text = "".join(
                 paragraph.xpath(".//w:t/text()", namespaces=namespace)
@@ -83,10 +202,14 @@ def _prepare_inner_headings(input_docx: Path, prepared_docx: Path) -> None:
             if text == CHAPTER_ONE:
                 chapter_one_count += 1
                 in_scope = True
+                scoped_paragraphs.append(paragraph)
             elif text == CHAPTER_THREE:
                 chapter_three_count += 1
                 in_scope = False
-            elif in_scope and (
+            elif in_scope:
+                scoped_paragraphs.append(paragraph)
+
+            if in_scope and (
                 chinese_heading.match(text) or arabic_heading.match(text)
             ):
                 properties = paragraph.find(f"{W}pPr")
@@ -106,6 +229,63 @@ def _prepare_inner_headings(input_docx: Path, prepared_docx: Path) -> None:
                         properties.insert(properties.index(run_properties), alignment)
                 alignment.set(f"{W}val", "left")
                 changed += 1
+
+        for paragraph in scoped_paragraphs:
+            text = "".join(paragraph.xpath(".//w:t/text()", namespaces=namespace)).strip()
+            style = paragraph.find(f"{W}pPr/{W}pStyle")
+            style_id = style.get(f"{W}val") if style is not None else ""
+            is_heading = (
+                text == CHAPTER_ONE
+                or style_id in {"1", "2"}
+                or bool(re.match(r"^\d+\.\d+\s", text))
+                or bool(chinese_heading.match(text))
+                or bool(arabic_heading.match(text))
+            )
+            if text.startswith("{{TABLE:"):
+                continue
+            for run in paragraph.findall(f".//{W}r"):
+                _ensure_run_format(
+                    run,
+                    size_half_points=None if is_heading else 21,
+                )
+
+        if table_manifest_path is not None:
+            table_records = json.loads(table_manifest_path.read_text(encoding="utf-8"))
+            scoped_markers = {
+                "".join(paragraph.xpath(".//w:t/text()", namespaces=namespace)).strip(): paragraph
+                for paragraph in scoped_paragraphs
+                if "".join(paragraph.xpath(".//w:t/text()", namespaces=namespace)).strip().startswith(
+                    "{{TABLE:"
+                )
+            }
+            expected_markers = {f"{{{{TABLE:{record['number']}}}}}" for record in table_records}
+            if set(scoped_markers) != expected_markers:
+                raise RuntimeError(
+                    "table marker mismatch: "
+                    f"expected={sorted(expected_markers)} actual={sorted(scoped_markers)}"
+                )
+            for record in table_records:
+                marker = f"{{{{TABLE:{record['number']}}}}}"
+                paragraph = scoped_markers[marker]
+                parent = paragraph.getparent()
+                position = parent.index(paragraph)
+                parent.remove(paragraph)
+                title = _new_text_paragraph(
+                    f"{record['number']} {record['title']}",
+                    align="center",
+                    size_half_points=18,
+                    bold=True,
+                    page_break_before=bool(record.get("page_break_before", False)),
+                )
+                table = _new_table(record)
+                note = _new_text_paragraph(
+                    f"注：{record['note']}",
+                    align="left",
+                    size_half_points=18,
+                )
+                parent.insert(position, title)
+                parent.insert(position + 1, table)
+                parent.insert(position + 2, note)
 
         if chapter_one_count != 1 or chapter_three_count != 1 or not changed:
             raise RuntimeError(
@@ -132,8 +312,9 @@ def build_review_docx(
     output_docx: Path,
     output_pdf: Path,
     manifest_path: Path,
+    table_manifest_path: Path,
 ) -> None:
-    for path in (input_docx, manifest_path):
+    for path in (input_docx, manifest_path, table_manifest_path):
         if not path.is_file():
             raise FileNotFoundError(path)
     for path in (output_docx, output_pdf):
@@ -143,7 +324,7 @@ def build_review_docx(
     records = json.loads(manifest_path.read_text(encoding="utf-8"))
     revision_root = manifest_path.parent.parent
     expected_numbers = [
-        *(f"图1.{index}" for index in range(1, 8)),
+        *(f"图1.{index}" for index in range(1, 10)),
         *(f"图2.{index}" for index in range(1, 15)),
     ]
     actual_numbers = [record["number"] for record in records]
@@ -156,7 +337,7 @@ def build_review_docx(
     document = None
     try:
         prepared_docx = Path(temporary.name) / "prepared.docx"
-        _prepare_inner_headings(input_docx, prepared_docx)
+        _prepare_inner_headings(input_docx, prepared_docx, table_manifest_path)
         word = win32com.client.DispatchEx("Word.Application")
         word.Visible = False
         word.DisplayAlerts = 0
@@ -239,8 +420,15 @@ def main() -> None:
     parser.add_argument("--output-docx", type=Path, required=True)
     parser.add_argument("--output-pdf", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--tables", type=Path, required=True)
     args = parser.parse_args()
-    build_review_docx(args.input, args.output_docx, args.output_pdf, args.manifest)
+    build_review_docx(
+        args.input,
+        args.output_docx,
+        args.output_pdf,
+        args.manifest,
+        args.tables,
+    )
     print(f"PASS DOCX: {args.output_docx}")
     print(f"PASS PDF: {args.output_pdf}")
 

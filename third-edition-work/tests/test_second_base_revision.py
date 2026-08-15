@@ -35,6 +35,13 @@ CHAPTERS_1_2_FIGURE_MANIFEST = (
 )
 REAL_IMAGE_SOURCES = WORK_ROOT / "revision" / "figures" / "real-image-sources.json"
 FIGURE_VALIDATOR = WORK_ROOT / "tools" / "validate_textbook_figures.py"
+CHAPTERS_1_2_TABLE_MANIFEST = (
+    WORK_ROOT / "revision" / "tables" / "ch01-02-table-manifest.json"
+)
+CHAPTERS_1_2_RESEARCH = (
+    WORK_ROOT / "revision" / "research" / "ch01-02-sources-20260815.json"
+)
+CHAPTERS_1_2_BUILDER = WORK_ROOT / "tools" / "build_chapters_1_2_review_docx.py"
 TASK3_FRAGMENTS = {
     1: FRAGMENTS_DIR / "ch01.md",
     2: FRAGMENTS_DIR / "ch02.md",
@@ -117,6 +124,17 @@ def load_revision_module():
 
 def load_bounded_revision_module():
     spec = importlib.util.spec_from_file_location("bounded_second_base_revision", REVISION_TOOL)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_chapters_1_2_builder_module():
+    spec = importlib.util.spec_from_file_location(
+        "chapters_1_2_review_builder", CHAPTERS_1_2_BUILDER
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -1106,7 +1124,7 @@ def test_chapter_1_layered_outline_matches_the_approved_teaching_sequence() -> N
         assert re.search(r"(?m)^1．[^\n]+$", body)
         assert re.search(r"(?m)^2．[^\n]+$", body)
 
-    for marker in ("图1.1", "图1.2", "图1.3", "图1.4", "图1.5", "图1.6", "图1.7"):
+    for marker in tuple(f"图1.{number}" for number in range(1, 10)):
         assert chapter.count(f"{{{{FIGURE:{marker}}}}}") == 1
 
 
@@ -1155,11 +1173,11 @@ def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
 def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> None:
     records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
     expected_numbers = [
-        *(f"图1.{index}" for index in range(1, 8)),
+        *(f"图1.{index}" for index in range(1, 10)),
         *(f"图2.{index}" for index in range(1, 15)),
     ]
     assert [record["number"] for record in records] == expected_numbers
-    assert len({record["number"] for record in records}) == 21
+    assert len({record["number"] for record in records}) == 23
 
     common = {
         "number",
@@ -1192,7 +1210,7 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> Non
             assert record["source_page"].startswith("https://")
             assert record["source_image"].startswith("https://")
             assert record["rights_owner"].strip()
-            assert record["accessed_on"] == "2026-08-14"
+            assert record["accessed_on"] in {"2026-08-14", "2026-08-15"}
             assert record["raw"].startswith("figures/")
 
         chapter = task3_fragment(int(record["number"][1]))
@@ -1270,7 +1288,7 @@ def test_chapter_figures_validator_reports_all_assets() -> None:
     )
     output = (result.stdout + result.stderr).decode("utf-8", errors="replace")
     assert result.returncode == 0, output
-    assert "PASS figures=21 svg=12 png=21 raw=9" in output
+    assert "PASS figures=23 svg=12 png=23 raw=11" in output
 
 
 def test_chapters_1_2_are_narrative_only_without_editorial_rules() -> None:
@@ -1289,6 +1307,15 @@ def test_chapters_1_2_are_narrative_only_without_editorial_rules() -> None:
         "实际项目必须在使用时核对",
         "动态数量",
         "短期宣传结论",
+        "每个数字都必须说明统计年份和口径",
+        "资料筛选",
+        "写作时",
+        "在书稿中",
+        "本书不再",
+        "本文只",
+        "正文也可写作",
+        "不要把产品能力写成",
+        "不必记忆所有",
     )
     for chapter in (task3_fragment(1), task3_fragment(2)):
         assert not [phrase for phrase in forbidden if phrase in chapter]
@@ -1298,8 +1325,10 @@ def test_chapters_1_2_real_image_source_register_is_complete() -> None:
     records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
     actual = [record for record in records if record.get("kind") in {"photo", "screenshot"}]
     assert [record["number"] for record in actual if record["kind"] == "photo"] == [
+        "图1.1",
         "图1.2",
         "图1.4",
+        "图1.6",
     ]
     assert [record["number"] for record in actual if record["kind"] == "screenshot"] == [
         "图2.2",
@@ -1312,16 +1341,245 @@ def test_chapters_1_2_real_image_source_register_is_complete() -> None:
     ]
 
     sources = json.loads(REAL_IMAGE_SOURCES.read_text(encoding="utf-8"))
-    assert len(sources) == 9
+    assert len(sources) == 11
     assert {source["number"] for source in sources} == {record["number"] for record in actual}
     for source in sources:
         assert source["source_page"].startswith("https://")
         assert source["source_image"].startswith("https://")
         assert source["rights_owner"].strip()
-        assert source["accessed_on"] == "2026-08-14"
+        assert source["accessed_on"] in {"2026-08-14", "2026-08-15"}
         assert source["raw_sha256"] == hashlib.sha256(
             (WORK_ROOT / "revision" / source["raw"]).read_bytes()
         ).hexdigest()
+
+
+def test_chapter_1_starts_the_computing_history_with_two_period_photographs() -> None:
+    text = task3_fragment(1)
+    evolution = text.split("## 1.1 计算模式的演变", 1)[1].split(
+        "## 1.2 云计算的定义", 1
+    )[0]
+
+    first = evolution.index("{{FIGURE:图1.1}}")
+    second = evolution.index("{{FIGURE:图1.2}}")
+    comparison = evolution.index("{{TABLE:表1-1}}")
+    evolution_diagram = evolution.index("{{FIGURE:图1.3}}")
+    assert first < second < comparison < evolution_diagram
+    for number in ("图1.1", "图1.2"):
+        before, after = evolution.split(f"{{{{FIGURE:{number}}}}}", 1)
+        assert f"如{number}所示" in before
+        following = next(
+            block.strip()
+            for block in re.split(r"\n\s*\n", after)
+            if block.strip() and not block.lstrip().startswith("#")
+        )
+        assert compact_length(following) >= 80
+
+
+def test_chapters_1_2_table_manifest_is_complete_and_referenced() -> None:
+    manifest = json.loads(CHAPTERS_1_2_TABLE_MANIFEST.read_text(encoding="utf-8"))
+    expected = ["表1-1", "表1-2", "表1-3", "表2-1", "表2-2"]
+    assert [record["number"] for record in manifest] == expected
+
+    for record in manifest:
+        assert {
+            "number",
+            "title",
+            "anchor",
+            "columns",
+            "rows",
+            "column_widths_cm",
+            "font_pt",
+            "note",
+        } <= set(record)
+        assert len(record["columns"]) >= 4
+        assert len(record["rows"]) >= 3
+        assert all(len(row) == len(record["columns"]) for row in record["rows"])
+        assert len(record["column_widths_cm"]) == len(record["columns"])
+        assert 9.0 <= record["font_pt"] <= 10.5
+        chapter = task3_fragment(int(record["number"][1]))
+        marker = f"{{{{TABLE:{record['number']}}}}}"
+        assert chapter.count(marker) == 1
+        before, after = chapter.split(marker, 1)
+        assert f"如{record['number']}所示" in before
+        following = next(
+            block.strip()
+            for block in re.split(r"\n\s*\n", after)
+            if block.strip() and not block.lstrip().startswith("#")
+        )
+        assert compact_length(following) >= 80
+
+    public_cloud = next(record for record in manifest if record["number"] == "表2-2")
+    assert len(public_cloud["rows"]) >= 6
+    joined = "\n".join("\t".join(row) for row in public_cloud["rows"])
+    for provider in (
+        "AWS",
+        "Microsoft Azure",
+        "Google Cloud",
+        "阿里云",
+        "华为云",
+        "腾讯云",
+    ):
+        assert provider in joined
+    for row in public_cloud["rows"]:
+        assert any(cell.startswith("https://") for cell in row)
+
+
+def test_chapter_1_international_market_data_is_source_backed() -> None:
+    research = json.loads(CHAPTERS_1_2_RESEARCH.read_text(encoding="utf-8"))
+    market = research["international_cloud_market"]
+    assert len(market) >= 2
+    assert {item["actual_or_forecast"] for item in market} >= {"actual", "forecast"}
+    for item in market:
+        assert {
+            "institution",
+            "title",
+            "statistic",
+            "year",
+            "actual_or_forecast",
+            "value",
+            "currency",
+            "published_on",
+            "source_url",
+            "accessed_on",
+        } <= set(item)
+        assert item["institution"] in {"Gartner", "IDC", "Synergy Research Group"}
+        assert item["source_url"].startswith("https://")
+        assert item["accessed_on"] == "2026-08-15"
+
+    chapter = task3_fragment(1)
+    for item in market:
+        assert item["institution"] in chapter
+        assert str(item["year"]) in chapter
+        assert str(item["value"]) in chapter
+    assert "实际" in chapter and "预测" in chapter
+
+
+def test_chapter_preparation_applies_simsun_to_body_without_resizing_headings(
+    tmp_path: Path,
+) -> None:
+    builder = load_chapters_1_2_builder_module()
+    source = tmp_path / "chapter-font-source.docx"
+    prepared = tmp_path / "chapter-font-prepared.docx"
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        '<w:body>'
+        + fixture_paragraph("第一章 云计算基本概念", style="1", marker="chapter-one")
+        + fixture_paragraph("正文甲", marker="body-one")
+        + fixture_paragraph("一．内部层次", marker="inner-heading")
+        + fixture_paragraph("正文乙", marker="body-two")
+        + fixture_paragraph("第三章 原生OpenStack云平台", style="1", marker="chapter-three")
+        + fixture_paragraph("范围外正文", marker="outside")
+        + '<w:sectPr/></w:body></w:document>'
+    ).encode("utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+        archive.writestr("word/document.xml", document_xml)
+
+    builder._prepare_inner_headings(source, prepared)
+    with zipfile.ZipFile(prepared) as archive:
+        root = ET.fromstring(archive.read("word/document.xml"))
+    paragraphs = root.findall(".//w:body/w:p", NS)
+    body_by_text = {
+        "".join(node.text or "" for node in paragraph.findall(".//w:t", NS)): paragraph
+        for paragraph in paragraphs
+    }
+    for text in ("正文甲", "正文乙"):
+        properties = body_by_text[text].find("w:r/w:rPr", NS)
+        assert properties is not None
+        fonts = properties.find("w:rFonts", NS)
+        size = properties.find("w:sz", NS)
+        assert fonts is not None and fonts.get(f"{W}eastAsia") == "宋体"
+        assert size is not None and size.get(f"{W}val") == "21"
+    heading_run = body_by_text["第一章 云计算基本概念"].find("w:r", NS)
+    assert heading_run is not None
+    heading_size = heading_run.find("w:rPr/w:sz", NS)
+    assert heading_size is None
+    outside_fonts = body_by_text["范围外正文"].find("w:r/w:rPr/w:rFonts", NS)
+    assert outside_fonts is None
+
+
+def test_chapter_preparation_replaces_table_marker_with_native_word_table(
+    tmp_path: Path,
+) -> None:
+    builder = load_chapters_1_2_builder_module()
+    source = tmp_path / "chapter-table-source.docx"
+    prepared = tmp_path / "chapter-table-prepared.docx"
+    table_manifest = tmp_path / "tables.json"
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        '<w:body>'
+        + fixture_paragraph("第一章 云计算基本概念", style="1", marker="chapter-one")
+        + fixture_paragraph("一．内部层次", marker="inner-heading")
+        + fixture_paragraph("{{TABLE:表1-1}}", marker="table-marker")
+        + fixture_paragraph("第三章 原生OpenStack云平台", style="1", marker="chapter-three")
+        + '<w:sectPr/></w:body></w:document>'
+    ).encode("utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+        archive.writestr("word/document.xml", document_xml)
+    table_manifest.write_text(
+        json.dumps(
+            [
+                {
+                    "number": "表1-1",
+                    "title": "示例比较",
+                    "anchor": "示例",
+                    "columns": ["项目", "特征"],
+                    "rows": [["A", "甲"], ["B", "乙"]],
+                    "column_widths_cm": [4.0, 8.0],
+                    "font_pt": 9.0,
+                    "note": "示例表注。",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    builder._prepare_inner_headings(source, prepared, table_manifest)
+    with zipfile.ZipFile(prepared) as archive:
+        root = ET.fromstring(archive.read("word/document.xml"))
+    text = "".join(node.text or "" for node in root.findall(".//w:t", NS))
+    assert "{{TABLE:表1-1}}" not in text
+    assert "表1-1 示例比较" in text
+    assert "示例表注。" in text
+    tables = root.findall(".//w:tbl", NS)
+    assert len(tables) == 1
+    rows = tables[0].findall("w:tr", NS)
+    assert len(rows) == 3
+    assert [
+        "".join(node.text or "" for node in cell.findall(".//w:t", NS))
+        for cell in rows[0].findall("w:tc", NS)
+    ] == ["项目", "特征"]
+    for run in tables[0].findall(".//w:r", NS):
+        fonts = run.find("w:rPr/w:rFonts", NS)
+        size = run.find("w:rPr/w:sz", NS)
+        assert fonts is not None and fonts.get(f"{W}eastAsia") == "宋体"
+        assert size is not None and size.get(f"{W}val") == "18"
+
+
+def test_long_product_tables_start_a_new_page_and_repeat_header_rows() -> None:
+    builder = load_chapters_1_2_builder_module()
+    records = json.loads(CHAPTERS_1_2_TABLE_MANIFEST.read_text(encoding="utf-8"))
+    for number in ("表2-1", "表2-2"):
+        record = next(item for item in records if item["number"] == number)
+        assert record["page_break_before"] is True
+        title = builder._new_text_paragraph(
+            f"{record['number']} {record['title']}",
+            align="center",
+            size_half_points=18,
+            bold=True,
+            page_break_before=record["page_break_before"],
+        )
+        assert title.find("w:pPr/w:pageBreakBefore", NS) is not None
+        table = builder._new_table(record)
+        first_row_properties = table.find("w:tr/w:trPr", NS)
+        assert first_row_properties is not None
+        children = [child.tag.rsplit("}", 1)[-1] for child in first_row_properties]
+        assert "tblHeader" in children
+        assert children.index("tblHeader") < children.index("cantSplit")
 
 
 def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None:
@@ -1395,7 +1653,7 @@ def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> Non
         "Azure Arc",
         "GKE Enterprise",
         "Apsara Stack",
-        "华为云 Stack",
+        "华为云Stack",
     ):
         assert product in text
     for stale_walkthrough in ("单击", "点击", "登录控制台", "菜单栏", "市场份额"):
@@ -2012,7 +2270,7 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
         for chapter in (1, 2)
     }
     assert chapter_targets == {
-        1: [f"图1.{number}" for number in range(1, 8)],
+        1: [f"图1.{number}" for number in range(1, 10)],
         2: [f"图2.{number}" for number in range(1, 15)],
     }
 

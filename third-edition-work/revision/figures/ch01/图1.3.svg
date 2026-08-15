@@ -2,39 +2,36 @@
   <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
   <defs><marker id="a" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto"><polygon points="0 0,12 4.5,0 9" fill="#2563eb"/></marker></defs>
   <rect width="1200" height="700" fill="#ffffff"/>
-  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">云计算环境的组成</text>
+  <text x="600" y="54" text-anchor="middle" font-size="44" font-weight="700">计算模式演变与资源服务化</text>
+  <path d="M140 560 H1060" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#a)"/>
   <g>
-    <rect x="120" y="90" width="960" height="105" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-    <text x="255" y="153" text-anchor="middle" font-size="34" font-weight="700">访问层</text>
-    <text x="500" y="153" text-anchor="middle" font-size="34">门户</text>
-    <text x="700" y="153" text-anchor="middle" font-size="34">命令接口</text>
-    <text x="900" y="153" text-anchor="middle" font-size="34">应用接口</text>
+    <rect x="55" y="130" width="250" height="360" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+    <text x="180" y="190" text-anchor="middle" font-size="34" font-weight="700">字符终端—主机</text>
+    <text x="180" y="270" text-anchor="middle" font-size="34">集中运算</text>
+    <text x="180" y="330" text-anchor="middle" font-size="34">分时共享</text>
+    <text x="180" y="390" text-anchor="middle" font-size="34">终端交互</text>
   </g>
-  <path d="M600 198 V226" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <g>
-    <rect x="120" y="230" width="960" height="120" rx="16" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
-    <text x="255" y="300" text-anchor="middle" font-size="34" font-weight="700">管理服务</text>
-    <text x="475" y="280" text-anchor="middle" font-size="34">身份·目录</text>
-    <text x="735" y="280" text-anchor="middle" font-size="34">配额·调度</text>
-    <text x="940" y="280" text-anchor="middle" font-size="34">监控·计量</text>
-    <text x="710" y="330" text-anchor="middle" font-size="34">策略、自动化与生命周期</text>
+    <rect x="335" y="130" width="250" height="360" rx="18" fill="#f0fdfa" stroke="#5eead4" stroke-width="3"/>
+    <text x="460" y="190" text-anchor="middle" font-size="34" font-weight="700">客户—服务器</text>
+    <text x="460" y="270" text-anchor="middle" font-size="34">网络分工</text>
+    <text x="460" y="330" text-anchor="middle" font-size="34">本地处理</text>
+    <text x="460" y="390" text-anchor="middle" font-size="34">共享服务</text>
   </g>
-  <path d="M600 353 V381" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <g>
-    <rect x="120" y="385" width="960" height="110" rx="16" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-    <text x="255" y="452" text-anchor="middle" font-size="34" font-weight="700">资源池</text>
-    <text x="480" y="452" text-anchor="middle" font-size="34">计算</text>
-    <text x="660" y="452" text-anchor="middle" font-size="34">网络</text>
-    <text x="840" y="452" text-anchor="middle" font-size="34">存储</text>
-    <text x="1010" y="452" text-anchor="middle" font-size="34">平台</text>
+    <rect x="615" y="130" width="250" height="360" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+    <text x="740" y="190" text-anchor="middle" font-size="34" font-weight="700">集群与分布式</text>
+    <text x="740" y="270" text-anchor="middle" font-size="34">多节点协同</text>
+    <text x="740" y="330" text-anchor="middle" font-size="34">横向扩展</text>
+    <text x="740" y="390" text-anchor="middle" font-size="34">容忍局部故障</text>
   </g>
-  <path d="M600 498 V526" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <g>
-    <rect x="120" y="530" width="960" height="105" rx="16" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
-    <text x="255" y="594" text-anchor="middle" font-size="34" font-weight="700">物理基础</text>
-    <text x="500" y="594" text-anchor="middle" font-size="34">服务器</text>
-    <text x="700" y="594" text-anchor="middle" font-size="34">网络设备</text>
-    <text x="930" y="594" text-anchor="middle" font-size="34">存储与机房</text>
+    <rect x="895" y="130" width="250" height="360" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+    <text x="1020" y="190" text-anchor="middle" font-size="34" font-weight="700">云计算</text>
+    <text x="1020" y="250" text-anchor="middle" font-size="34">虚拟化与池化</text>
+    <text x="1020" y="310" text-anchor="middle" font-size="34">自助与弹性</text>
+    <text x="1020" y="370" text-anchor="middle" font-size="34">隔离与计量</text>
+    <text x="1020" y="430" text-anchor="middle" font-size="34">按服务交付</text>
   </g>
-  <text x="600" y="682" text-anchor="middle" font-size="34" fill="#6b7280">安全与运营贯穿访问、管理、资源和基础设施各层</text>
+  <text x="600" y="635" text-anchor="middle" font-size="34" fill="#2563eb">资源由“固定设备”逐步转变为“可申请、可调度、可回收的服务”</text>
 </svg>

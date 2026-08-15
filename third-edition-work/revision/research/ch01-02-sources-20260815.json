@@ -1,0 +1,133 @@
+{
+  "frozen_on": "2026-08-15",
+  "international_cloud_market": [
+    {
+      "institution": "IDC",
+      "title": "Worldwide Public Cloud Services Revenues Grew 19.9% Year Over Year in 2023",
+      "statistic": "全球公共云服务收入，含IaaS、PaaS、SaaS应用和SaaS系统基础设施软件",
+      "year": 2023,
+      "actual_or_forecast": "actual",
+      "value": "6,692亿美元",
+      "currency": "USD",
+      "published_on": "2024-06-10",
+      "source_url": "https://www.idc.com/resource-center/press-releases/worldwide-public-cloud-services-revenues-grew-19-9-year-over-year-in-2023-according-to-idc-tracker/",
+      "accessed_on": "2026-08-15"
+    },
+    {
+      "institution": "Synergy Research Group",
+      "title": "GenAI Helps Drive Quarterly Cloud Revenues to $119 Billion as Growth Rate Jumped Yet Again in Q4",
+      "statistic": "全球云基础设施服务收入，含IaaS、PaaS和托管私有云服务",
+      "year": 2025,
+      "actual_or_forecast": "actual",
+      "value": "4,190亿美元",
+      "currency": "USD",
+      "published_on": "2026-02-05",
+      "source_url": "https://www.srgresearch.com/articles/genai-helps-drive-quarterly-cloud-revenues-to-119-billion-as-growth-rate-jumped-yet-again-in-q4",
+      "accessed_on": "2026-08-15"
+    },
+    {
+      "institution": "Synergy Research Group",
+      "title": "Cloud Market Annual Revenue Run Rate Topped Half a Trillion Dollars in Q1 as Growth Surge Continues",
+      "statistic": "2026年第一季度全球云基础设施服务收入",
+      "year": 2026,
+      "actual_or_forecast": "actual",
+      "value": "1,286亿美元",
+      "currency": "USD",
+      "published_on": "2026-04-29",
+      "source_url": "https://www.srgresearch.com/articles/cloud-market-annual-revenue-run-rate-topped-half-a-trillion-dollars-in-q1-as-growth-surge-continues",
+      "accessed_on": "2026-08-15"
+    },
+    {
+      "institution": "Gartner",
+      "title": "Forecast: Public Cloud Services, Worldwide, 2023-2029, 3Q25 Update",
+      "statistic": "全球公共云服务终端用户支出",
+      "year": 2029,
+      "actual_or_forecast": "forecast",
+      "value": "1.48万亿美元",
+      "currency": "USD",
+      "published_on": "2025-09-26",
+      "source_url": "https://www.gartner.com/en/documents/6996966",
+      "accessed_on": "2026-08-15"
+    }
+  ],
+  "historical_images": [
+    {
+      "number": "图1.1",
+      "subject": "1969年的IBM System/360计算机房",
+      "creator": "Warren K. Leffler",
+      "license": "Public domain",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Dept_of_Agriculture_Computer_Room.jpg",
+      "accessed_on": "2026-08-15"
+    },
+    {
+      "number": "图1.2",
+      "subject": "20世纪80年代的学校计算机实验室",
+      "creator": "Carol M. Highsmith",
+      "license": "Public domain",
+      "source_url": "https://commons.wikimedia.org/wiki/File:School_computer_lab_LCCN2011636104.tif",
+      "accessed_on": "2026-08-15"
+    }
+  ],
+  "public_cloud_platforms": [
+    {
+      "platform": "AWS",
+      "website": "https://aws.amazon.com/",
+      "compute_service": "Amazon EC2",
+      "service_model": "IaaS、容器、数据库、Serverless与AI等综合公有云服务",
+      "region": "Asia Pacific (Hong Kong), ap-east-1",
+      "billing": "Linux按需实例按秒计费，最低60秒",
+      "pricing_url": "https://calculator.aws/",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、On-Demand；官方计算器动态查询"
+    },
+    {
+      "platform": "Microsoft Azure",
+      "website": "https://azure.microsoft.com/",
+      "compute_service": "Azure Virtual Machines",
+      "service_model": "IaaS、PaaS、数据库、AI与混合云管理",
+      "region": "East Asia, Hong Kong SAR",
+      "billing": "采用小时费率，未满整小时按实际分钟计算",
+      "pricing_url": "https://azure.microsoft.com/en-us/pricing/calculator/",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay as you go；官方计算器动态查询"
+    },
+    {
+      "platform": "Google Cloud",
+      "website": "https://cloud.google.com/",
+      "compute_service": "Compute Engine",
+      "service_model": "IaaS、容器、Serverless、数据分析、数据库与AI",
+      "region": "Hong Kong, asia-east2",
+      "billing": "按秒计费，最低1分钟",
+      "pricing_url": "https://cloud.google.com/products/calculator?hl=zh-cn",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、On-demand；官方计算器动态查询"
+    },
+    {
+      "platform": "阿里云",
+      "website": "https://www.aliyun.com/",
+      "compute_service": "云服务器ECS",
+      "service_model": "计算、容器、存储、网络、数据库、大数据与AI",
+      "region": "中国香港, cn-hongkong",
+      "billing": "按量实例按秒计量、小时出账，2 vCPU实例最低5分钟",
+      "pricing_url": "https://www.alibabacloud.com/pricing-calculator",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay-As-You-Go；官方计算器动态查询"
+    },
+    {
+      "platform": "华为云",
+      "website": "https://www.huaweicloud.com/",
+      "compute_service": "弹性云服务器ECS",
+      "service_model": "计算、容器、存储、网络、数据库、大数据、AI与混合云",
+      "region": "中国-香港",
+      "billing": "按需ECS按秒计费",
+      "pricing_url": "https://www.huaweicloud.com/intl/en-us/pricing/calculator.html",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay-per-use；官方计算器动态查询"
+    },
+    {
+      "platform": "腾讯云",
+      "website": "https://cloud.tencent.com/",
+      "compute_service": "云服务器CVM",
+      "service_model": "计算、容器、存储、网络、数据库、大数据与AI",
+      "region": "中国香港, ap-hongkong",
+      "billing": "按秒计量、按小时结算",
+      "pricing_url": "https://intl.cloud.tencent.com/pricing/cvm/calculator",
+      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay as you go；官方计算器动态查询"
+    }
+  ]
+}

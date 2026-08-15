@@ -24,8 +24,12 @@ def sha256(path: Path) -> str:
 def validate(manifest_path: Path) -> list[str]:
     manifest_path = manifest_path.resolve()
     records = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(records, list) or len(records) != 21:
-        raise ValueError("manifest must contain exactly 21 records")
+    expected_numbers = [
+        *(f"图1.{index}" for index in range(1, 10)),
+        *(f"图2.{index}" for index in range(1, 15)),
+    ]
+    if not isinstance(records, list) or [record.get("number") for record in records] != expected_numbers:
+        raise ValueError("manifest must contain the ordered 23 chapter figures")
 
     revision_root = manifest_path.parent.parent
     svg_hashes: set[str] = set()
@@ -113,7 +117,7 @@ def main() -> int:
         return 1
     for line in report:
         print(line)
-    print("PASS figures=21 svg=12 png=21 raw=9")
+    print("PASS figures=23 svg=12 png=23 raw=11")
     return 0
 
 
