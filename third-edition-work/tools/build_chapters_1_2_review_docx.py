@@ -278,14 +278,8 @@ def _prepare_inner_headings(
                     page_break_before=bool(record.get("page_break_before", False)),
                 )
                 table = _new_table(record)
-                note = _new_text_paragraph(
-                    f"注：{record['note']}",
-                    align="left",
-                    size_half_points=18,
-                )
                 parent.insert(position, title)
                 parent.insert(position + 1, table)
-                parent.insert(position + 2, note)
 
         if chapter_one_count != 1 or chapter_three_count != 1 or not changed:
             raise RuntimeError(

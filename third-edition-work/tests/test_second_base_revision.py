@@ -1083,7 +1083,7 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         assert headings == expected
         assert not any(line.startswith("###") for line in text.splitlines())
         assert paragraphs[0].startswith("本章导读：")
-        assert "教学活动" in text
+        assert "教学活动" not in text
         assert sum(lengths) >= minimum_characters[chapter]
         assert max(lengths) <= 240
         assert statistics.median(lengths) >= 80
@@ -1316,9 +1316,35 @@ def test_chapters_1_2_are_narrative_only_without_editorial_rules() -> None:
         "正文也可写作",
         "不要把产品能力写成",
         "不必记忆所有",
+        "教学活动",
+        "把产品名称还原",
+        "不宜",
+        "注：",
+        "学生",
+        "学习者",
+        "读者",
+        "小组",
+        "每组",
+        "不能把",
+        "不应把",
+        "应当继续",
+        "学习本章后",
+        "教学场景",
     )
     for chapter in (task3_fragment(1), task3_fragment(2)):
         assert not [phrase for phrase in forbidden if phrase in chapter]
+
+
+def test_all_revised_chapters_exclude_teaching_activity_and_editorial_directives() -> None:
+    forbidden = (
+        "教学活动",
+        "把产品名称还原",
+        "不宜把",
+        "不要把",
+    )
+    for fragment in sorted(FRAGMENTS_DIR.glob("ch*.md")):
+        chapter = fragment.read_text(encoding="utf-8")
+        assert not [phrase for phrase in forbidden if phrase in chapter], fragment.name
 
 
 def test_chapters_1_2_real_image_source_register_is_complete() -> None:
@@ -1389,8 +1415,8 @@ def test_chapters_1_2_table_manifest_is_complete_and_referenced() -> None:
             "rows",
             "column_widths_cm",
             "font_pt",
-            "note",
         } <= set(record)
+        assert "note" not in record
         assert len(record["columns"]) >= 4
         assert len(record["rows"]) >= 3
         assert all(len(row) == len(record["columns"]) for row in record["rows"])
@@ -1530,7 +1556,6 @@ def test_chapter_preparation_replaces_table_marker_with_native_word_table(
                     "rows": [["A", "甲"], ["B", "乙"]],
                     "column_widths_cm": [4.0, 8.0],
                     "font_pt": 9.0,
-                    "note": "示例表注。",
                 }
             ],
             ensure_ascii=False,
@@ -1544,7 +1569,7 @@ def test_chapter_preparation_replaces_table_marker_with_native_word_table(
     text = "".join(node.text or "" for node in root.findall(".//w:t", NS))
     assert "{{TABLE:表1-1}}" not in text
     assert "表1-1 示例比较" in text
-    assert "示例表注。" in text
+    assert "注：" not in text
     tables = root.findall(".//w:tbl", NS)
     assert len(tables) == 1
     rows = tables[0].findall("w:tr", NS)
@@ -1646,7 +1671,7 @@ def test_chapter_1_preserves_the_recognition_sequence_and_frozen_facts() -> None
 def test_chapter_2_compares_current_products_on_the_approved_dimensions() -> None:
     text = task3_fragment(2)
 
-    for dimension in ("定位", "服务能力", "生态", "部署形态", "锁定风险", "教学场景"):
+    for dimension in ("定位", "服务能力", "生态", "部署形态", "锁定风险", "应用场景"):
         assert dimension in text
     for product in (
         "AWS Outposts",

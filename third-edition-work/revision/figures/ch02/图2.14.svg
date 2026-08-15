@@ -18,7 +18,7 @@
     <rect x="450" y="405" width="300" height="110" rx="18" fill="#fef2f2" stroke="#fca5a5" stroke-width="3"/>
     <text x="600" y="453" text-anchor="middle" font-size="34" font-weight="700">锁定风险</text><text x="600" y="498" text-anchor="middle" font-size="34">接口数据与退出</text>
     <rect x="830" y="405" width="300" height="110" rx="18" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
-    <text x="980" y="453" text-anchor="middle" font-size="34" font-weight="700">教学场景</text><text x="980" y="498" text-anchor="middle" font-size="34">能否呈现原理</text>
+    <text x="980" y="453" text-anchor="middle" font-size="34" font-weight="700">应用场景</text><text x="980" y="498" text-anchor="middle" font-size="34">是否匹配需求</text>
   </g>
   <path d="M220 345 V400 M600 345 V400 M980 345 V400" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
   <path d="M220 520 C220 585 450 580 505 600 M600 520 V590 M980 520 C980 585 750 580 695 600" fill="none" stroke="#2563eb" stroke-width="4" marker-end="url(#a)"/>
