@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
-<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
 <defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">Placement资源模型</text>
 <rect x="70" y="150" width="420" height="240" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="280.0" y="236.0" text-anchor="middle" class="title">资源提供者</text>
+<text x="280.0" y="236.0" text-anchor="middle" class="node-title">资源提供者</text>
 <text x="280.0" y="282.0" text-anchor="middle">计算节点　设备</text>
 <text x="280.0" y="328.0" text-anchor="middle">共享存储池</text>
 <rect x="600" y="120" width="400" height="240" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="800.0" y="206.0" text-anchor="middle" class="title">资源清单</text>
+<text x="800.0" y="206.0" text-anchor="middle" class="node-title">资源清单</text>
 <text x="800.0" y="252.0" text-anchor="middle">资源类别 + 数量</text>
 <text x="800.0" y="298.0" text-anchor="middle">总量 / 保留 / 超分</text>
 <rect x="1110" y="150" width="420" height="210" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
-<text x="1320.0" y="244.0" text-anchor="middle" class="title">资源特征</text>
+<text x="1320.0" y="244.0" text-anchor="middle" class="node-title">资源特征</text>
 <text x="1320.0" y="290.0" text-anchor="middle">架构 / 指令集 / 能力</text>
 <rect x="310" y="540" width="430" height="190" rx="18" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
-<text x="525.0" y="624.0" text-anchor="middle" class="title">消费者</text>
+<text x="525.0" y="624.0" text-anchor="middle" class="node-title">消费者</text>
 <text x="525.0" y="670.0" text-anchor="middle">实例或其他占用对象</text>
 <rect x="870" y="520" width="440" height="230" rx="18" fill="#fef2f2" stroke="#fca5a5" stroke-width="3"/>
-<text x="1090.0" y="601.0" text-anchor="middle" class="title">资源分配</text>
+<text x="1090.0" y="601.0" text-anchor="middle" class="node-title">资源分配</text>
 <text x="1090.0" y="647.0" text-anchor="middle">消费者 + 提供者</text>
 <text x="1090.0" y="693.0" text-anchor="middle">资源类别 + 数量</text>
 <line x1="490" y1="255" x2="600" y2="255" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
-  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <style>text { font-family: 'Times New Roman', SimSun, '宋体', serif; fill: #111827; }</style>
   <rect width="1200" height="700" fill="#ffffff"/>
   <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">2024年我国云计算市场结构</text>
   <rect x="90" y="95" width="1020" height="100" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>

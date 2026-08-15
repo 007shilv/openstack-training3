@@ -1,0 +1,4 @@
+[
+  {"number":"表10-1","title":"Neutron主要服务与部署位置","headers":["服务","部署节点","主要作用"],"rows":[["neutron-server","controller","提供网络API并管理逻辑对象"],["Linux Bridge代理","controller、compute","连接虚拟端口与网桥"],["DHCP代理","controller","为子网分配地址"],["L3代理","controller","提供租户路由与地址转换"],["元数据代理","controller","转发实例元数据请求"]]},
+  {"number":"表10-2","title":"本章网络类型与参数","headers":["项目","参数","说明"],"rows":[["管理网络","192.168.234.0/24，ens33","节点管理、API和隧道通信"],["Provider网络","ens34，无IP地址","接入外部二层网络"],["flat网络","provider","直接映射Provider网络"],["VXLAN网络","VNI 1—1000","承载租户覆盖网络"],["租户网络MTU","1450","为VXLAN封装保留空间"]]}
+]

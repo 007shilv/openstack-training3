@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
-<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
 <defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">Keystone核心对象关系</text>
 <rect x="60" y="150" width="330" height="180" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
-<text x="225.0" y="229.0" text-anchor="middle" class="title">域</text>
+<text x="225.0" y="229.0" text-anchor="middle" class="node-title">域</text>
 <text x="225.0" y="275.0" text-anchor="middle">Default</text>
 <rect x="460" y="130" width="430" height="230" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="675.0" y="211.0" text-anchor="middle" class="title">身份对象</text>
+<text x="675.0" y="211.0" text-anchor="middle" class="node-title">身份对象</text>
 <text x="675.0" y="257.0" text-anchor="middle">用户　组</text>
 <text x="675.0" y="303.0" text-anchor="middle">项目　角色</text>
 <rect x="970" y="130" width="560" height="230" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="1250.0" y="211.0" text-anchor="middle" class="title">服务目录</text>
+<text x="1250.0" y="211.0" text-anchor="middle" class="node-title">服务目录</text>
 <text x="1250.0" y="257.0" text-anchor="middle">服务　区域</text>
 <text x="1250.0" y="303.0" text-anchor="middle">公有/内部/管理端点</text>
 <rect x="460" y="520" width="430" height="180" rx="18" fill="#faf5ff" stroke="#c4b5fd" stroke-width="3"/>
-<text x="675.0" y="599.0" text-anchor="middle" class="title">角色授权</text>
+<text x="675.0" y="599.0" text-anchor="middle" class="node-title">角色授权</text>
 <text x="675.0" y="645.0" text-anchor="middle">身份 + 作用域 + 角色</text>
 <rect x="970" y="520" width="560" height="180" rx="18" fill="#fef2f2" stroke="#fca5a5" stroke-width="3"/>
-<text x="1250.0" y="599.0" text-anchor="middle" class="title">令牌</text>
+<text x="1250.0" y="599.0" text-anchor="middle" class="node-title">令牌</text>
 <text x="1250.0" y="645.0" text-anchor="middle">身份 + 作用域 + 角色 + 目录</text>
 <line x1="390" y1="240" x2="460" y2="240" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
 <line x1="675" y1="360" x2="675" y2="520" stroke="#9333ea" stroke-width="5" marker-end="url(#purple)"/>

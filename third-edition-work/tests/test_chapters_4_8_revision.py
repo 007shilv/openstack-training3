@@ -234,16 +234,16 @@ def test_experiment_password_is_consistent(number: int) -> None:
         assert forbidden not in text
 
 
-def test_chapters_1_8_revision_map_is_complete_and_bounded() -> None:
+def test_chapters_1_13_revision_map_is_complete_and_bounded() -> None:
     operations = json.loads(
         (REVISION_ROOT / "revision-map-ch01-08.json").read_text(encoding="utf-8")
     )
-    assert len(operations) == 8
+    assert len(operations) == 13
     assert [row["fragment"] for row in operations] == [
-        f"fragments/ch{number:02d}.md" for number in range(1, 9)
+        f"fragments/ch{number:02d}.md" for number in range(1, 14)
     ]
     assert operations[0]["start_heading"] == "第一章 云计算基本概念"
-    assert operations[-1]["end_heading"] == "第九章 Nova的安装及其配置"
+    assert operations[-1]["end_heading"] == "第十四章 虚拟机镜像文件的制作"
     assert all(row["op"] == "replace" for row in operations)
 
 
@@ -287,7 +287,7 @@ def _all_diagram_svg_paths() -> list[Path]:
     manifests = [REVISION_ROOT / "figures" / "ch01-02-figure-manifest.json"]
     manifests.extend(
         REVISION_ROOT / "figures" / f"ch{number:02d}-figure-manifest.json"
-        for number in range(3, 9)
+        for number in range(3, 14)
     )
     paths: list[Path] = []
     for manifest in manifests:
@@ -399,3 +399,82 @@ def test_metadata_figure_boxes_are_proportional_to_their_content() -> None:
     ]
     assert len(boxes) == 2
     assert all(float(box.attrib["height"]) <= 360 for box in boxes)
+
+
+def test_chapter2_separates_public_cloud_architecture_from_domestic_products() -> None:
+    text = chapter(2)
+    headings = [line for line in text.splitlines() if line.startswith("## ")]
+    assert "## 2.3 公有云服务体系" in headings
+    assert "## 2.4 国内公有云产品" in headings
+    assert text.index("## 2.3 公有云服务体系") < text.index("{{FIGURE:图2.11}}")
+    assert text.index("{{FIGURE:图2.11}}") < text.index("## 2.4 国内公有云产品")
+    assert "三．EasyStack、ZStack与其他国产平台" not in text
+
+
+def test_all_diagrams_use_song_for_chinese_and_times_for_latin() -> None:
+    for path in _all_diagram_svg_paths():
+        payload = path.read_text(encoding="utf-8")
+        assert "Times New Roman" in payload, path
+        assert "SimSun" in payload and "宋体" in payload, path
+
+
+def test_glance_flow_uses_short_labels_that_fit_each_module() -> None:
+    path = REVISION_ROOT / "figures" / "ch7" / "图7.2.svg"
+    payload = path.read_text(encoding="utf-8")
+    for forbidden in ("建库、用户、服务、端点", "glance-manage db_sync", "openstack-glance-api"):
+        assert forbidden not in payload
+    for expected in ("建库、授权", "服务、端点", "编辑配置", "同步数据库", "启用glance-api"):
+        assert expected in payload
+
+
+def test_generated_word_runs_use_song_and_times_fonts() -> None:
+    spec = importlib.util.spec_from_file_location("revise_second_edition_fonts", REVISION_TOOL)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    payload = module._text_runs("OpenStack云平台")
+    assert b'Times New Roman' in payload
+    assert "宋体".encode("utf-8") in payload
+
+
+def test_word_style_normalizer_uses_second_edition_fonts_and_heading_sizes() -> None:
+    spec = importlib.util.spec_from_file_location("book_font_normalizer", BOOK_BUILDER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:styles xmlns:w="{module.W_NS}">
+      <w:docDefaults><w:rPrDefault><w:rPr/></w:rPrDefault></w:docDefaults>
+      <w:style w:type="paragraph" w:styleId="1"><w:rPr/></w:style>
+      <w:style w:type="paragraph" w:styleId="2"><w:rPr/></w:style>
+      <w:style w:type="paragraph" w:styleId="Normal"><w:rPr/></w:style>
+    </w:styles>'''.encode("utf-8")
+    normalized = module._normalize_styles_xml(xml)
+    assert b'Times New Roman' in normalized
+    assert "宋体".encode("utf-8") in normalized
+    root = ET.fromstring(normalized)
+    ns = {"w": module.W_NS}
+    h1 = root.find(".//w:style[@w:styleId='1']/w:rPr/w:sz", ns)
+    h2 = root.find(".//w:style[@w:styleId='2']/w:rPr/w:sz", ns)
+    assert h1 is not None and h1.get(f"{{{module.W_NS}}}val") == "44"
+    assert h2 is not None and h2.get(f"{{{module.W_NS}}}val") == "32"
+
+
+def test_word_builder_forces_each_chapter_to_start_on_a_new_page() -> None:
+    payload = BOOK_BUILDER.read_text(encoding="utf-8")
+    assert "if is_chapter_heading:" in payload
+    assert 'properties.find(f"{W}pageBreakBefore")' in payload
+    assert 'page_break.set(f"{W}val", "1")' in payload
+
+
+def test_word_builder_applies_song_and_times_through_word_before_save() -> None:
+    payload = BOOK_BUILDER.read_text(encoding="utf-8")
+    save_position = payload.index("document.SaveAs2(")
+    for statement in (
+        'document.Content.Font.NameFarEast = "宋体"',
+        'document.Content.Font.NameAscii = "Times New Roman"',
+        'document.Content.Font.NameOther = "Times New Roman"',
+    ):
+        assert 0 <= payload.index(statement) < save_position
+    assert "_rewrite_styles_in_place(output_docx)" in payload

@@ -1,4 +1,4 @@
-"""Build the Chapter 1-8 Word review manuscript from bounded Markdown revisions.
+"""Build the bounded textbook chapters in the current Word manuscript.
 
 The source is a DOCX that already contains figure and table markers.  This
 module preserves the second-edition package and paragraph templates, converts
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import tempfile
@@ -43,7 +44,7 @@ from build_chapters_1_2_review_docx import (  # noqa: E402
 
 
 CHAPTER_ONE = "第一章 云计算基本概念"
-CHAPTER_NINE = "第九章 Nova的安装及其配置"
+CHAPTER_AFTER_SCOPE = "第十四章 虚拟机镜像文件的制作"
 CHAPTER_RE = re.compile(r"^第[一二三四五六七八九十]+章")
 INTERNAL_HEADING_RE = re.compile(r"^(?:[一二三四五六七八九十]+|\d+)．")
 
@@ -115,8 +116,68 @@ def _set_left_no_indent(properties: etree._Element) -> None:
     alignment.set(f"{W}val", "left")
 
 
+def _normalize_styles_xml(styles_xml: bytes) -> bytes:
+    """Use Song typeface for Chinese and Times New Roman for Latin text."""
+
+    root = etree.fromstring(styles_xml)
+    for owner in root.xpath(
+        ".//w:docDefaults/w:rPrDefault/w:rPr | .//w:style/w:rPr",
+        namespaces={"w": W_NS},
+    ):
+        fonts = owner.find(f"{W}rFonts")
+        if fonts is None:
+            fonts = etree.Element(f"{W}rFonts")
+            owner.insert(0, fonts)
+        fonts.set(f"{W}ascii", "Times New Roman")
+        fonts.set(f"{W}hAnsi", "Times New Roman")
+        fonts.set(f"{W}eastAsia", "宋体")
+        fonts.set(f"{W}cs", "Times New Roman")
+
+    for style in root.findall(f"{W}style"):
+        style_id = style.get(f"{W}styleId", "")
+        size_half_points = None
+        if style_id in {"1", "Heading1", "heading1"}:
+            size_half_points = 44
+        elif style_id in {"2", "3", "Heading2", "Heading3", "heading2", "heading3"}:
+            size_half_points = 32
+        if size_half_points is None:
+            continue
+        properties = style.find(f"{W}rPr")
+        if properties is None:
+            properties = etree.SubElement(style, f"{W}rPr")
+        for tag in ("sz", "szCs"):
+            size = properties.find(f"{W}{tag}")
+            if size is None:
+                size = etree.SubElement(properties, f"{W}{tag}")
+            size.set(f"{W}val", str(size_half_points))
+
+    return etree.tostring(
+        root,
+        encoding="UTF-8",
+        xml_declaration=True,
+        standalone=True,
+    )
+
+
+def _rewrite_styles_in_place(docx_path: Path) -> None:
+    """Reassert bilingual style fonts after Word has normalized the package."""
+
+    with tempfile.TemporaryDirectory(prefix="textbook-font-style-") as directory:
+        replacement = Path(directory) / docx_path.name
+        with ZipFile(docx_path, "r") as source, ZipFile(
+            replacement, "w", compression=ZIP_DEFLATED
+        ) as target:
+            target.comment = source.comment
+            for info in source.infolist():
+                payload = source.read(info)
+                if info.filename == "word/styles.xml":
+                    payload = _normalize_styles_xml(payload)
+                target.writestr(info, payload)
+        os.replace(replacement, docx_path)
+
+
 def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -> None:
-    """Format the bounded first eight chapters and replace table markers."""
+    """Format the bounded deployment chapters and replace table markers."""
 
     namespace = {"w": W_NS}
     with ZipFile(input_docx, "r") as source:
@@ -125,6 +186,20 @@ def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -
         body = root.find(f".//{W}body")
         if body is None:
             raise ValueError("DOCX has no body")
+
+        # Apply the book-wide typeface rule to actual runs, including text that
+        # predates the bounded chapter replacement.  Sizes are changed only for
+        # the three heading styles; all other direct sizes remain intact.
+        for paragraph in body.findall(f".//{W}p"):
+            style = paragraph.find(f"{W}pPr/{W}pStyle")
+            style_id = style.get(f"{W}val") if style is not None else ""
+            heading_size = None
+            if style_id in {"1", "Heading1", "heading1"}:
+                heading_size = 44
+            elif style_id in {"2", "3", "Heading2", "Heading3", "heading2", "heading3"}:
+                heading_size = 32
+            for run in paragraph.findall(f".//{W}r"):
+                _ensure_run_format(run, size_half_points=heading_size)
 
         in_scope = False
         start_count = 0
@@ -139,7 +214,7 @@ def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -
             if text == CHAPTER_ONE:
                 start_count += 1
                 in_scope = True
-            elif text == CHAPTER_NINE:
+            elif text == CHAPTER_AFTER_SCOPE:
                 end_count += 1
                 in_scope = False
             if in_scope:
@@ -171,6 +246,16 @@ def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -
                 re.match(r"^\d+\.\d+\s", text)
             )
             is_internal_heading = bool(INTERNAL_HEADING_RE.match(text))
+            if is_chapter_heading:
+                properties = paragraph.find(f"{W}pPr")
+                if properties is None:
+                    properties = etree.Element(f"{W}pPr")
+                    paragraph.insert(0, properties)
+                page_break = properties.find(f"{W}pageBreakBefore")
+                if page_break is None:
+                    page_break = etree.Element(f"{W}pageBreakBefore")
+                    properties.append(page_break)
+                page_break.set(f"{W}val", "1")
             if is_internal_heading:
                 properties = paragraph.find(f"{W}pPr")
                 if properties is None:
@@ -215,10 +300,16 @@ def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -
             xml_declaration=True,
             standalone=True,
         )
+        styles_xml = _normalize_styles_xml(source.read("word/styles.xml"))
         with ZipFile(output_docx, "w", compression=ZIP_DEFLATED) as target:
             target.comment = source.comment
             for info in source.infolist():
-                payload = updated_xml if info.filename == "word/document.xml" else source.read(info)
+                if info.filename == "word/document.xml":
+                    payload = updated_xml
+                elif info.filename == "word/styles.xml":
+                    payload = styles_xml
+                else:
+                    payload = source.read(info)
                 target.writestr(info, payload)
 
 
@@ -238,7 +329,7 @@ def build_review_docx(
     tables = _load_records(table_manifests, table=True)
 
     pythoncom.CoInitialize()
-    temporary = tempfile.TemporaryDirectory(prefix="chapters-1-8-review-")
+    temporary = tempfile.TemporaryDirectory(prefix="textbook-review-")
     word = None
     document = None
     try:
@@ -288,6 +379,13 @@ def build_review_docx(
             selection.ParagraphFormat.LeftIndent = 0
             selection.ParagraphFormat.FirstLineIndent = 0
 
+        # Word may simplify run properties during SaveAs.  Apply the bilingual
+        # typeface rule through the Word object model so the saved document and
+        # the PDF use the same explicit fonts throughout the main story.
+        document.Content.Font.NameFarEast = "宋体"
+        document.Content.Font.NameAscii = "Times New Roman"
+        document.Content.Font.NameOther = "Times New Roman"
+
         document.SaveAs2(
             str(output_docx.resolve()),
             FileFormat=WD_FORMAT_DOCUMENT_DEFAULT,
@@ -314,6 +412,7 @@ def build_review_docx(
             word.Quit(SaveChanges=False)
         temporary.cleanup()
         pythoncom.CoUninitialize()
+    _rewrite_styles_in_place(output_docx)
 
 
 def main() -> int:

@@ -1057,9 +1057,10 @@ def test_task3_fragments_keep_second_edition_heading_and_narrative_density() -> 
         2: [
             "## 2.1 国外私有云及相关产品简介",
             "## 2.2 国内私有云产品",
-            "## 2.3 国内公有云产品",
-            "## 2.4 国外公有云产品简介",
-            "## 2.5 云平台选择与比较",
+            "## 2.3 公有云服务体系",
+            "## 2.4 国内公有云产品",
+            "## 2.5 国外公有云产品简介",
+            "## 2.6 云平台选择与比较",
         ],
         3: [
             "## 3.1 OpenStack技术简介",
@@ -1139,9 +1140,10 @@ def test_chapters_1_2_have_second_edition_internal_levels_and_depth() -> None:
         2: [
             "2.1 国外私有云及相关产品简介",
             "2.2 国内私有云产品",
-            "2.3 国内公有云产品",
-            "2.4 国外公有云产品简介",
-            "2.5 云平台选择与比较",
+            "2.3 公有云服务体系",
+            "2.4 国内公有云产品",
+            "2.5 国外公有云产品简介",
+            "2.6 云平台选择与比较",
         ],
     }
     target_lengths = {1: (14_000, 18_000), 2: (11_500, 16_000)}
@@ -1727,22 +1729,25 @@ def test_chapter_2_prioritizes_domestic_products_in_five_section_outline() -> No
         "2.2 国内私有云产品": [
             "一．国内私有云的通用架构",
             "二．华为云Stack与Apsara Stack",
-            "三．EasyStack、ZStack与其他国产平台",
+            "三．H3C CloudOS、深信服aCloud与基础软件适配",
             "四．信创适配与开放生态",
         ],
-        "2.3 国内公有云产品": [
-            "一．国内公有云的服务体系",
-            "二．阿里云、华为云与腾讯云",
-            "三．百度智能云、京东云与金山云",
-            "四．运营商云服务简介",
+        "2.3 公有云服务体系": [
+            "一．公有云的基础设施层次",
+            "二．公有云的服务与治理",
         ],
-        "2.4 国外公有云产品简介": [
+        "2.4 国内公有云产品": [
+            "一．阿里云、华为云与腾讯云",
+            "二．百度智能云、京东云与金山云",
+            "三．运营商云服务简介",
+        ],
+        "2.5 国外公有云产品简介": [
             "一．AWS、Microsoft Azure与Google Cloud",
             "二．国外公有云的服务特点",
             "三．混合基础设施延伸",
             "四．使用边界",
         ],
-        "2.5 云平台选择与比较": [
+        "2.6 云平台选择与比较": [
             "一．比较维度",
             "二．私有云产品比较",
             "三．公有云产品比较",
@@ -1758,9 +1763,10 @@ def test_chapter_2_prioritizes_domestic_products_in_five_section_outline() -> No
     required_by_section = {
         "2.1": ("VMware Cloud Foundation", "Citrix DaaS", "VDA", "HDX", "Hyper-V", "VMBus", "Azure Local"),
         "2.2": ("华为云Stack", "Apsara Stack", "EasyStack", "ZStack", "H3C CloudOS", "深信服aCloud", "openEuler", "OpenStack"),
-        "2.3": ("阿里云", "华为云", "腾讯云", "百度智能云", "京东云", "金山云", "天翼云", "移动云", "联通云"),
-        "2.4": ("AWS", "Microsoft Azure", "Google Cloud", "AWS Outposts", "Azure Arc"),
-        "2.5": ("定位", "服务能力", "生态", "部署形态", "锁定风险", "应用场景"),
+        "2.3": ("区域", "可用区", "资源池", "服务目录", "身份", "计量"),
+        "2.4": ("阿里云", "华为云", "腾讯云", "百度智能云", "京东云", "金山云", "天翼云", "移动云", "联通云"),
+        "2.5": ("AWS", "Microsoft Azure", "Google Cloud", "AWS Outposts", "Azure Arc"),
+        "2.6": ("定位", "服务能力", "生态", "部署形态", "锁定风险", "应用场景"),
     }
     for heading, body in h2_sections(chapter):
         prefix = heading.split()[0]
@@ -1782,10 +1788,10 @@ def test_chapter_2_prioritizes_domestic_products_in_five_section_outline() -> No
 
     sections = dict(h2_sections(chapter))
     domestic_length = len(sections["2.2 国内私有云产品"]) + len(
-        sections["2.3 国内公有云产品"]
+        sections["2.4 国内公有云产品"]
     )
     foreign_length = len(sections["2.1 国外私有云及相关产品简介"]) + len(
-        sections["2.4 国外公有云产品简介"]
+        sections["2.5 国外公有云产品简介"]
     )
     assert domestic_length >= foreign_length * 1.35
 
@@ -2337,11 +2343,13 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
         "owner",
     }
     assert rows and set(rows[0]) == expected_columns
-    assert {row["chapter"] for row in rows} == {"1", "2", "3", "4"}
+    assert {row["chapter"] for row in rows} == {
+        "1", "2", "3", "4", "9", "10", "11", "12", "13"
+    }
     assert len({row["second_edition_figure"] for row in rows if row["second_edition_figure"]}) >= 36
     assert {row["decision"] for row in rows} <= {"保留", "删除", "重绘", "重拍"}
     assert all(
-        not row["target_number"] or re.fullmatch(r"图[1234]\.\d+", row["target_number"])
+        not row["target_number"] or re.fullmatch(r"图(?:[1-4]|9|10|11|12|13)\.\d+", row["target_number"])
         for row in rows
     )
     assert all(row["target_number"] for row in rows if row["decision"] != "删除")

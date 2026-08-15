@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
-  <style>text{font-family:SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.white{fill:#ffffff}</style>
+  <style>text{font-family:'Times New Roman',SimSun,'宋体',serif;font-size:40px;fill:#172033}.title{font-weight:700}.white{fill:#ffffff}</style>
   <rect width="1600" height="900" fill="#ffffff"/>
   <text x="800" y="62" text-anchor="middle" font-size="52" class="title">Horizon登录与项目概览</text>
   <g>

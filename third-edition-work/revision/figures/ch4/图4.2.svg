@@ -1,28 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
-<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
 <defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">双节点环境拓扑与组件分布</text>
 <line x1="300" y1="235" x2="350" y2="235" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
 <line x1="860" y1="235" x2="950" y2="235" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
-<line x1="605" y1="680" x2="605" y2="735" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
-<line x1="1240" y1="680" x2="1240" y2="735" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
+<line x1="605" y1="680" x2="605" y2="720" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="1240" y1="680" x2="1240" y2="720" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
 <rect x="35" y="150" width="265" height="170" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
 <text x="167.5" y="224.0" text-anchor="middle">管理主机</text>
 <text x="167.5" y="270.0" text-anchor="middle">SSH远程连接</text>
 <rect x="350" y="100" width="510" height="580" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="605.0" y="195.0" text-anchor="middle" class="title">controller 控制节点</text>
-<text x="605.0" y="241.0" text-anchor="middle">192.168.234.151　ens33</text>
-<text x="605.0" y="287.0" text-anchor="middle">MariaDB　RabbitMQ</text>
-<text x="605.0" y="333.0" text-anchor="middle">Memcached</text>
-<text x="605.0" y="379.0" text-anchor="middle" font-size="34">Keystone　Glance　Placement</text>
-<text x="605.0" y="425.0" text-anchor="middle">Nova控制服务</text>
-<text x="605.0" y="471.0" text-anchor="middle">Neutron控制服务</text>
-<text x="605.0" y="517.0" text-anchor="middle">Cinder控制服务</text>
-<text x="605.0" y="563.0" text-anchor="middle">Swift Proxy</text>
-<text x="605.0" y="609.0" text-anchor="middle">Horizon　Apache</text>
+<text x="605.0" y="172.0" text-anchor="middle" class="node-title">controller 控制节点</text>
+<text x="605.0" y="218.0" text-anchor="middle">192.168.234.151　ens33</text>
+<text x="605.0" y="264.0" text-anchor="middle">MariaDB　RabbitMQ</text>
+<text x="605.0" y="310.0" text-anchor="middle">Memcached</text>
+<text x="605.0" y="356.0" text-anchor="middle">Keystone　Glance</text>
+<text x="605.0" y="402.0" text-anchor="middle">Placement</text>
+<text x="605.0" y="448.0" text-anchor="middle">Nova控制服务</text>
+<text x="605.0" y="494.0" text-anchor="middle">Neutron控制服务</text>
+<text x="605.0" y="540.0" text-anchor="middle">Cinder控制服务</text>
+<text x="605.0" y="586.0" text-anchor="middle">Swift Proxy</text>
+<text x="605.0" y="632.0" text-anchor="middle">Horizon　Apache</text>
 <rect x="950" y="100" width="590" height="580" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="1245.0" y="218.0" text-anchor="middle" class="title">compute 计算节点</text>
+<text x="1245.0" y="218.0" text-anchor="middle" class="node-title">compute 计算节点</text>
 <text x="1245.0" y="264.0" text-anchor="middle">192.168.234.150　ens33</text>
 <text x="1245.0" y="310.0" text-anchor="middle">KVM　libvirt</text>
 <text x="1245.0" y="356.0" text-anchor="middle">nova-compute</text>
@@ -31,10 +32,12 @@
 <text x="1245.0" y="494.0" text-anchor="middle">Swift：/dev/sdc</text>
 <text x="1245.0" y="540.0" text-anchor="middle">ens34：Provider接口</text>
 <text x="1245.0" y="586.0" text-anchor="middle">无IP地址</text>
-<rect x="350" y="735" width="510" height="100" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
-<text x="605.0" y="774.0" text-anchor="middle" font-size="35">管理网络　192.168.234.0/24</text>
-<text x="605.0" y="820.0" text-anchor="middle">SSH、API与节点通信</text>
-<rect x="950" y="735" width="590" height="100" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
-<text x="1245.0" y="774.0" text-anchor="middle">Provider网络　外部二层网络</text>
-<text x="1245.0" y="820.0" text-anchor="middle">实例外部网络数据</text>
+<rect x="350" y="720" width="510" height="150" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="605.0" y="761.0" text-anchor="middle">管理网络</text>
+<text x="605.0" y="807.0" text-anchor="middle">192.168.234.0/24</text>
+<text x="605.0" y="853.0" text-anchor="middle">SSH、API与节点通信</text>
+<rect x="950" y="720" width="590" height="150" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="1245.0" y="761.0" text-anchor="middle">Provider网络</text>
+<text x="1245.0" y="807.0" text-anchor="middle">外部二层网络</text>
+<text x="1245.0" y="853.0" text-anchor="middle">实例外部网络数据</text>
 </svg>

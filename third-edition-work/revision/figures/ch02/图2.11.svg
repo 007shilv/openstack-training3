@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
-  <style>text { font-family: SimSun, '宋体', serif; fill: #111827; }</style>
+  <style>text { font-family: 'Times New Roman', SimSun, '宋体', serif; fill: #111827; }</style>
   <defs><marker id="a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2563eb"/></marker></defs>
   <rect width="1200" height="700" fill="#ffffff"/>
-  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">国内外公有云稳定能力层次</text>
+  <text x="600" y="52" text-anchor="middle" font-size="44" font-weight="700">公有云服务能力层次</text>
   <rect x="105" y="95" width="990" height="105" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
   <text x="260" y="160" text-anchor="middle" font-size="34" font-weight="700">用户与治理</text>
   <text x="510" y="160" text-anchor="middle" font-size="34">身份·权限</text><text x="745" y="160" text-anchor="middle" font-size="34">监控·计量</text><text x="970" y="160" text-anchor="middle" font-size="34">预算·策略</text>
@@ -18,5 +18,5 @@
   <rect x="105" y="515" width="990" height="115" rx="16" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
   <text x="260" y="580" text-anchor="middle" font-size="34" font-weight="700">物理故障域</text>
   <text x="490" y="580" text-anchor="middle" font-size="34">区域</text><text x="700" y="580" text-anchor="middle" font-size="34">可用区</text><text x="930" y="580" text-anchor="middle" font-size="34">数据中心</text>
-  <text x="600" y="685" text-anchor="middle" font-size="34" fill="#6b7280">平台提供故障域与服务选择；应用负责正确分布、保护数据并控制成本</text>
+  <text x="600" y="670" text-anchor="middle" font-size="34" fill="#6b7280">平台提供故障域与服务选择；应用负责正确分布、保护数据并控制成本</text>
 </svg>

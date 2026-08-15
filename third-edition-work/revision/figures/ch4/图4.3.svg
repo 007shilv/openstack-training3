@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
-<style>text{font-family:"SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
 <defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
 <rect width="1600" height="900" fill="#ffffff"/>
 <text x="800" y="70" text-anchor="middle" class="title">双网卡与网络平面</text>
 <rect x="80" y="150" width="650" height="560" rx="18" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
-<text x="405.0" y="396.0" text-anchor="middle" class="title">controller</text>
+<text x="405.0" y="396.0" text-anchor="middle" class="node-title">controller</text>
 <text x="405.0" y="442.0" text-anchor="middle">ens33：192.168.234.151/24</text>
 <text x="405.0" y="488.0" text-anchor="middle">ens34：无IP地址</text>
 <rect x="870" y="150" width="650" height="560" rx="18" fill="#f9fafb" stroke="#9ca3af" stroke-width="3"/>
-<text x="1195.0" y="396.0" text-anchor="middle" class="title">compute</text>
+<text x="1195.0" y="396.0" text-anchor="middle" class="node-title">compute</text>
 <text x="1195.0" y="442.0" text-anchor="middle">ens33：192.168.234.150/24</text>
 <text x="1195.0" y="488.0" text-anchor="middle">ens34：无IP地址</text>
 <rect x="120" y="520" width="1360" height="90" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/><text x="800" y="578" text-anchor="middle">管理网络：SSH、API、数据库、消息与节点通信</text>

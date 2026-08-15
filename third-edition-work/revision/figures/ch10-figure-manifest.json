@@ -1,0 +1,4 @@
+[
+  {"number":"图10.1","title":"Neutron双节点网络拓扑","svg":"figures/ch10/图10.1.svg","png":"figures/ch10/图10.1.png","width_cm":14.5,"minimum_font_pt":9.0},
+  {"number":"图10.2","title":"实例访问外部网络的路径","svg":"figures/ch10/图10.2.svg","png":"figures/ch10/图10.2.png","width_cm":14.5,"minimum_font_pt":9.0}
+]

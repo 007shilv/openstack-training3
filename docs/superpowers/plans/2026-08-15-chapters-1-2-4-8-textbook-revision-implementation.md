@@ -186,3 +186,47 @@
 - [x] **Step 7: 运行定向和全量测试并修正到通过**
 - [x] **Step 8: 在临时文件中生成当前Word，完成打开、页数和代表页视觉检查后原子覆盖原文件**
 - [x] **Step 9: 提交本轮源文件和检查项，不提交临时文件或另建正式书稿**
+
+### Task 9: 统一全稿结构、字体和现有图形
+
+**Files:**
+- Modify: `third-edition-work/revision/fragments/ch02.md`
+- Modify: `third-edition-work/revision/figures/ch02/图2.11.svg`
+- Modify: `third-edition-work/revision/figures/ch7/图7.2.svg`
+- Modify: `third-edition-work/tools/revise_second_edition.py`
+- Modify: `third-edition-work/tools/build_ch04_08_figures.py`
+- Modify: `third-edition-work/tests/test_chapters_4_8_revision.py`
+
+**Interfaces:**
+- Consumes: 当前第1—8章正文、图形资产和第二版字体字号基线。
+- Produces: 第二章无重复标题、公有云通用结构独立成节、图形文字不溢出、中文宋体且英文数字为Times New Roman的当前稿。
+
+- [ ] **Step 1: 写入第二章结构、图7.2文字边界和中英文字体合同并运行失败基线**
+- [ ] **Step 2: 把第二章重排为公有云服务体系、国内产品、国外产品和选择比较四个连续层次**
+- [ ] **Step 3: 重绘图7.2并统一现有SVG字体栈、字号、模块内边距和箭头走向**
+- [ ] **Step 4: 在Open XML生成层统一中文、英文数字字体并保持第二版标题字号**
+- [ ] **Step 5: 运行定向测试和全量回归测试**
+
+### Task 10: 完成Nova至Horizon部署部分
+
+**Files:**
+- Create: `third-edition-work/revision/fragments/ch09.md` 至 `ch13.md`
+- Create: `third-edition-work/revision/figures/ch9` 至 `ch13` 中的教材示意图
+- Create: `third-edition-work/revision/figures/ch09-figure-manifest.json` 至 `ch13-figure-manifest.json`
+- Create: `third-edition-work/revision/tables/ch09-table-manifest.json` 至 `ch13-table-manifest.json`
+- Modify: `third-edition-work/revision/revision-map-ch01-08.json`
+- Modify: `third-edition-work/tools/build_chapters_1_8_review_docx.py`
+- Modify in place: `D:/codex/云计算教材更新/云计算基础架构平台构建与应用（第三版第1-3章审阅稿-20260815-04修复版）.docx`
+
+**Interfaces:**
+- Consumes: 第二版第9—13章可借鉴叙事、本地手工部署记录、当前第1—8章环境和配置参数。
+- Produces: Nova、Neutron、Cinder、Swift、Horizon及平台初始化的纯手工教材正文，并回写唯一当前正式稿。
+
+- [ ] **Step 1: 从第二版与已验证记录提取每章原理、组件、配置和严格先后关系**
+- [ ] **Step 2: 先写章节层级、禁用语言、提示符、密码和手工步骤的失败合同**
+- [ ] **Step 3: 完成第9章Nova与第10章Neutron正文、图表和配置**
+- [ ] **Step 4: 完成第11章Cinder、第12章Swift和第13章Horizon正文、图表和配置**
+- [ ] **Step 5: 确保命令均带系统提示符，数据库、身份、端点、配置、同步和启服均为逐条手工操作**
+- [ ] **Step 6: 生成全章图表，逐图渲染检查文字溢出、箭头覆盖和字号**
+- [ ] **Step 7: 在临时副本中替换第9—13章，Word打开及PDF视觉检查通过后原子覆盖当前稿**
+- [ ] **Step 8: 运行全量测试、包结构检查和最终字体图表审计**

@@ -482,7 +482,12 @@ def _text_runs(text: str, *, caption: bool = False) -> bytes:
     for index, line in enumerate(lines):
         if index:
             chunks.append("<w:r><w:br/></w:r>")
-        properties = "<w:rPr><w:b/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr>" if caption else ""
+        font_properties = (
+            '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" '
+            'w:eastAsia="宋体" w:cs="Times New Roman"/>'
+        )
+        emphasis = '<w:b/><w:sz w:val="18"/><w:szCs w:val="18"/>' if caption else ""
+        properties = f"<w:rPr>{font_properties}{emphasis}</w:rPr>"
         chunks.append(
             f'<w:r>{properties}<w:t xml:space="preserve">{escape(line)}</w:t></w:r>'
         )

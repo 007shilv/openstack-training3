@@ -1,0 +1,4 @@
+[
+  {"number":"表11-1","title":"Cinder主要组件与部署位置","headers":["组件","部署节点","主要作用"],"rows":[["cinder-api","controller","接收块存储请求"],["cinder-scheduler","controller","选择卷后端"],["cinder-volume","compute","调用后端驱动管理卷"],["LVM","compute","建立物理卷、卷组和逻辑卷"],["targetclid与LIO","compute","公布iSCSI目标"]]},
+  {"number":"表11-2","title":"LVM块存储参数","headers":["项目","参数","作用"],"rows":[["数据盘","/dev/sdb，50 GiB","Cinder专用独立磁盘"],["卷组","cinder-volumes","保存Cinder逻辑卷"],["后端标识","LVM","与卷类型属性关联"],["目标协议","iSCSI","向实例提供块设备"],["目标助手","lioadm","通过LIO管理目标"],["服务端口","8776","Cinder volumev3 API"]]}
+]

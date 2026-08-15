@@ -46,5 +46,35 @@
     "start_heading": "第八章 Placement的安装及其配置",
     "end_heading": "第九章 Nova的安装及其配置",
     "fragment": "fragments/ch08.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第九章 Nova的安装及其配置",
+    "end_heading": "第十章 Neutron的安装及其配置",
+    "fragment": "fragments/ch09.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第十章 Neutron的安装及其配置",
+    "end_heading": "第十一章 Cinder的安装及其配置",
+    "fragment": "fragments/ch10.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第十一章 Cinder的安装及其配置",
+    "end_heading": "第十二章 Dashboard的安装及其配置",
+    "fragment": "fragments/ch11.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第十二章 Dashboard的安装及其配置",
+    "end_heading": "第十三章 原生OpenStack云平台各组件运维",
+    "fragment": "fragments/ch12.md"
+  },
+  {
+    "op": "replace",
+    "start_heading": "第十三章 原生OpenStack云平台各组件运维",
+    "end_heading": "第十四章 虚拟机镜像文件的制作",
+    "fragment": "fragments/ch13.md"
   }
 ]

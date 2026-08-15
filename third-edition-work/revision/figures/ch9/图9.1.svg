@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<style>text{font-family:"Times New Roman","SimSun","宋体",serif;font-size:36px;fill:#111827} .title{font-size:46px;font-weight:700} .node-title{font-size:40px;font-weight:700} .sub{font-size:36px;fill:#4b5563} .white{fill:#fff}</style>
+<defs><marker id="blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#9333ea"/></marker></defs>
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="800" y="70" text-anchor="middle" class="title">Nova双节点组件分布</text>
+<rect x="60" y="130" width="670" height="480" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="3"/>
+<text x="395.0" y="290.0" text-anchor="middle" class="node-title">controller控制节点</text>
+<text x="395.0" y="336.0" text-anchor="middle">nova-api</text>
+<text x="395.0" y="382.0" text-anchor="middle">nova-scheduler</text>
+<text x="395.0" y="428.0" text-anchor="middle">nova-conductor</text>
+<text x="395.0" y="474.0" text-anchor="middle">nova-novncproxy</text>
+<rect x="870" y="130" width="670" height="480" rx="18" fill="#f0fdf4" stroke="#86efac" stroke-width="3"/>
+<text x="1205.0" y="290.0" text-anchor="middle" class="node-title">compute计算节点</text>
+<text x="1205.0" y="336.0" text-anchor="middle">nova-compute</text>
+<text x="1205.0" y="382.0" text-anchor="middle">libvirt</text>
+<text x="1205.0" y="428.0" text-anchor="middle">QEMU / KVM</text>
+<text x="1205.0" y="474.0" text-anchor="middle">实例虚拟机</text>
+<line x1="730" y1="320" x2="870" y2="320" stroke="#2563eb" stroke-width="5" marker-end="url(#blue)"/>
+<line x1="870" y1="470" x2="730" y2="470" stroke="#16a34a" stroke-width="5" marker-end="url(#green)"/>
+<rect x="170" y="680" width="1260" height="130" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="3"/>
+<text x="800.0" y="734.0" text-anchor="middle" class="node-title">公共依赖</text>
+<text x="800.0" y="780.0" text-anchor="middle">Keystone　Glance　Placement　RabbitMQ　MariaDB</text>
+<line x1="400" y1="610" x2="400" y2="680" stroke="#9333ea" stroke-width="5" marker-end="url(#purple)"/>
+<line x1="1200" y1="610" x2="1200" y2="680" stroke="#9333ea" stroke-width="5" marker-end="url(#purple)"/>
+</svg>
