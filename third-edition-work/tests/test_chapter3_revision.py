@@ -42,6 +42,10 @@ def compact_text() -> str:
     return "".join(chapter_text().split())
 
 
+def _paragraph_text_for_test(paragraph: ET.Element, namespace: str) -> str:
+    return "".join(node.text or "" for node in paragraph.iter(f"{{{namespace}}}t"))
+
+
 def test_chapter3_official_source_register_is_complete():
     data = json.loads(SOURCES.read_text(encoding="utf-8"))
     assert data["cutoff_date"] == "2026-07-31"
@@ -237,9 +241,14 @@ def test_chapter3_openxml_builder_inserts_figures_tables_and_captions():
     paragraphs.extend(f"{{{{TABLE:表3-{number}}}}}" for number in range(1, 6))
     paragraphs.append("第四章 openEuler与信创OpenStack实验环境准备")
     body = "".join(f'<w:p><w:r><w:t>{text}</w:t></w:r></w:p>' for text in paragraphs)
+    mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+    w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+    wp14 = "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
     document_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        f'<w:document xmlns:w="{w}"><w:body>{body}<w:sectPr/></w:body></w:document>'
+        f'<w:document xmlns:w="{w}" xmlns:mc="{mc}" xmlns:w14="{w14}" '
+        f'xmlns:wp14="{wp14}" mc:Ignorable="w14 wp14">'
+        f'<w:body>{body}<w:sectPr/></w:body></w:document>'
     ).encode("utf-8")
     content_types = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -268,7 +277,8 @@ def test_chapter3_openxml_builder_inserts_figures_tables_and_captions():
             package.writestr("custom/unchanged.bin", b"unchanged")
         module.build_review_docx(source, output, FIGURE_MANIFEST, ROOT / "third-edition-work" / "revision" / "tables" / "ch03-table-manifest.json")
         with ZipFile(output) as package:
-            root = ET.fromstring(package.read("word/document.xml"))
+            document_payload = package.read("word/document.xml")
+            root = ET.fromstring(document_payload)
             rel_root = ET.fromstring(package.read("word/_rels/document.xml.rels"))
             texts = [node.text or "" for node in root.iter(f"{{{w}}}t")]
             assert not any("{{FIGURE:" in text or "{{TABLE:" in text for text in texts)
@@ -277,6 +287,30 @@ def test_chapter3_openxml_builder_inserts_figures_tables_and_captions():
             image_rels = [row for row in rel_root if row.attrib.get("Type", "").endswith("/image")]
             assert len(image_rels) == 9
             assert package.read("custom/unchanged.bin") == b"unchanged"
+            root_tag = re.search(rb"<w:document\b.*?>", document_payload, flags=re.DOTALL)
+            assert root_tag is not None
+            assert b'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"' in root_tag.group(0)
+            assert b'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"' in root_tag.group(0)
+            assert b'xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"' in root_tag.group(0)
+            for table in root.iter(f"{{{w}}}tbl"):
+                table_properties = table.find(f"{{{w}}}tblPr")
+                assert table_properties is not None
+                property_names = [child.tag.rsplit("}", 1)[-1] for child in table_properties]
+                assert property_names.index("tblBorders") < property_names.index("tblLayout")
+            for shading in root.iter(f"{{{w}}}shd"):
+                assert shading.attrib.get(f"{{{w}}}val") == "clear"
+            generated_paragraphs = [
+                paragraph
+                for paragraph in root.iter(f"{{{w}}}p")
+                if paragraph.find(f".//{{{w}}}drawing") is not None
+                or _paragraph_text_for_test(paragraph, w).startswith(("图3.", "表3-"))
+            ]
+            assert len(generated_paragraphs) == 23
+            for paragraph in generated_paragraphs:
+                paragraph_properties = paragraph.find(f"{{{w}}}pPr")
+                assert paragraph_properties is not None
+                property_names = [child.tag.rsplit("}", 1)[-1] for child in paragraph_properties]
+                assert property_names.index("spacing") < property_names.index("jc")
             for number in range(1, 10):
                 assert f"图3.{number}" in texts
                 assert f"word/media/ch03-figure-{number}.png" in package.namelist()

@@ -9,6 +9,7 @@ of the three Open XML parts that must be updated for embedded images.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -94,13 +95,13 @@ def _new_text_paragraph(
 ) -> ET.Element:
     paragraph = ET.Element(q(W, "p"))
     properties = ET.SubElement(paragraph, q(W, "pPr"))
-    justification = ET.SubElement(properties, q(W, "jc"))
-    justification.set(q(W, "val"), alignment)
     spacing = ET.SubElement(properties, q(W, "spacing"))
     spacing.set(q(W, "before"), "0")
     spacing.set(q(W, "after"), "0")
     spacing.set(q(W, "line"), "240")
     spacing.set(q(W, "lineRule"), "auto")
+    justification = ET.SubElement(properties, q(W, "jc"))
+    justification.set(q(W, "val"), alignment)
     run = ET.SubElement(paragraph, q(W, "r"))
     _set_run_font(run, size_half_points, bold)
     node = ET.SubElement(run, q(W, "t"))
@@ -139,11 +140,11 @@ def _new_drawing_paragraph(
 ) -> ET.Element:
     paragraph = ET.Element(q(W, "p"))
     ppr = ET.SubElement(paragraph, q(W, "pPr"))
-    jc = ET.SubElement(ppr, q(W, "jc"))
-    jc.set(q(W, "val"), "center")
     spacing = ET.SubElement(ppr, q(W, "spacing"))
     spacing.set(q(W, "before"), "120")
     spacing.set(q(W, "after"), "0")
+    jc = ET.SubElement(ppr, q(W, "jc"))
+    jc.set(q(W, "val"), "center")
 
     run = ET.SubElement(paragraph, q(W, "r"))
     drawing = ET.SubElement(run, q(W, "drawing"))
@@ -195,11 +196,11 @@ def _new_table(record: dict) -> ET.Element:
     width = ET.SubElement(properties, q(W, "tblW"))
     width.set(q(W, "w"), "0")
     width.set(q(W, "type"), "auto")
-    layout = ET.SubElement(properties, q(W, "tblLayout"))
-    layout.set(q(W, "type"), "fixed")
     borders = ET.SubElement(properties, q(W, "tblBorders"))
     for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
         ET.SubElement(borders, q(W, edge), {q(W, "val"): "single", q(W, "sz"): "4", q(W, "space"): "0", q(W, "color"): "808080"})
+    layout = ET.SubElement(properties, q(W, "tblLayout"))
+    layout.set(q(W, "type"), "fixed")
     grid = ET.SubElement(table, q(W, "tblGrid"))
     for value in widths:
         ET.SubElement(grid, q(W, "gridCol"), {q(W, "w"): str(round(float(value) / 2.54 * 1440))})
@@ -212,6 +213,7 @@ def _new_table(record: dict) -> ET.Element:
             cell_properties = cell.find(q(W, "tcPr"))
             if row_index == 0:
                 shading = ET.SubElement(cell_properties, q(W, "shd"))
+                shading.set(q(W, "val"), "clear")
                 shading.set(q(W, "fill"), "D9EAF7")
             paragraph = ET.SubElement(cell, q(W, "p"))
             ppr = ET.SubElement(paragraph, q(W, "pPr"))
@@ -279,8 +281,38 @@ def _normalize_chapter_fonts(body: ET.Element, caption_texts: set[str]) -> None:
             _set_run_font(run, 21, bold)
 
 
-def _xml_bytes(root: ET.Element) -> bytes:
-    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+def _root_namespace_declarations(payload: bytes) -> list[tuple[str, str]]:
+    declarations: list[tuple[str, str]] = []
+    for event, value in ET.iterparse(io.BytesIO(payload), events=("start-ns", "start")):
+        if event == "start-ns":
+            declarations.append(value)
+            continue
+        break
+    return declarations
+
+
+def _xml_bytes(root: ET.Element, original_payload: bytes) -> bytes:
+    declarations = _root_namespace_declarations(original_payload)
+    for prefix, namespace in declarations:
+        if prefix == "xml" or re.fullmatch(r"ns\d+", prefix or ""):
+            continue
+        ET.register_namespace(prefix, namespace)
+
+    payload = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    match = re.search(rb"<[^!?][^>]*>", payload, flags=re.DOTALL)
+    if match is None:
+        raise ValueError("serialized XML has no root start tag")
+    root_tag = match.group(0)
+    missing = []
+    for prefix, namespace in declarations:
+        attribute = "xmlns" if not prefix else f"xmlns:{prefix}"
+        if re.search(fr"\s{re.escape(attribute)}=".encode("ascii"), root_tag):
+            continue
+        missing.append(f' {attribute}="{namespace}"'.encode("utf-8"))
+    if missing:
+        insertion = match.end() - 1
+        payload = payload[:insertion] + b"".join(missing) + payload[insertion:]
+    return payload
 
 
 def _copy_zip_info(info: ZipInfo) -> ZipInfo:
@@ -383,9 +415,13 @@ def build_review_docx(
     _normalize_chapter_fonts(body, caption_texts)
     if not any(node.attrib.get("Extension", "").lower() == "png" for node in content_types.findall(q(CT, "Default"))):
         ET.SubElement(content_types, q(CT, "Default"), {"Extension": "png", "ContentType": PNG_CONTENT_TYPE})
-    payloads["word/document.xml"] = _xml_bytes(document)
-    payloads["word/_rels/document.xml.rels"] = _xml_bytes(relationships)
-    payloads["[Content_Types].xml"] = _xml_bytes(content_types)
+    payloads["word/document.xml"] = _xml_bytes(document, payloads["word/document.xml"])
+    payloads["word/_rels/document.xml.rels"] = _xml_bytes(
+        relationships, payloads["word/_rels/document.xml.rels"]
+    )
+    payloads["[Content_Types].xml"] = _xml_bytes(
+        content_types, payloads["[Content_Types].xml"]
+    )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{output.stem}-", suffix=".tmp", dir=output.parent)
