@@ -306,5 +306,21 @@
     "minimum_font_pt": 9.0,
     "source_note": "依据本章五类产品路线的定位、服务能力、生态、部署形态、锁定风险和应用场景比较框架重绘",
     "width_cm": 13.5
+  },
+  {
+    "number": "图2.15",
+    "title": "阿里云ECS官方价格计算器（中国站）",
+    "kind": "screenshot",
+    "png": "figures/ch02/图2.15.png",
+    "raw": "figures/ch02/raw/图2.15-original.png",
+    "anchor": "阿里云ECS中国站价格页面能够按地域、用户类型、网络、操作系统和I/O方式筛选实例",
+    "minimum_font_pt": 9.0,
+    "source_note": "阿里云ECS中国站官方价格页面，选择中国内地华东1地域后截取",
+    "source_page": "https://ecs-buy.aliyun.com/price",
+    "source_image": "https://ecs-buy.aliyun.com/price",
+    "rights_owner": "阿里云计算有限公司",
+    "accessed_on": "2026-08-15",
+    "crop_note": "保留地域选择、计费筛选、实例规格和价格表主体，未增添文字或界面元素",
+    "width_cm": 14.0
   }
 ]

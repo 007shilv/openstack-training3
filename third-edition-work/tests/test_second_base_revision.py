@@ -1174,10 +1174,10 @@ def test_chapters_1_2_figure_manifest_and_cross_references_are_complete() -> Non
     records = json.loads(CHAPTERS_1_2_FIGURE_MANIFEST.read_text(encoding="utf-8"))
     expected_numbers = [
         *(f"图1.{index}" for index in range(1, 10)),
-        *(f"图2.{index}" for index in range(1, 15)),
+        *(f"图2.{index}" for index in range(1, 16)),
     ]
     assert [record["number"] for record in records] == expected_numbers
-    assert len({record["number"] for record in records}) == 23
+    assert len({record["number"] for record in records}) == 24
 
     common = {
         "number",
@@ -1288,7 +1288,7 @@ def test_chapter_figures_validator_reports_all_assets() -> None:
     )
     output = (result.stdout + result.stderr).decode("utf-8", errors="replace")
     assert result.returncode == 0, output
-    assert "PASS figures=23 svg=12 png=23 raw=11" in output
+    assert "PASS figures=24 svg=12 png=24 raw=12" in output
 
 
 def test_chapters_1_2_are_narrative_only_without_editorial_rules() -> None:
@@ -1364,10 +1364,11 @@ def test_chapters_1_2_real_image_source_register_is_complete() -> None:
         "图2.9",
         "图2.12",
         "图2.13",
+        "图2.15",
     ]
 
     sources = json.loads(REAL_IMAGE_SOURCES.read_text(encoding="utf-8"))
-    assert len(sources) == 11
+    assert len(sources) == 12
     assert {source["number"] for source in sources} == {record["number"] for record in actual}
     for source in sources:
         assert source["source_page"].startswith("https://")
@@ -1448,6 +1449,35 @@ def test_chapters_1_2_table_manifest_is_complete_and_referenced() -> None:
         assert provider in joined
     for row in public_cloud["rows"]:
         assert any(cell.startswith("https://") for cell in row)
+
+
+def test_domestic_public_clouds_use_mainland_china_official_price_entries() -> None:
+    chapter = task3_fragment(2)
+    manifest = json.loads(CHAPTERS_1_2_TABLE_MANIFEST.read_text(encoding="utf-8"))
+    public_cloud = next(record for record in manifest if record["number"] == "表2-2")
+    rows = {row[0].splitlines()[0]: "\n".join(row) for row in public_cloud["rows"]}
+
+    expected = {
+        "阿里云": "https://ecs-buy.aliyun.com/price",
+        "华为云": "https://www.huaweicloud.com/product/ecs/pricing.html",
+        "腾讯云": "https://buy.cloud.tencent.com/price/cvm/calculator",
+    }
+    for provider, price_url in expected.items():
+        assert price_url in rows[provider]
+        assert "中国内地" in rows[provider]
+        assert "香港" not in rows[provider]
+        assert "intl." not in rows[provider]
+
+    assert "{{FIGURE:图2.15}}" in chapter
+    assert "中国内地“华东1”" in chapter
+    assert "三方计算器" not in chapter
+
+
+def test_all_revised_chapters_remove_review_question_sections() -> None:
+    forbidden = ("复习思考", "复习题", "思考题", "复习与思考")
+    for fragment in sorted(FRAGMENTS_DIR.glob("ch*.md")):
+        chapter = fragment.read_text(encoding="utf-8")
+        assert not [phrase for phrase in forbidden if phrase in chapter], fragment.name
 
 
 def test_chapter_1_international_market_data_is_source_backed() -> None:
@@ -2296,7 +2326,7 @@ def test_task3_figure_plan_resolves_each_old_figure_without_placeholders() -> No
     }
     assert chapter_targets == {
         1: [f"图1.{number}" for number in range(1, 10)],
-        2: [f"图2.{number}" for number in range(1, 15)],
+            2: [f"图2.{number}" for number in range(1, 16)],
     }
 
     chapter4 = [row for row in rows if row["chapter"] == "4"]

@@ -104,30 +104,30 @@
       "website": "https://www.aliyun.com/",
       "compute_service": "云服务器ECS",
       "service_model": "计算、容器、存储、网络、数据库、大数据与AI",
-      "region": "中国香港, cn-hongkong",
+      "region": "中国内地华东1（杭州）",
       "billing": "按量实例按秒计量、小时出账，2 vCPU实例最低5分钟",
-      "pricing_url": "https://www.alibabacloud.com/pricing-calculator",
-      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay-As-You-Go；官方计算器动态查询"
+      "pricing_url": "https://ecs-buy.aliyun.com/price",
+      "pricing_basis": "中国内地华东1、非Windows、专有网络；官方中国站价格页面动态查询"
     },
     {
       "platform": "华为云",
       "website": "https://www.huaweicloud.com/",
       "compute_service": "弹性云服务器ECS",
       "service_model": "计算、容器、存储、网络、数据库、大数据、AI与混合云",
-      "region": "中国-香港",
+      "region": "中国内地可用区域",
       "billing": "按需ECS按秒计费",
-      "pricing_url": "https://www.huaweicloud.com/intl/en-us/pricing/calculator.html",
-      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay-per-use；官方计算器动态查询"
+      "pricing_url": "https://www.huaweicloud.com/product/ecs/pricing.html",
+      "pricing_basis": "中国内地可用区域、Linux、按需计费；官方中国站价格入口动态查询"
     },
     {
       "platform": "腾讯云",
       "website": "https://cloud.tencent.com/",
       "compute_service": "云服务器CVM",
       "service_model": "计算、容器、存储、网络、数据库、大数据与AI",
-      "region": "中国香港, ap-hongkong",
+      "region": "中国内地可用区域",
       "billing": "按秒计量、按小时结算",
-      "pricing_url": "https://intl.cloud.tencent.com/pricing/cvm/calculator",
-      "pricing_basis": "2 vCPU、4 GiB、Linux、Pay as you go；官方计算器动态查询"
+      "pricing_url": "https://buy.cloud.tencent.com/price/cvm/calculator",
+      "pricing_basis": "中国内地可用区域、Linux、按量计费；官方中国站价格计算器动态查询"
     }
   ]
 }

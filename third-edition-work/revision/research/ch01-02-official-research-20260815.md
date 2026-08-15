@@ -96,36 +96,36 @@ Gartner预测，2026年全球主权云IaaS支出为804.27亿美元，比2025年�
 
 ### 1. 统一比较口径
 
-为了便于课堂比较，六家平台的价格查询采用以下共同条件：
+六家平台的价格入口按以下口径整理：
 
-- 地域：中国香港或厂商对应的香港区域。
+- 地域：国外平台保留其公开可查的香港或East Asia入口；国内阿里云、华为云和腾讯云统一使用中国站与中国内地可用区域，不使用中国香港站点。
 - 资源：1台2 vCPU、4 GiB内存的通用型Linux云主机。
 - 付费方式：按需/按量/Pay-as-you-go/On-Demand，不使用竞价、Spot、预留实例、节省计划或包年包月折扣。
 - 价格范围：优先比较CPU与内存的实例计算费；系统盘、数据盘、公网IP、出网流量、付费镜像和技术支持费用另列，不混入主机计算费。
 - 使用时长：比较小时价时按1小时；换算月度时统一按730小时，但注明这只是估算用量。
 - 查询日期：2026-08-15。
 
-六家平台均提供中国香港区域或对应区域：AWS为Asia Pacific (Hong Kong)，区域代码`ap-east-1`；Azure为East Asia，物理位置为Hong Kong SAR；Google Cloud为Hong Kong，区域代码`asia-east2`；阿里云为中国香港，区域代码`cn-hongkong`；华为云为中国-香港；腾讯云为中国香港，区域代码`ap-hongkong`。
+国外三家平台的公开查询入口分别使用AWS Asia Pacific (Hong Kong)、Azure East Asia和Google Cloud Hong Kong。国内平台改用中国内地：中国站阿里云ECS价格页面选择华东1，华为云ECS价格页与腾讯云CVM价格计算器均使用中国站并在查询时选择中国内地可用区域。
 
 官方区域来源：
 
 - AWS：[AWS Regions](https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html)，访问日期2026-08-15。
 - Microsoft Azure：[List of Azure regions](https://learn.microsoft.com/en-us/azure/reliability/regions-list)，访问日期2026-08-15。
 - Google Cloud：[Cloud locations](https://cloud.google.com/about/locations)；[Compute Engine通用虚拟机价格区域列表](https://cloud.google.com/products/compute/pricing/general-purpose?hl=zh-CN)，访问日期2026-08-15。
-- 阿里云：[ECS地域和可用区](https://help.aliyun.com/zh/ecs/user-guide/regions-and-zones)，访问日期2026-08-15。
-- 华为云：[ECS用户指南（中国-香港区域）](https://support.huaweicloud.com/intl/zh-cn/usermanual-ecs/ecs-usermanual-pdf.pdf)，访问日期2026-08-15。
-- 腾讯云：[CVM请求结构与地域接入点](https://cloud.tencent.com/document/product/213/15691)，访问日期2026-08-15。
+- 阿里云：[ECS中国站价格页](https://ecs-buy.aliyun.com/price)，页面列出华北、华东和华南等内地区域，访问日期2026-08-15。
+- 华为云：[ECS中国站价格页](https://www.huaweicloud.com/product/ecs/pricing.html)，访问日期2026-08-15。
+- 腾讯云：[CVM中国站价格计算器](https://buy.cloud.tencent.com/price/cvm/calculator)，访问日期2026-08-15。
 
 ### 2. 平台对照表
 
-| 平台 | 官网与代表计算服务 | 主要服务方式 | 按需计费特点 | 2核4GB Linux统一查询入口（中国香港） | 价格记录结论 |
+| 平台 | 官网与代表计算服务 | 主要服务方式 | 按需计费特点 | 官方价格入口与查询区域 | 价格记录结论 |
 |---|---|---|---|---|---|
 | Amazon Web Services（AWS） | [官网](https://aws.amazon.com/)；[Amazon EC2](https://aws.amazon.com/ec2/) | 公有云；覆盖IaaS、容器、数据库、Serverless、AI及各类托管服务。[产品目录](https://aws.amazon.com/products/) | EC2 On-Demand无长期承诺；Linux等实例按秒计费，最低60秒。[官方计费说明](https://aws.amazon.com/ec2/pricing/on-demand/) | [AWS Pricing Calculator](https://calculator.aws/)：选择EC2、Asia Pacific (Hong Kong)、Linux、2 vCPU/4 GiB、On-Demand。可用`t3.medium`（2 vCPU、4 GiB）作为规格筛选参考，最终以计算器当前可用规格为准。[T3规格](https://aws.amazon.com/ec2/instance-types/t3/) | 官方计算器动态查询；不在教材中固化单价。EBS、出网流量和公网IPv4等费用另计。 |
 | Microsoft Azure | [官网](https://azure.microsoft.com/)；[Azure Virtual Machines](https://azure.microsoft.com/en-us/products/virtual-machines/) | 公有云；覆盖IaaS、PaaS、容器、Serverless、数据库、AI、混合云和多云管理。[产品目录](https://azure.microsoft.com/en-us/products/) | Linux虚拟机按VM规格和操作系统采用小时费率；未满整小时按实际分钟计费，磁盘与带宽另计。[VM概述](https://learn.microsoft.com/en-us/azure/virtual-machines/overview) | [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/)：选择Virtual Machines、East Asia、Linux、2 vCPU/4 GiB、Pay as you go。 | 官方计算器动态查询；价格受区域、VM系列、协议、币种和日期影响，页面也明确说明估算值会随最新价格变化。 |
 | Google Cloud | [官网](https://cloud.google.com/)；[Compute Engine](https://cloud.google.com/products/compute) | 公有云；覆盖IaaS、容器、Serverless、数据库、数据分析、AI和托管服务。[产品目录](https://cloud.google.com/products) | Compute Engine vCPU和内存按需计费；虚拟机按秒计费，最低1分钟，磁盘和网络单独计费。[计费说明](https://cloud.google.com/products/compute/pricing) | [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator?hl=zh-cn)：选择Compute Engine、Hong Kong (`asia-east2`)、Linux、2 vCPU/4 GiB、On-demand。 | 官方计算器动态查询；计算器明确说明估算结果不一定等于最终账单。 |
-| 阿里云 | [官网](https://www.aliyun.com/)；[云服务器ECS](https://cn.aliyun.com/product/ecs) | 公有云；覆盖计算、容器、存储、网络、数据库、大数据、Serverless、人工智能与机器学习等。[产品目录](https://cn.aliyun.com/product/list) | ECS支持包年包月、按量付费和抢占式实例；按量实例按秒计量、小时出账。2 vCPU实例的最低计费时长为5分钟。[计费方式](https://www.alibabacloud.com/help/en/ecs/instance-types) | [Alibaba Cloud Pricing Calculator](https://www.alibabacloud.com/pricing-calculator)：选择Elastic Compute Service (Pay-As-You-Go)、China (Hong Kong)、Linux、2 vCPU/4 GiB。 | 官方计算器动态查询；同一规格在不同地域价格不同，系统盘、带宽、镜像和快照另行计费。 |
-| 华为云 | [官网](https://www.huaweicloud.com/)；[弹性云服务器ECS](https://www.huaweicloud.com/product/what-is-ecs.html) | 公有云；覆盖计算、容器、存储、网络、数据库、大数据、人工智能、混合云、开发与运维等。[产品目录](https://www.huaweicloud.com/intl/zh-cn/product/) | ECS支持包年/包月、按需计费和竞价计费；按需ECS按秒计费，可由小时价格除以3600得到秒价。[按需计费说明](https://support.huaweicloud.com/usermanual-ecs/ecs_03_0103.html) | [Huawei Cloud Price Calculator](https://www.huaweicloud.com/intl/en-us/pricing/calculator.html)：选择Elastic Cloud Server、China-Hong Kong、Linux、2 vCPU/4 GiB、Pay-per-use。 | 官方计算器动态查询；实例规格、镜像、云硬盘和弹性公网IP分别构成费用。[计费概述](https://support.huaweicloud.com/intl/en-us/price-ecs/ecs_billing_0000.html) |
-| 腾讯云 | [官网](https://cloud.tencent.com/)；[云服务器CVM](https://cloud.tencent.com/product/cvm) | 公有云；覆盖计算、容器与中间件、存储、数据库、网络、大数据、人工智能与机器学习等。[产品目录](https://cloud.tencent.com/product/) | CVM按量计费按秒计量、按小时结算；部分实例实行阶梯价。CPU与内存、磁盘和网络费用应分开核算。[价格总览](https://intl.cloud.tencent.com/zh/document/product/213/2176) | [Tencent Cloud CVM Calculator](https://intl.cloud.tencent.com/pricing/cvm/calculator)：选择China Hong Kong、Linux、2 vCPU/4 GiB、Pay as you go。 | 官方计算器动态查询；准确优惠价或购买价可能与登录账号、购买时点和活动有关，教材不固化单价。 |
+| 阿里云 | [官网](https://www.aliyun.com/)；[云服务器ECS](https://cn.aliyun.com/product/ecs) | 公有云；覆盖计算、容器、存储、网络、数据库、大数据、Serverless、人工智能与机器学习等。[产品目录](https://cn.aliyun.com/product/list) | ECS支持包年包月、按量付费和抢占式实例；按量实例按秒计量、小时出账。2 vCPU实例的最低计费时长为5分钟。[计费方式](https://www.alibabacloud.com/help/en/ecs/instance-types) | [ECS中国站价格页](https://ecs-buy.aliyun.com/price)：选择中国内地华东1、非Windows、专有网络，页面列出实例规格与按量、月付价格。 | 官方中国站动态查询；同一规格在不同地域价格不同，系统盘、带宽、镜像和快照另行计费。 |
+| 华为云 | [官网](https://www.huaweicloud.com/)；[弹性云服务器ECS](https://www.huaweicloud.com/product/what-is-ecs.html) | 公有云；覆盖计算、容器、存储、网络、数据库、大数据、人工智能、混合云、开发与运维等。[产品目录](https://www.huaweicloud.com/product/) | ECS支持包年/包月、按需计费和竞价计费；按需ECS按秒计费，可由小时价格除以3600得到秒价。[按需计费说明](https://support.huaweicloud.com/usermanual-ecs/ecs_03_0103.html) | [ECS中国站价格页](https://www.huaweicloud.com/product/ecs/pricing.html)：查询时选择中国内地可用区域和按需计费。 | 官方中国站动态查询；实例规格、镜像、云硬盘和弹性公网IP分别构成费用。 |
+| 腾讯云 | [官网](https://cloud.tencent.com/)；[云服务器CVM](https://cloud.tencent.com/product/cvm) | 公有云；覆盖计算、容器与中间件、存储、数据库、网络、大数据、人工智能与机器学习等。[产品目录](https://cloud.tencent.com/product/) | CVM按量计费按秒计量、按小时结算；部分实例实行阶梯价。CPU与内存、磁盘和网络费用应分开核算。[云服务器CVM](https://cloud.tencent.com/product/cvm) | [CVM中国站价格计算器](https://buy.cloud.tencent.com/price/cvm/calculator)：查询时选择中国内地可用区域、Linux和按量计费。 | 官方中国站动态查询；准确优惠价或购买价可能与登录账号、购买时点和活动有关。 |
 
 ### 3. 可直接写入教材的平台比较叙述
 
@@ -152,7 +152,7 @@ AWS、Azure和Google Cloud常把计算、磁盘、网络等费用分开；国内
 | 字段 | 推荐写法 |
 |---|---|
 | 查询配置 | 2 vCPU、4 GiB、Linux、1台、按需计费 |
-| 统一地域 | 中国香港；Azure使用East Asia，AWS使用Asia Pacific (Hong Kong)，Google使用`asia-east2` |
+| 地域口径 | 国外平台沿用其公开可查的香港或East Asia入口；国内阿里云、华为云和腾讯云使用中国站及中国内地可用区域 |
 | 计算费用 | 填写查询日官方计算器显示的按小时计算费；若页面需登录，则写“官方计算器动态查询” |
 | 月度估算 | 小时计算费×730，仅作预算估算 |
 | 其他费用 | 系统盘、公网IP、出网流量、付费镜像、支持计划另计 |
@@ -183,21 +183,21 @@ AWS、Azure和Google Cloud常把计算、磁盘、网络等费用分开；国内
 | 16 | Google Cloud | General-purpose machine pricing | https://cloud.google.com/products/compute/pricing/general-purpose?hl=zh-CN | 香港区域和通用实例价格入口 |
 | 17 | 阿里云 | 阿里云产品目录 | https://cn.aliyun.com/product/list | 阿里云产品类别 |
 | 18 | 阿里云 | ECS实例规格计费方式 | https://www.alibabacloud.com/help/en/ecs/instance-types | 按量计费粒度、最低时长和附加费用 |
-| 19 | 阿里云 | Alibaba Cloud Pricing Calculator | https://www.alibabacloud.com/pricing-calculator | ECS动态价格查询入口 |
-| 20 | 阿里云 | ECS地域和可用区 | https://help.aliyun.com/zh/ecs/user-guide/regions-and-zones | 中国香港区域`cn-hongkong` |
-| 21 | 华为云 | 华为云产品目录 | https://www.huaweicloud.com/intl/zh-cn/product/ | 华为云产品类别 |
+| 19 | 阿里云 | ECS中国站价格页 | https://ecs-buy.aliyun.com/price | 中国内地地域、实例规格与动态价格查询入口 |
+| 20 | 阿里云 | ECS地域和可用区 | https://help.aliyun.com/zh/ecs/user-guide/regions-and-zones | 中国内地地域和可用区说明 |
+| 21 | 华为云 | 华为云产品目录 | https://www.huaweicloud.com/product/ | 华为云中国站产品类别 |
 | 22 | 华为云 | 弹性云服务器ECS计费 | https://www.huaweicloud.com/product/ecs/pricing.html | 包年包月、按需和竞价计费 |
 | 23 | 华为云 | ECS按需计费 | https://support.huaweicloud.com/usermanual-ecs/ecs_03_0103.html | 秒级计费与价格计算 |
-| 24 | 华为云 | Huawei Cloud Price Calculator | https://www.huaweicloud.com/intl/en-us/pricing/calculator.html | ECS动态价格查询入口 |
+| 24 | 华为云 | ECS中国站价格页 | https://www.huaweicloud.com/product/ecs/pricing.html | 中国内地ECS计费与动态价格入口 |
 | 25 | 腾讯云 | 腾讯云产品总览 | https://cloud.tencent.com/product/ | 腾讯云产品类别 |
 | 26 | 腾讯云 | 云服务器CVM | https://cloud.tencent.com/product/cvm | CVM产品与基本计费方式 |
-| 27 | 腾讯云 | CVM价格总览 | https://intl.cloud.tencent.com/zh/document/product/213/2176 | 按秒计量、小时结算及费用范围 |
-| 28 | 腾讯云 | Tencent Cloud CVM Calculator | https://intl.cloud.tencent.com/pricing/cvm/calculator | CVM动态价格查询入口 |
-| 29 | 腾讯云 | CVM请求结构 | https://cloud.tencent.com/document/product/213/15691 | 中国香港区域接入点`ap-hongkong` |
+| 27 | 腾讯云 | 云服务器CVM | https://cloud.tencent.com/product/cvm | 产品能力与计费入口 |
+| 28 | 腾讯云 | CVM中国站价格计算器 | https://buy.cloud.tencent.com/price/cvm/calculator | 中国内地CVM动态价格查询入口 |
+| 29 | 腾讯云 | 地域和可用区 | https://cloud.tencent.com/document/product/213/6091 | 中国内地地域和可用区说明 |
 
 ## 五、核查结论
 
 1. 全球产业数据可以使用“IDC 2023年公共云服务实际收入+Synergy 2025年和2026年第一季度云基础设施服务估算+IDC/Gartner中长期预测”形成时间递进，但正文必须写清统计对象，不能把不同口径数字直接比较或相加。
 2. 2026年主权云IaaS预测可自然引出数据主权、关键基础设施和信创化平台建设，但它是特定子市场，不等于整个云计算产业。
-3. 六家公有云均可用中国香港区域进行统一查询。由于价格由动态页面、账号协议和实时优惠共同决定，本次不写入未经登录核定的精确单价，统一标注“官方计算器动态查询”。
+3. 国内阿里云、华为云和腾讯云使用中国站及中国内地可用区域；国外平台保留各自公开价格入口。由于价格由动态页面、账号协议和实时优惠共同决定，本次不写入未经登录核定的精确单价，统一标注“官方价格入口动态查询”。
 4. 教材中的平台比较表可以稳定保留官网、服务类型、代表云主机、按需计费粒度、计算器入口和典型场景；价格列应同时注明查询日期和费用范围。

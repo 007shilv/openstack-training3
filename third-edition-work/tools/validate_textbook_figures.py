@@ -26,10 +26,10 @@ def validate(manifest_path: Path) -> list[str]:
     records = json.loads(manifest_path.read_text(encoding="utf-8"))
     expected_numbers = [
         *(f"图1.{index}" for index in range(1, 10)),
-        *(f"图2.{index}" for index in range(1, 15)),
+        *(f"图2.{index}" for index in range(1, 16)),
     ]
     if not isinstance(records, list) or [record.get("number") for record in records] != expected_numbers:
-        raise ValueError("manifest must contain the ordered 23 chapter figures")
+        raise ValueError("manifest must contain the ordered 24 chapter figures")
 
     revision_root = manifest_path.parent.parent
     svg_hashes: set[str] = set()
@@ -117,7 +117,7 @@ def main() -> int:
         return 1
     for line in report:
         print(line)
-    print("PASS figures=23 svg=12 png=23 raw=11")
+    print("PASS figures=24 svg=12 png=24 raw=12")
     return 0
 
 

@@ -66,9 +66,9 @@
       ["AWS\nhttps://aws.amazon.com/", "Amazon EC2", "IaaS、容器、数据库、Serverless与AI", "Linux按秒计费，最低60秒", "https://calculator.aws/\n香港区域2核4GB Linux动态查询；全球化互联网与托管服务"],
       ["Microsoft Azure\nhttps://azure.microsoft.com/", "Azure Virtual Machines", "IaaS、PaaS、数据库、AI与混合云管理", "按小时费率，未满整小时按实际分钟", "https://azure.microsoft.com/en-us/pricing/calculator/\nEast Asia区域动态查询；微软生态与混合管理"],
       ["Google Cloud\nhttps://cloud.google.com/", "Compute Engine", "IaaS、容器、Serverless、数据分析与AI", "按秒计费，最低1分钟", "https://cloud.google.com/products/calculator?hl=zh-cn\n香港区域动态查询；云原生、数据分析和AI应用"],
-      ["阿里云\nhttps://www.aliyun.com/", "云服务器ECS", "计算、容器、数据库、大数据与AI", "按秒计量、小时出账，2 vCPU最低5分钟", "https://www.alibabacloud.com/pricing-calculator\n中国香港区域动态查询；国内互联网与企业应用"],
-      ["华为云\nhttps://www.huaweicloud.com/", "弹性云服务器ECS", "计算、容器、数据库、大数据、AI与混合云", "按需ECS按秒计费", "https://www.huaweicloud.com/intl/en-us/pricing/calculator.html\n中国-香港区域动态查询；政企、行业与混合场景"],
-      ["腾讯云\nhttps://cloud.tencent.com/", "云服务器CVM", "计算、容器、数据库、大数据与AI", "按秒计量、按小时结算", "https://intl.cloud.tencent.com/pricing/cvm/calculator\n中国香港区域动态查询；互联网、音视频与行业应用"]
+      ["阿里云\nhttps://www.aliyun.com/", "云服务器ECS", "计算、容器、数据库、大数据与AI", "按秒计量、小时出账，2 vCPU最低5分钟", "https://ecs-buy.aliyun.com/price\n中国内地华东1动态查询；国内互联网与企业应用"],
+      ["华为云\nhttps://www.huaweicloud.com/", "弹性云服务器ECS", "计算、容器、数据库、大数据、AI与混合云", "按需ECS按秒计费", "https://www.huaweicloud.com/product/ecs/pricing.html\n中国内地可用区域动态查询；政企、行业与混合场景"],
+      ["腾讯云\nhttps://cloud.tencent.com/", "云服务器CVM", "计算、容器、数据库、大数据与AI", "按秒计量、按小时结算", "https://buy.cloud.tencent.com/price/cvm/calculator\n中国内地可用区域动态查询；互联网、音视频与行业应用"]
     ],
     "column_widths_cm": [2.7, 2.0, 3.0, 2.5, 3.8],
     "font_pt": 9.0,

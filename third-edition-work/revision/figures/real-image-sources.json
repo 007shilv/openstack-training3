@@ -112,5 +112,15 @@
     "license": "厂商官方文档产品截图",
     "accessed_on": "2026-08-14",
     "raw_sha256": "1f0931edaae410658686b624378be74c45fe2badd8646621b53e838c5dda8b1c"
+  },
+  {
+    "number": "图2.15",
+    "raw": "figures/ch02/raw/图2.15-original.png",
+    "source_page": "https://ecs-buy.aliyun.com/price",
+    "source_image": "https://ecs-buy.aliyun.com/price",
+    "rights_owner": "阿里云计算有限公司",
+    "license": "厂商官方价格页面截图",
+    "accessed_on": "2026-08-15",
+    "raw_sha256": "451cf2af975ffc9eb8df220c768d44626749da0066c3ad57253342d959c2117a"
   }
 ]
