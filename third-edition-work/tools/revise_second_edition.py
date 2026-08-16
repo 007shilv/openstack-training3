@@ -35,6 +35,9 @@ OPERATION_FIELDS = {
     ),
     "delete": frozenset({"op", "start_heading", "end_heading"}),
     "insert_before": frozenset({"op", "heading", "fragment"}),
+    "renumber_chapter": frozenset(
+        {"op", "heading", "old_number", "new_number"}
+    ),
 }
 TAG_PATTERN = re.compile(
     rb"<(?P<close>/)?(?P<name>[A-Za-z_][\w:.-]*)(?P<attrs>[^<>]*?)(?P<self>/)?>"
@@ -564,6 +567,93 @@ def insert_before_heading(doc: DocxDocument, heading: str, blocks: list[Block]) 
     _write_children(doc, children[:index] + insertion + children[index:])
 
 
+def _replace_text_node_values(
+    paragraph: bytes, replacements: tuple[tuple[str, str], ...]
+) -> bytes:
+    """Replace literal values only inside existing ``w:t`` nodes."""
+
+    rewritten: list[bytes] = []
+    cursor = 0
+    for match in TEXT_NODE_PATTERN.finditer(paragraph):
+        rewritten.append(paragraph[cursor:match.start()])
+        value = match.group(0)
+        for old, new in replacements:
+            value = value.replace(old.encode("utf-8"), new.encode("utf-8"))
+        rewritten.append(value)
+        cursor = match.end()
+    rewritten.append(paragraph[cursor:])
+    return b"".join(rewritten)
+
+
+def renumber_chapter(
+    doc: DocxDocument,
+    heading: str,
+    old_number: int,
+    new_number: int,
+) -> None:
+    """Mechanically renumber one uniquely bounded chapter without rewriting prose."""
+
+    if not isinstance(old_number, int) or not isinstance(new_number, int):
+        raise TypeError("chapter numbers must be integers")
+    if old_number <= 0 or new_number <= 0 or old_number == new_number:
+        raise ValueError("chapter numbers must be different positive integers")
+    expected_prefix = f"第{old_number}章"
+    chinese_numbers = {
+        1: "一", 2: "二", 3: "三", 4: "四", 5: "五",
+        6: "六", 7: "七", 8: "八", 9: "九", 10: "十",
+        11: "十一", 12: "十二", 13: "十三", 14: "十四",
+        15: "十五", 16: "十六", 17: "十七", 18: "十八",
+        19: "十九", 20: "二十",
+    }
+    old_chinese = chinese_numbers.get(old_number)
+    new_chinese = chinese_numbers.get(new_number)
+    if old_chinese is None or new_chinese is None:
+        raise ValueError("chapter renumbering supports chapter numbers 1 through 20")
+    expected_chinese_prefix = f"第{old_chinese}章"
+    if not _normalize_heading(heading).startswith(expected_chinese_prefix):
+        raise ValueError(
+            f"heading does not match old chapter number {old_number}: {heading!r}"
+        )
+
+    start_index = _unique_heading_index(doc, heading)
+    _, children, _ = _body_parts(doc.document_xml)
+    end_index = len(children)
+    for index in range(start_index + 1, len(children)):
+        child = children[index]
+        if _child_name(doc.document_xml, child) == f"{W}sectPr":
+            end_index = index
+            break
+        if (
+            _child_name(doc.document_xml, child) == f"{W}p"
+            and _paragraph_outline_level(doc, child) == 0
+        ):
+            end_index = index
+            break
+
+    rewritten = list(children)
+    for index in range(start_index, end_index):
+        child = children[index]
+        if _child_name(doc.document_xml, child) != f"{W}p":
+            continue
+        text = _normalize_heading(_child_text(doc.document_xml, child))
+        replacements: list[tuple[str, str]] = [
+            (f"图{old_number}.", f"图{new_number}."),
+            (f"表{old_number}-", f"表{new_number}-"),
+            (f"第{old_number}.", f"第{new_number}."),
+        ]
+        if index == start_index:
+            replacements.append((expected_chinese_prefix, f"第{new_chinese}章"))
+        elif _paragraph_outline_level(doc, child) == 1 and text.startswith(
+            f"{old_number}."
+        ):
+            replacements.append((f"{old_number}.", f"{new_number}."))
+        rewritten[index] = _replace_text_node_values(child, tuple(replacements))
+
+    if expected_prefix in _normalize_heading(_child_text(doc.document_xml, rewritten[start_index])):
+        raise ValueError("chapter heading uses unsupported Arabic chapter form")
+    _write_children(doc, rewritten)
+
+
 def save_candidate(doc: DocxDocument, output: Path) -> None:
     """Atomically save a candidate, preserving unchanged member payload bytes."""
     output = Path(output)
@@ -721,6 +811,15 @@ def apply_revision_map(source: Path, revision_map: Path, output: Path) -> None:
         elif op == "insert_before":
             blocks = parse_fragment(_resolve_fragment_path(revision_map, operation["fragment"]))
             insert_before_heading(document, operation["heading"], blocks)
+        elif op == "renumber_chapter":
+            if not operation["old_number"].isdigit() or not operation["new_number"].isdigit():
+                raise ValueError("renumber_chapter numbers must contain decimal digits")
+            renumber_chapter(
+                document,
+                operation["heading"],
+                int(operation["old_number"]),
+                int(operation["new_number"]),
+            )
         else:  # load_revision_map makes this unreachable.
             raise AssertionError(f"unhandled operation: {op}")
     save_candidate(document, output)
