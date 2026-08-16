@@ -12,10 +12,21 @@ import pytest
 
 WORK_ROOT = Path(__file__).resolve().parents[1]
 REVISION_TOOL = WORK_ROOT / "tools" / "revise_second_edition.py"
+CAPTURE_TOOL = WORK_ROOT / "tools" / "capture_ch14_operations.py"
+RENDER_TOOL = WORK_ROOT / "tools" / "render_terminal_capture.py"
 
 
 def load_revision_tool():
     spec = importlib.util.spec_from_file_location("chapter14_revision_tool", REVISION_TOOL)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_tool(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -140,3 +151,63 @@ def test_revision_map_accepts_only_complete_renumber_operation(tmp_path: Path) -
     )
     with pytest.raises(ValueError, match="missing fields"):
         module.load_revision_map(invalid)
+
+
+@pytest.mark.parametrize(
+    "unsafe",
+    [
+        "OS_PASSWORD=qwer1234",
+        "X-Auth-Token: secret-token",
+        "Cookie: sessionid=secret",
+        "-----BEGIN PRIVATE KEY-----",
+        "mysql+pymysql://user:password@controller/db",
+    ],
+)
+def test_sanitize_output_rejects_secret_bearing_text(unsafe: str) -> None:
+    module = load_tool(CAPTURE_TOOL, "chapter14_capture_tool")
+    with pytest.raises(ValueError, match="sensitive"):
+        module.sanitize_output(unsafe)
+
+
+def test_sanitize_output_preserves_normal_openstack_table() -> None:
+    module = load_tool(CAPTURE_TOOL, "chapter14_capture_tool")
+    text = "+----+---------+\n| ID | Name    |\n+----+---------+\n| 01 | bookops |"
+    assert module.sanitize_output(text) == text
+
+
+def test_capture_source_uses_reviewed_host_keys_and_reject_policy() -> None:
+    source = CAPTURE_TOOL.read_text(encoding="utf-8")
+    assert "load_host_keys" in source
+    assert "RejectPolicy" in source
+    assert "AutoAddPolicy" not in source
+    assert "ssh-keyscan" not in source
+    assert "getpass" in source
+
+
+def test_terminal_renderer_outputs_white_png_with_dark_text(tmp_path: Path) -> None:
+    module = load_tool(RENDER_TOOL, "chapter14_terminal_renderer")
+    output = tmp_path / "terminal.png"
+    module.render_terminal_capture(
+        title="查看项目",
+        command="[root@controller ~]# openstack project list",
+        output="+----+---------+\n| ID | Name    |\n+----+---------+\n| 01 | bookops |",
+        destination=output,
+    )
+    from PIL import Image
+
+    with Image.open(output) as image:
+        assert image.format == "PNG"
+        assert image.width >= 1000
+        assert image.height >= 300
+        assert image.getpixel((0, 0))[:3] == (255, 255, 255)
+        pixels = (
+            image.get_flattened_data()
+            if hasattr(image, "get_flattened_data")
+            else image.getdata()
+        )
+        dark_pixels = sum(
+            1
+            for red, green, blue, *_ in pixels
+            if red < 80 and green < 80 and blue < 80
+        )
+        assert dark_pixels > 100
