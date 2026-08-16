@@ -1,0 +1,21 @@
+{
+  "component": "cinder",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "cinder-services",
+      "title": "查看块存储服务和卷类型",
+      "command": "[root@controller ~]# openstack volume service list && openstack volume type list",
+      "stdout": "+------------------+-------------+---------+-------+\n| Binary           | Host        | Status  | State |\n+------------------+-------------+---------+-------+\n| cinder-scheduler | controller  | enabled | up    |\n| cinder-volume    | compute@lvm | enabled | up    |\n+------------------+-------------+---------+-------+\n+-------------+\n| Name        |\n+-------------+\n| lvm         |\n| __DEFAULT__ |\n+-------------+",
+      "returncode": 0
+    },
+    {
+      "slug": "cinder-volumes",
+      "title": "查看卷和卷快照",
+      "command": "[root@controller ~]# openstack volume list && openstack volume snapshot list",
+      "stdout": "+---------------------+-----------+------+\n| Name                | Status    | Size |\n+---------------------+-----------+------+\n| bookops-volume-copy | available |    1 |\n| bookops-volume      | available |    1 |\n+---------------------+-----------+------+\n+-------------------------+-----------+------+\n| Name                    | Status    | Size |\n+-------------------------+-----------+------+\n| bookops-volume-snapshot | available |    1 |\n+-------------------------+-----------+------+",
+      "returncode": 0
+    }
+  ]
+}

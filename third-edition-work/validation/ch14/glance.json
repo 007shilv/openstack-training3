@@ -1,0 +1,21 @@
+{
+  "component": "glance",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "glance-list",
+      "title": "查看项目可用镜像",
+      "command": "[root@controller ~]# openstack image list",
+      "stdout": "+-------------------------+--------+\n| Name                    | Status |\n+-------------------------+--------+\n| bookops-image           | active |\n| bookops-server-snapshot | active |\n+-------------------------+--------+",
+      "returncode": 0
+    },
+    {
+      "slug": "glance-show",
+      "title": "查看镜像属性",
+      "command": "[root@controller ~]# openstack image show bookops-image",
+      "stdout": "+------------------+---------------+\n| Field            | Value         |\n+------------------+---------------+\n| container_format | bare          |\n| disk_format      | qcow2         |\n| min_disk         | 0             |\n| min_ram          | 0             |\n| name             | bookops-image |\n| protected        | True          |\n| status           | active        |\n| visibility       | private       |\n+------------------+---------------+",
+      "returncode": 0
+    }
+  ]
+}

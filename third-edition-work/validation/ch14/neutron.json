@@ -1,0 +1,28 @@
+{
+  "component": "neutron",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "neutron-agents",
+      "title": "查看网络代理",
+      "command": "[root@controller ~]# openstack network agent list",
+      "stdout": "+--------------------+------------+-------+-------+\n| Agent Type         | Host       | Alive | State |\n+--------------------+------------+-------+-------+\n| Linux bridge agent | controller | :-)   | UP    |\n| L3 agent           | controller | :-)   | UP    |\n| Linux bridge agent | compute    | :-)   | UP    |\n| Metadata agent     | controller | :-)   | UP    |\n| DHCP agent         | controller | :-)   | UP    |\n+--------------------+------------+-------+-------+",
+      "returncode": 0
+    },
+    {
+      "slug": "neutron-resources",
+      "title": "查看项目网络资源",
+      "command": "[root@controller ~]# openstack network list && openstack router list",
+      "stdout": "+-------------+--------------------------------------+\n| Name        | Subnets                              |\n+-------------+--------------------------------------+\n| bookops-net | cc13190b-15a0-4535-a134-4efb7a593487 |\n+-------------+--------------------------------------+\n+----------------+--------------------------------------+--------------+\n| Name           | Network                              | Subnet       |\n+----------------+--------------------------------------+--------------+\n| bookops-subnet | e684ef17-04fc-488c-8a74-8a175916e94c | 10.14.0.0/24 |\n+----------------+--------------------------------------+--------------+\n+----------------+--------+-------+\n| Name           | Status | State |\n+----------------+--------+-------+\n| bookops-router | ACTIVE | UP    |\n+----------------+--------+-------+",
+      "returncode": 0
+    },
+    {
+      "slug": "neutron-security",
+      "title": "查看安全组与实例端口",
+      "command": "[root@controller ~]# openstack security group rule list bookops-secgroup && openstack port list",
+      "stdout": "+-------------+-----------+-----------+------------+\n| IP Protocol | Ethertype | IP Range  | Port Range |\n+-------------+-----------+-----------+------------+\n| None        | IPv6      | ::/0      |            |\n| icmp        | IPv4      | 0.0.0.0/0 |            |\n| tcp         | IPv4      | 0.0.0.0/0 | 22:22      |\n| None        | IPv4      | 0.0.0.0/0 |            |\n+-------------+-----------+-----------+------------+\n+------+--------+---------------------------------------------------------------------------+\n| Name | Status | Fixed IP Addresses                                                        |\n+------+--------+---------------------------------------------------------------------------+\n|      | ACTIVE | ip_address='10.14.0.26', subnet_id='cc13190b-15a0-4535-a134-4efb7a593487' |\n+------+--------+---------------------------------------------------------------------------+",
+      "returncode": 0
+    }
+  ]
+}

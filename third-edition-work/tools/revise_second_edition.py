@@ -423,6 +423,10 @@ def _body_template_candidate(document: DocxDocument, paragraph: bytes) -> bool:
         return False
     paragraph_run = properties.find("w:rPr", NS)
     fonts = None if paragraph_run is None else paragraph_run.find("w:rFonts", NS)
+    if fonts is None and normal is not None:
+        fonts = normal.find("w:rPr/w:rFonts", NS)
+    if fonts is None and styles is not None:
+        fonts = styles.find("w:docDefaults/w:rPrDefault/w:rPr/w:rFonts", NS)
     if _attribute(fonts, "eastAsia") != "宋体":
         return False
     size = None if paragraph_run is None else paragraph_run.find("w:sz", NS)

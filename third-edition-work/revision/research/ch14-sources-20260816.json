@@ -1,0 +1,19 @@
+{
+  "chapter": "第十四章 OpenStack云平台各组件运维",
+  "retrieved_at": "2026-08-16",
+  "environment": "openEuler 24.03 LTS SP3 / OpenStack 2023.1 Antelope",
+  "sources": [
+    {"id":"osc-2023-1","title":"OpenStackClient 2023.1 command objects","url":"https://docs.openstack.org/python-openstackclient/2023.1/cli/command-objects/","supports":["Keystone对象查询","Glance镜像操作","Nova实例操作","Neutron网络操作","Cinder卷操作","Swift对象操作"]},
+    {"id":"api-2023-1","title":"OpenStack 2023.1 API Reference Documentation","url":"https://docs.openstack.org/2023.1/api/index.html","supports":["组件API边界","服务类型与接口"]},
+    {"id":"placement-api","title":"Placement API Reference","url":"https://docs.openstack.org/api-ref/placement/","supports":["资源提供者","资源清单","用量","分配","generation"]},
+    {"id":"placement-usage","title":"Placement Usage","url":"https://docs.openstack.org/placement/2023.1/user/","supports":["nova-compute资源跟踪","nova-scheduler资源选择","只读运维边界"]},
+    {"id":"horizon-user","title":"OpenStack Dashboard User Documentation","url":"https://docs.openstack.org/horizon/2023.1/user/","supports":["项目页面","镜像","实例","网络","对象存储","卷"]},
+    {"id":"horizon-login","title":"Log in to the dashboard","url":"https://docs.openstack.org/horizon/2023.1/user/log-in.html","supports":["登录字段","项目视图与管理员视图"]},
+    {"id":"horizon-images","title":"Upload and manage images","url":"https://docs.openstack.org/horizon/2023.1/user/manage-images.html","supports":["镜像页面与镜像管理"]},
+    {"id":"horizon-instances","title":"Launch and manage instances","url":"https://docs.openstack.org/horizon/2023.1/user/launch-instances.html","supports":["实例页面与生命周期操作"]},
+    {"id":"horizon-networks","title":"Create and manage networks","url":"https://docs.openstack.org/horizon/2023.1/user/create-networks.html","supports":["网络与路由器页面"]},
+    {"id":"horizon-volumes","title":"Create and manage volumes","url":"https://docs.openstack.org/horizon/2023.1/user/manage-volumes.html","supports":["卷与卷快照页面"]},
+    {"id":"cirros-download","title":"CirrOS 0.6.3 download directory","url":"https://download.cirros-cloud.net/0.6.3/","supports":["本章小型测试镜像版本与文件名"]},
+    {"id":"cirros-sha","title":"CirrOS 0.6.3 SHA256SUMS","url":"https://download.cirros-cloud.net/0.6.3/SHA256SUMS","supports":["cirros-0.6.3-x86_64-disk.img完整性"]}
+  ]
+}

@@ -44,7 +44,10 @@ from build_chapters_1_2_review_docx import (  # noqa: E402
 
 
 CHAPTER_ONE = "第一章 云计算基本概念"
-CHAPTER_AFTER_SCOPE = "第十四章 虚拟机镜像文件的制作"
+CHAPTER_AFTER_SCOPE = {
+    "第十四章 虚拟机镜像文件的制作",
+    "第十五章 虚拟机镜像文件的制作",
+}
 CHAPTER_RE = re.compile(r"^第[一二三四五六七八九十]+章")
 INTERNAL_HEADING_RE = re.compile(r"^(?:[一二三四五六七八九十]+|\d+)．")
 
@@ -219,7 +222,7 @@ def _prepare_document(input_docx: Path, output_docx: Path, tables: list[dict]) -
             if text == CHAPTER_ONE:
                 start_count += 1
                 in_scope = True
-            elif text == CHAPTER_AFTER_SCOPE:
+            elif text in CHAPTER_AFTER_SCOPE:
                 end_count += 1
                 in_scope = False
             if in_scope:

@@ -14,6 +14,10 @@ WORK_ROOT = Path(__file__).resolve().parents[1]
 REVISION_TOOL = WORK_ROOT / "tools" / "revise_second_edition.py"
 CAPTURE_TOOL = WORK_ROOT / "tools" / "capture_ch14_operations.py"
 RENDER_TOOL = WORK_ROOT / "tools" / "render_terminal_capture.py"
+HORIZON_TOOL = WORK_ROOT / "tools" / "capture_ch14_horizon.py"
+CH14_FRAGMENT = WORK_ROOT / "revision" / "fragments" / "ch14.md"
+CH14_FIGURES = WORK_ROOT / "revision" / "figures" / "ch14-figure-manifest.json"
+CH14_TABLES = WORK_ROOT / "revision" / "tables" / "ch14-table-manifest.json"
 
 
 def load_revision_tool():
@@ -211,3 +215,93 @@ def test_terminal_renderer_outputs_white_png_with_dark_text(tmp_path: Path) -> N
             if red < 80 and green < 80 and blue < 80
         )
         assert dark_pixels > 100
+
+
+def test_horizon_capture_is_headless_isolated_and_secret_silent() -> None:
+    source = HORIZON_TOOL.read_text(encoding="utf-8")
+    assert "headless=True" in source
+    assert "browser.new_context" in source
+    assert "context.close()" in source
+    assert "browser.close()" in source
+    assert "getpass" in source
+    assert "launch_persistent_context" not in source
+    assert "print(password" not in source
+    assert "storage_state" not in source
+
+
+def test_horizon_capture_has_expected_dashboard_targets() -> None:
+    source = HORIZON_TOOL.read_text(encoding="utf-8")
+    for required in (
+        "dashboard-login.png",
+        "dashboard-project.png",
+        "dashboard-images.png",
+        "dashboard-instances.png",
+        "dashboard-networks.png",
+        "dashboard-volumes.png",
+    ):
+        assert required in source
+
+
+def test_chapter14_manuscript_structure_and_scope() -> None:
+    text = CH14_FRAGMENT.read_text(encoding="utf-8")
+    assert text.count("# 第十四章 OpenStack云平台各组件运维") == 1
+    expected = [
+        "14.1 Keystone身份与权限运维",
+        "14.2 Glance镜像运维",
+        "14.3 Placement资源信息运维",
+        "14.4 Nova实例、规格与配额运维",
+        "14.5 Neutron网络运维",
+        "14.6 Cinder卷与快照运维",
+        "14.7 Swift容器与对象运维",
+        "14.8 Horizon图形化运维",
+    ]
+    assert [line[3:] for line in text.splitlines() if line.startswith("## ")] == expected
+    for forbidden in (
+        "教学活动",
+        "复习思考",
+        "作者建议",
+        "不宜把",
+        "教学云",
+        "Python",
+        "脚本",
+    ):
+        assert forbidden not in text
+    assert "第十五章" not in text
+
+
+def test_chapter14_commands_are_manual_and_prompted() -> None:
+    text = CH14_FRAGMENT.read_text(encoding="utf-8")
+    blocks = text.split("```command\n")[1:]
+    assert len(blocks) >= 24
+    for block in blocks:
+        payload = block.split("```", 1)[0].strip().splitlines()
+        assert payload
+        for line in payload:
+            if line.startswith(("export ", "OS_", "[", "name=", "auth_")):
+                continue
+            assert line.startswith(("[root@controller ~]#", "[root@compute ~]#", "MariaDB")), line
+    assert "qwer1234" in text
+
+
+def test_chapter14_figures_and_tables_are_complete_and_referenced() -> None:
+    import json
+
+    text = CH14_FRAGMENT.read_text(encoding="utf-8")
+    figures = json.loads(CH14_FIGURES.read_text(encoding="utf-8"))
+    tables = json.loads(CH14_TABLES.read_text(encoding="utf-8"))
+    assert [row["number"] for row in figures] == [f"图14.{n}" for n in range(1, 25)]
+    assert [row["number"] for row in tables] == [f"表14-{n}" for n in range(1, 9)]
+    for row in figures:
+        marker = "{{FIGURE:" + row["number"] + "}}"
+        assert text.count(marker) == 1
+        before, after = text.split(marker, 1)
+        assert row["number"] in before[-500:]
+        assert len(after.strip()) >= 80
+        image_path = WORK_ROOT / "revision" / row["png"]
+        assert image_path.is_file()
+    for row in tables:
+        marker = "{{TABLE:" + row["number"] + "}}"
+        assert text.count(marker) == 1
+        before, after = text.split(marker, 1)
+        assert row["number"] in before[-500:]
+        assert len(after.strip()) >= 80

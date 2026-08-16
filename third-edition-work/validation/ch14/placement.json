@@ -1,0 +1,28 @@
+{
+  "component": "placement",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "placement-providers",
+      "title": "查看资源提供者",
+      "command": "[root@controller ~]# curl -s -H \"X-Auth-Token: $TOKEN\" $PLACEMENT/resource_providers",
+      "stdout": "{\"resource_providers\": [{\"uuid\": \"20123419-d437-4586-bb07-de071cfdff66\", \"name\": \"compute\", \"generation\": 3, \"links\": [{\"rel\": \"self\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66\"}, {\"rel\": \"inventories\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66/inventories\"}, {\"rel\": \"usages\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66/usages\"}, {\"rel\": \"aggregates\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66/aggregates\"}, {\"rel\": \"traits\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66/traits\"}, {\"rel\": \"allocations\", \"href\": \"/resource_providers/20123419-d437-4586-bb07-de071cfdff66/allocations\"}], \"parent_provider_uuid\": null, \"root_provider_uuid\": \"20123419-d437-4586-bb07-de071cfdff66\"}]}",
+      "returncode": 0
+    },
+    {
+      "slug": "placement-inventories",
+      "title": "查看计算节点资源清单",
+      "command": "[root@controller ~]# curl -s -H \"X-Auth-Token: $TOKEN\" $PLACEMENT/resource_providers/$RP/inventories",
+      "stdout": "{\"resource_provider_generation\": 3, \"inventories\": {\"VCPU\": {\"total\": 8, \"reserved\": 0, \"min_unit\": 1, \"max_unit\": 8, \"step_size\": 1, \"allocation_ratio\": 4.0}, \"MEMORY_MB\": {\"total\": 15450, \"reserved\": 512, \"min_unit\": 1, \"max_unit\": 15450, \"step_size\": 1, \"allocation_ratio\": 1.0}, \"DISK_GB\": {\"total\": 187, \"reserved\": 0, \"min_unit\": 1, \"max_unit\": 187, \"step_size\": 1, \"allocation_ratio\": 1.0}}}",
+      "returncode": 0
+    },
+    {
+      "slug": "placement-usages",
+      "title": "查看计算节点资源用量",
+      "command": "[root@controller ~]# curl -s -H \"X-Auth-Token: $TOKEN\" $PLACEMENT/resource_providers/$RP/usages",
+      "stdout": "{\"resource_provider_generation\": 3, \"usages\": {\"VCPU\": 1, \"MEMORY_MB\": 512, \"DISK_GB\": 1}}",
+      "returncode": 0
+    }
+  ]
+}

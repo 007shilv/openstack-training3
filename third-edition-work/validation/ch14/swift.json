@@ -1,0 +1,21 @@
+{
+  "component": "swift",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "swift-container",
+      "title": "查看容器和对象",
+      "command": "[root@controller ~]# openstack container list && openstack object list bookops-container",
+      "stdout": "+-------------------+\n| Name              |\n+-------------------+\n| bookops-container |\n+-------------------+\n+--------------------+\n| Name               |\n+--------------------+\n| bookops-object.txt |\n+--------------------+",
+      "returncode": 0
+    },
+    {
+      "slug": "swift-object",
+      "title": "查看对象元数据",
+      "command": "[root@controller ~]# openstack object show bookops-container bookops-object.txt",
+      "stdout": "+----------------+--------------------+\n| Field          | Value              |\n+----------------+--------------------+\n| content-length | 31                 |\n| content-type   | text/plain         |\n| object         | bookops-object.txt |\n+----------------+--------------------+",
+      "returncode": 0
+    }
+  ]
+}

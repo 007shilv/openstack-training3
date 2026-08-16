@@ -1,0 +1,35 @@
+{
+  "component": "nova",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "nova-services",
+      "title": "查看计算服务与虚拟化资源",
+      "command": "[root@controller ~]# openstack compute service list && openstack hypervisor list",
+      "stdout": "+----------------+------------+---------+-------+\n| Binary         | Host       | Status  | State |\n+----------------+------------+---------+-------+\n| nova-scheduler | controller | enabled | up    |\n| nova-conductor | controller | enabled | up    |\n| nova-compute   | compute    | enabled | up    |\n+----------------+------------+---------+-------+\n+---------------------+-----------------+-------+\n| Hypervisor Hostname | Hypervisor Type | State |\n+---------------------+-----------------+-------+\n| compute             | QEMU            | up    |\n+---------------------+-----------------+-------+",
+      "returncode": 0
+    },
+    {
+      "slug": "nova-server",
+      "title": "查看实例和实例规格",
+      "command": "[root@controller ~]# openstack server list && openstack flavor show bookops-flavor",
+      "stdout": "+----------------+--------+------------------------+\n| Name           | Status | Networks               |\n+----------------+--------+------------------------+\n| bookops-server | ACTIVE | bookops-net=10.14.0.26 |\n+----------------+--------+------------------------+\n+-------+----------------+\n| Field | Value          |\n+-------+----------------+\n| disk  | 1              |\n| name  | bookops-flavor |\n| ram   | 512            |\n| vcpus | 1              |\n+-------+----------------+",
+      "returncode": 0
+    },
+    {
+      "slug": "nova-lifecycle",
+      "title": "实例生命周期操作结果",
+      "command": "[root@controller ~]# openstack server stop/start/pause/unpause/reboot bookops-server",
+      "stdout": "停止后状态：SHUTOFF\n启动后状态：ACTIVE\n暂停后状态：PAUSED\n恢复后状态：ACTIVE\n软重启后状态：ACTIVE",
+      "returncode": 0
+    },
+    {
+      "slug": "nova-snapshot",
+      "title": "查看实例快照",
+      "command": "[root@controller ~]# openstack image show bookops-server-snapshot",
+      "stdout": "+------------------+-------------------------+\n| Field            | Value                   |\n+------------------+-------------------------+\n| container_format | bare                    |\n| disk_format      | qcow2                   |\n| name             | bookops-server-snapshot |\n| protected        | False                   |\n| status           | active                  |\n| visibility       | private                 |\n+------------------+-------------------------+",
+      "returncode": 0
+    }
+  ]
+}

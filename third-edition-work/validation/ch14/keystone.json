@@ -1,0 +1,21 @@
+{
+  "component": "keystone",
+  "captured_at": "2026-08-16T03:10:09.114407+00:00",
+  "project": "bookops",
+  "entries": [
+    {
+      "slug": "keystone-identity",
+      "title": "查看项目、用户和组",
+      "command": "[root@controller ~]# openstack project show bookops && openstack user show bookops-user",
+      "stdout": "+---------+---------+\n| Field   | Value   |\n+---------+---------+\n| enabled | True    |\n| name    | bookops |\n+---------+---------+\n+---------+--------------+\n| Field   | Value        |\n+---------+--------------+\n| enabled | True         |\n| name    | bookops-user |\n+---------+--------------+\n+-------+---------------+\n| Field | Value         |\n+-------+---------------+\n| name  | bookops-group |\n+-------+---------------+",
+      "returncode": 0
+    },
+    {
+      "slug": "keystone-role-service",
+      "title": "查看角色授权和服务目录",
+      "command": "[root@controller ~]# openstack role assignment list --project bookops --names",
+      "stdout": "+--------+------+-----------------------+-----------------+--------+--------+-----------+\n| Role   | User | Group                 | Project         | Domain | System | Inherited |\n+--------+------+-----------------------+-----------------+--------+--------+-----------+\n| member |      | bookops-group@Default | bookops@Default |        |        | False     |\n| user   |      | bookops-group@Default | bookops@Default |        |        | False     |\n+--------+------+-----------------------+-----------------+--------+--------+-----------+\n+-----------+--------------+\n| Name      | Type         |\n+-----------+--------------+\n| nova      | compute      |\n| neutron   | network      |\n| cinderv3  | volumev3     |\n| swift     | object-store |\n| placement | placement    |\n| keystone  | identity     |\n| glance    | image        |\n+-----------+--------------+",
+      "returncode": 0
+    }
+  ]
+}

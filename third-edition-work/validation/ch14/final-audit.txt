@@ -1,0 +1,5 @@
+OWNERSHIP_PRECHECK=PASS
+CLEANUP_ORDER=server-storage-swift-network-image-identity
+CONTROLLER_FINAL=PASS task_resources=0 services=healthy
+COMPUTE_FINAL=PASS sdb=cinder-volumes sdc=xfs_swift-data services=healthy
+ISCSID_RESTORED=inactive_disabled

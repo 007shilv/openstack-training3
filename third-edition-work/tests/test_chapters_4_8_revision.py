@@ -235,17 +235,28 @@ def test_experiment_password_is_consistent(number: int) -> None:
         assert forbidden not in text
 
 
-def test_chapters_1_13_revision_map_is_complete_and_bounded() -> None:
+def test_chapters_1_14_revision_map_is_complete_and_bounded() -> None:
     operations = json.loads(
         (REVISION_ROOT / "revision-map-ch01-08.json").read_text(encoding="utf-8")
     )
-    assert len(operations) == 13
-    assert [row["fragment"] for row in operations] == [
+    assert len(operations) == 15
+    assert [row["fragment"] for row in operations[:13]] == [
         f"fragments/ch{number:02d}.md" for number in range(1, 14)
     ]
     assert operations[0]["start_heading"] == "第一章 云计算基本概念"
-    assert operations[-1]["end_heading"] == "第十四章 虚拟机镜像文件的制作"
-    assert all(row["op"] == "replace" for row in operations)
+    assert operations[12]["end_heading"] == "第十四章 虚拟机镜像文件的制作"
+    assert all(row["op"] == "replace" for row in operations[:13])
+    assert operations[13] == {
+        "op": "renumber_chapter",
+        "heading": "第十四章 虚拟机镜像文件的制作",
+        "old_number": "14",
+        "new_number": "15",
+    }
+    assert operations[14] == {
+        "op": "insert_before",
+        "heading": "第十五章 虚拟机镜像文件的制作",
+        "fragment": "fragments/ch14.md",
+    }
 
 
 def test_chapters_1_8_word_builder_normalizes_table_schemas() -> None:

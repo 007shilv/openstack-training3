@@ -76,5 +76,16 @@
     "start_heading": "第十三章 原生OpenStack云平台各组件运维",
     "end_heading": "第十四章 虚拟机镜像文件的制作",
     "fragment": "fragments/ch13.md"
+  },
+  {
+    "op": "renumber_chapter",
+    "heading": "第十四章 虚拟机镜像文件的制作",
+    "old_number": "14",
+    "new_number": "15"
+  },
+  {
+    "op": "insert_before",
+    "heading": "第十五章 虚拟机镜像文件的制作",
+    "fragment": "fragments/ch14.md"
   }
 ]
